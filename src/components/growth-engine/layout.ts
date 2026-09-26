@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, Vector3 } from "three";
+import { CatmullRomCurve3, QuadraticBezierCurve3, Vector3 } from "three";
 
 // World-space layout for the growth engine. 1 unit ≈ 95px at a 900px-tall hero.
 
@@ -28,13 +28,36 @@ export const GAUGE_POSITION = onScreen(2.1, 5.1);
 
 export const TERMINAL = { position: onScreen(-3.4, 0, 1.6), yaw: FACING_YAW - 0.25, size: [1.7, 0.42, 1.1] as const };
 
-// The signal rail is set into the stack's front-left corner; the cable feeds its foot.
+// The signal rail is set into the stack's front-left corner.
 export const RAIL = new Vector3(-1.47, 0, 1.47);
-const CABLE_Y = 0.07;
-const cableStart = TERMINAL.position
-  .clone()
-  .add(new Vector3(Math.cos(TERMINAL.yaw), 0, -Math.sin(TERMINAL.yaw)).multiplyScalar(TERMINAL.size[0] / 2 + 0.05))
-  .setY(CABLE_Y);
-const cableEnd = RAIL.clone().setY(CABLE_Y);
-const cableMid = cableStart.clone().lerp(cableEnd, 0.5).addScaledVector(TOWARD, 0.5).setY(CABLE_Y);
-export const CABLE = new CatmullRomCurve3([cableStart, cableMid, cableEnd]);
+
+// The cable plugs into the terminal's right side and a socket on the base's
+// front face, next to the rail; both ends get metal collars (see SignalPath).
+const TERMINAL_RIGHT = new Vector3(Math.cos(TERMINAL.yaw), 0, -Math.sin(TERMINAL.yaw));
+const FRONT = new Vector3(0, 0, 1);
+export const CABLE_RADIUS = 0.07;
+export const PORTS = {
+  terminal: { at: TERMINAL.position.clone().addScaledVector(TERMINAL_RIGHT, TERMINAL.size[0] / 2).setY(0.2), dir: TERMINAL_RIGHT },
+  stack: { at: new Vector3(-1.39, 0.28, LAYER.baseWidth / 2), dir: FRONT },
+};
+const ground = (v: Vector3) => v.setY(CABLE_RADIUS);
+export const CABLE = new CatmullRomCurve3([
+  PORTS.terminal.at.clone(),
+  ground(PORTS.terminal.at.clone().addScaledVector(TERMINAL_RIGHT, 0.4)),
+  ground(PORTS.terminal.at.clone().lerp(PORTS.stack.at, 0.5).addScaledVector(TOWARD, 0.45)),
+  ground(PORTS.stack.at.clone().addScaledVector(FRONT, 0.45)),
+  PORTS.stack.at.clone(),
+]);
+
+/** Control-point offset for each token's single-file pearl line to the gauge. */
+export const LEAD_BOW = [onScreen(0.6, 1.2), onScreen(0.4, 0.9), onScreen(-0.3, 0.8), onScreen(-0.6, 1.4)];
+
+// Tether from the core's socket up to the nub under the PIPELINE card.
+export const GAUGE_CARD = { w: 2.5, h: 1.3, d: 0.2 };
+export const TETHER_FROM = new Vector3(0, STACK_TOP + 0.3, 0);
+export const TETHER_TO = GAUGE_POSITION.clone().setY(GAUGE_POSITION.y - GAUGE_CARD.h / 2 - 0.12);
+export const TETHER = new QuadraticBezierCurve3(
+  TETHER_FROM,
+  TETHER_FROM.clone().lerp(TETHER_TO, 0.5).add(onScreen(-0.7, 0.6)),
+  TETHER_TO,
+);

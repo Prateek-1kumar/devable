@@ -37,6 +37,15 @@ function build() {
     stone: new MeshStandardMaterial({ color: p.stone, roughness: 0.75 }),
     coralEnamel: new MeshPhysicalMaterial({ color: p.coral, roughness: 0.35, clearcoat: 0.6 }),
     tealEnamel: new MeshPhysicalMaterial({ color: p.teal, roughness: 0.35, clearcoat: 0.6 }),
+    /** Glassy amber pearls: the signal and the leads. */
+    pearl: new MeshPhysicalMaterial({
+      color: p.amber,
+      roughness: 0.08,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+      emissive: p.amber,
+      emissiveIntensity: 0.45,
+    }),
   };
 }
 

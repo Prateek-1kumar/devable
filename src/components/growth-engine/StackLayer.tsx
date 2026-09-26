@@ -1,14 +1,15 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html, Outlines, RoundedBox } from "@react-three/drei";
+import { Outlines, RoundedBox } from "@react-three/drei";
 import { AdditiveBlending, Color, type Group, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
 import { CHANNELS, drawGlyph } from "./channels";
 import { LAYER, layerWidth, layerY } from "./layout";
 import { INK_PX, materials, palette } from "./palette";
-import { clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
+import { HoverContext, clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-const PANEL = { w: 2.05, h: 0.3, d: 0.05, radius: 0.07 };
+const PANEL = { w: 2.4, h: 0.36, d: 0.05, radius: 0.08 };
+const LABEL = { w: 1.95, h: 0.26, px: [1200, 160] as const }; // text area left of the lights
 const LIFT = 0.12; // ≈ 10px
 const DROP = 1.4;
 
@@ -28,6 +29,7 @@ export default function StackLayer({ index, children }: Props) {
   const h = LAYER.height;
 
   const [hovered, setHovered] = useState(false);
+  const reportHover = useContext(HoverContext);
   const group = useRef<Group>(null);
   const sheen = useRef<MeshBasicMaterial>(null);
   const sheenMesh = useRef<Group>(null);
@@ -39,16 +41,25 @@ export default function StackLayer({ index, children }: Props) {
   const on = useMemo(() => new Color(p.amber), [p]);
 
   const drawPanel = useCallback(
-    (ctx: CanvasRenderingContext2D, _w: number, H: number) => {
-      drawGlyph(ctx, channel.glyph, H * 0.5, H / 2, H * 0.62, p.teal, p.bodyFont);
-      ctx.font = `600 ${H * 0.56}px ${p.bodyFont}`;
+    (ctx: CanvasRenderingContext2D, W: number, H: number) => {
+      drawGlyph(ctx, channel.glyph, H * 0.45, H / 2, H * 0.6, p.teal, p.bodyFont);
+      // As large as the panel allows; long names shrink just enough to fit.
+      const x = H * 0.95;
+      let size = H * 0.6;
+      ctx.font = `600 ${size}px ${p.bodyFont}`;
+      const room = W - x - H * 0.15;
+      const width = ctx.measureText(channel.name).width;
+      if (width > room) {
+        size *= room / width;
+        ctx.font = `600 ${size}px ${p.bodyFont}`;
+      }
       ctx.fillStyle = p.cream;
       ctx.textBaseline = "middle";
-      ctx.fillText(channel.name, H * 1.05, H / 2 + 3);
+      ctx.fillText(channel.name, x, H / 2 + 3);
     },
     [channel, p],
   );
-  const panel = useCanvasTexture(1024, 128, drawPanel);
+  const panel = useCanvasTexture(LABEL.px[0], LABEL.px[1], drawPanel);
 
   const drawCap = useCallback(
     (ctx: CanvasRenderingContext2D, _w: number, H: number) => {
@@ -97,8 +108,12 @@ export default function StackLayer({ index, children }: Props) {
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
+        reportHover(index);
       }}
-      onPointerOut={() => setHovered(false)}
+      onPointerOut={() => {
+        setHovered(false);
+        reportHover(null);
+      }}
     >
       <RoundedBox args={[w, h, w]} radius={LAYER.radius} smoothness={4} material={m.ceramic} castShadow receiveShadow>
         <Outlines thickness={INK_PX} color={p.ink} />
@@ -109,12 +124,12 @@ export default function StackLayer({ index, children }: Props) {
       <RoundedBox args={[PANEL.w, PANEL.h, PANEL.d]} radius={PANEL.radius} smoothness={4} position={[0, 0.02, front]} material={m.screen}>
         <Outlines thickness={1} color={p.ink} />
       </RoundedBox>
-      <mesh position={[-PANEL.w / 2 + 0.06 + 0.8, 0.02, front + PANEL.d / 2 + 0.002]}>
-        <planeGeometry args={[1.6, 0.2]} />
+      <mesh position={[-PANEL.w / 2 + 0.04 + LABEL.w / 2, 0.02, front + PANEL.d / 2 + 0.002]}>
+        <planeGeometry args={[LABEL.w, LABEL.h]} />
         <meshBasicMaterial map={panel.texture} transparent toneMapped={false} />
       </mesh>
       {[0, 1, 2].map((k) => (
-        <mesh key={k} position={[PANEL.w / 2 - 0.14 - k * 0.1, 0.02, front + PANEL.d / 2]}>
+        <mesh key={k} position={[PANEL.w / 2 - 0.12 - k * 0.09, 0.02, front + PANEL.d / 2]}>
           <sphereGeometry args={[0.032, 16, 12]} />
           <meshStandardMaterial
             ref={(el) => {
@@ -142,18 +157,6 @@ export default function StackLayer({ index, children }: Props) {
 
       <group position={[0, h / 2, 0]}>{children}</group>
 
-      {!story.still && (
-        <Html position={[w / 2 + 0.2, 0, -w / 2 - 0.15]} style={{ pointerEvents: "none" }} zIndexRange={[5, 0]}>
-          <div
-            className={`w-60 -translate-y-1/2 rounded-2xl border border-foreground/10 bg-white/90 px-4 py-3 text-foreground shadow-sm transition duration-300 ${
-              hovered ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0"
-            }`}
-          >
-            <p className="font-heading text-sm font-semibold">{channel.name}</p>
-            <p className="mt-1 text-xs leading-snug">{channel.line}</p>
-          </div>
-        </Html>
-      )}
     </group>
   );
 }

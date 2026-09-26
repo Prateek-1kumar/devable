@@ -1,13 +1,12 @@
 import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Line, Outlines, RoundedBox } from "@react-three/drei";
+import { Outlines, RoundedBox } from "@react-three/drei";
 import type { Group } from "three";
-import { FACING_YAW, GAUGE_POSITION, STACK_TOP } from "./layout";
+import { FACING_YAW, GAUGE_CARD as CARD, GAUGE_POSITION } from "./layout";
 import { INK_PX, materials, palette } from "./palette";
 import { INTRO_LEADS, clamp01, easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-const CARD = { w: 2.5, h: 1.3, d: 0.2 };
 // Normalized sparkline: a steady climb with a couple of plateaus.
 const SPARK = [
   [0, 0.12],
@@ -24,7 +23,6 @@ export default function PipelineGauge() {
   const story = useStory();
   const p = palette();
   const group = useRef<Group>(null);
-  const link = useRef<Group>(null);
   const view = useRef({ leads: 0, drawn: 0 });
 
   const draw = useCallback(
@@ -85,9 +83,7 @@ export default function PipelineGauge() {
     if (group.current) {
       group.current.visible = appear > 0;
       group.current.scale.setScalar(Math.max(1e-4, easeOutBack(appear)));
-      group.current.position.y = GAUGE_POSITION.y + Math.sin(t * 0.9) * 0.04;
     }
-    if (link.current) link.current.visible = appear > 0.5;
 
     const leads = Math.round(story.count(t));
     const drawn = Math.round(clamp01(leads / INTRO_LEADS) * 60) / 60;
@@ -98,23 +94,7 @@ export default function PipelineGauge() {
   });
 
   return (
-    <>
-      <group ref={link} visible={false}>
-        <Line
-          points={[
-            [0, STACK_TOP + 0.2, 0],
-            [GAUGE_POSITION.x, GAUGE_POSITION.y - CARD.h / 2, GAUGE_POSITION.z],
-          ]}
-          color={p.ink}
-          lineWidth={1.2}
-          dashed
-          dashSize={0.1}
-          gapSize={0.08}
-          transparent
-          opacity={0.5}
-        />
-      </group>
-      <group ref={group} position={GAUGE_POSITION} rotation-y={FACING_YAW} visible={false}>
+    <group ref={group} position={GAUGE_POSITION} rotation-y={FACING_YAW} visible={false}>
         <RoundedBox args={[CARD.w, CARD.h, CARD.d]} radius={0.1} smoothness={4} material={materials().ceramic} castShadow>
           <Outlines thickness={INK_PX} color={p.ink} />
         </RoundedBox>
@@ -122,7 +102,11 @@ export default function PipelineGauge() {
           <planeGeometry args={[CARD.w - 0.1, CARD.h - 0.1]} />
           <meshBasicMaterial map={face.texture} transparent toneMapped={false} />
         </mesh>
-      </group>
-    </>
+        {/* Nub where the tether from the core attaches. */}
+        <mesh position-y={-CARD.h / 2 - 0.06} material={materials().ceramic} castShadow>
+          <cylinderGeometry args={[0.07, 0.09, 0.14, 24]} />
+          <Outlines thickness={INK_PX} color={p.ink} />
+        </mesh>
+    </group>
   );
 }

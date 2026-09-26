@@ -34,6 +34,10 @@ export default function EngineCore() {
         <meshPhysicalMaterial ref={pill} color={p.cream} emissive={p.amber} emissiveIntensity={0} roughness={0.25} clearcoat={1} />
         <Outlines thickness={INK_PX} color={p.ink} />
       </RoundedBox>
+      {/* Socket the tether rises from. */}
+      <mesh position={[0, 0.22, 0]} material={m.screen}>
+        <cylinderGeometry args={[0.07, 0.08, 0.08, 24]} />
+      </mesh>
       <mesh ref={ring} rotation-x={-Math.PI / 2} position={[0, 0.03, 0]} visible={false}>
         <ringGeometry args={[0.55, 0.58, 64]} />
         <meshBasicMaterial ref={ripple} color={p.amber} transparent opacity={0} depthWrite={false} toneMapped={false} />

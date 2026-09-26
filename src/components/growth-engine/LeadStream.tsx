@@ -1,13 +1,16 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Object3D, Vector3, type InstancedMesh } from "three";
-import { GAUGE_POSITION, TOKEN_DEST } from "./layout";
-import { palette } from "./palette";
-import { useStory } from "./story";
+import { GAUGE_POSITION, LEAD_BOW, TOKEN_DEST } from "./layout";
+import { materials } from "./palette";
+import { clamp01, useStory } from "./story";
 
-const MAX_DOTS = 96;
+const MAX_PEARLS = 64;
 
-/** Glossy amber beads that curve from each burst token into the pipeline gauge. One draw call for all of them. */
+/**
+ * Glassy amber pearls that travel in tidy single-file lines from each burst
+ * token into the pipeline gauge. One draw call for all of them.
+ */
 export default function LeadStream() {
   const story = useStory();
   const mesh = useRef<InstancedMesh>(null);
@@ -21,15 +24,15 @@ export default function LeadStream() {
     if (!m) return;
     const t = story.time(state.clock.elapsedTime);
     let i = 0;
-    story.leads(t, (token, bend, p) => {
-      if (i >= MAX_DOTS) return;
+    story.leads(t, (token, p) => {
+      if (i >= MAX_PEARLS) return;
       const from = TOKEN_DEST[token];
-      // Quadratic bezier from the token's burst point to the gauge, bowed by the dot's own bend.
-      control.lerpVectors(from, GAUGE_POSITION, 0.5).add(bend);
+      // Every pearl from one token shares the same smooth arc, so they read as a line.
+      control.lerpVectors(from, GAUGE_POSITION, 0.5).add(LEAD_BOW[token]);
       a.lerpVectors(from, control, p);
       b.lerpVectors(control, GAUGE_POSITION, p);
       dummy.position.lerpVectors(a, b, p);
-      dummy.scale.setScalar(Math.sin(Math.PI * p) ** 0.4);
+      dummy.scale.setScalar(Math.min(1, clamp01(p / 0.08), clamp01((1 - p) / 0.08)));
       dummy.updateMatrix();
       m.setMatrixAt(i++, dummy.matrix);
     });
@@ -38,9 +41,8 @@ export default function LeadStream() {
   });
 
   return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, MAX_DOTS]} frustumCulled={false}>
-      <sphereGeometry args={[0.035, 12, 10]} />
-      <meshPhysicalMaterial color={palette().amber} roughness={0.2} clearcoat={1} emissive={palette().amber} emissiveIntensity={0.25} />
+    <instancedMesh ref={mesh} args={[undefined, undefined, MAX_PEARLS]} material={materials().pearl} frustumCulled={false}>
+      <sphereGeometry args={[0.04, 20, 14]} />
     </instancedMesh>
   );
 }
