@@ -1,23 +1,22 @@
+import Highlight from "./Highlight";
 import PixelField from "./PixelField";
-import StrokeText from "./StrokeText";
 
 export default function Hero() {
   return (
-    <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-[16svh] pb-16 sm:px-12 lg:grid-cols-2">
+    <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
       <PixelField className="-z-10" />
       <div className="text-foreground">
-        <h1 className="font-display">
-          <StrokeText lines={["DEVABLE"]} fontWeight={800} />
+        {/* Line breaks from sm up keep the three-line structure; phones wrap naturally. */}
+        <h1 className="text-4xl leading-[1.3] font-semibold sm:text-5xl xl:text-6xl">
+          <Highlight tone="accent" delay={0.2}>Growth marketing</Highlight> for
+          <br className="hidden sm:block" /> AI-native{" "}
+          <Highlight tone="coral" delay={0.45}>dev tools</Highlight>
+          <br className="hidden sm:block" /> and{" "}
+          <Highlight tone="white" delay={0.7}>platforms</Highlight>.
         </h1>
-        {/* Two lines on offset indents for an asymmetric rhythm under the wordmark. */}
-        <p className="mt-8 flex flex-col gap-4">
-          <span className="ml-[28%] max-w-md text-xl sm:text-2xl">
-            Growth marketing for AI-native dev tools and platforms.
-          </span>
-          <span className="ml-[8%] max-w-lg text-base sm:text-lg">
-            We build visibility and pipeline through technical content, organic search, AI visibility,
-            Reddit, and creator distribution.
-          </span>
+        <p className="mt-8 max-w-xl text-base leading-relaxed sm:text-lg">
+          We build visibility and pipeline through technical content, organic search, AI visibility,
+          Reddit, and creator distribution.
         </p>
       </div>
       {/* Reserved for the upcoming animation. */}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka, M_PLUS_Rounded_1c } from "next/font/google";
+import { Fredoka, M_PLUS_Rounded_1c, Outfit } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 
@@ -8,6 +8,12 @@ const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
   axes: ["wdth"],
+});
+
+// Sharper geometric face for headings.
+const heading = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
 });
 
 // Display face for the wordmark only.
@@ -26,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fredoka.variable} ${display.variable} h-full antialiased`}
+      className={`${fredoka.variable} ${heading.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Navbar />

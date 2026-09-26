@@ -6,15 +6,30 @@
   --pixel-light: #f4f2ee;
   --pixel-stone: #d6d2c4;
   --accent: #2a9093;
+  --coral: #ec544b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-coral: var(--coral);
   --font-sans: var(--font-fredoka);
   --font-mono: var(--font-fredoka);
+  --font-heading: var(--font-outfit);
   --font-display: var(--font-mplus);
+
+  /* Highlight pill entrance: color slides in from the left, text ink follows. */
+  --animate-pill-sweep: pill-sweep 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+  --animate-pill-ink: pill-ink 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
+
+  @keyframes pill-sweep {
+    from { transform: translateX(-101%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes pill-ink {
+    from { color: var(--foreground); }
+  }
 }
 
 body {
@@ -23,10 +38,9 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Headings are wide (125%); paragraphs keep the normal width.
-   For large hero text that isn't a heading, add `font-stretch-expanded`. */
+/* Headings use the sharper Outfit face; body text stays Fredoka. */
 @layer base {
   h1, h2, h3, h4, h5, h6 {
-    font-stretch: expanded;
+    font-family: var(--font-heading);
   }
 }
