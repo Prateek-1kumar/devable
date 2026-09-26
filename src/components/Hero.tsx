@@ -1,3 +1,4 @@
+import ArcButton from "./ArcButton";
 import GrowthEngine from "./growth-engine/GrowthEngine";
 import PixelField from "./PixelField";
 
@@ -11,7 +12,7 @@ export default function Hero() {
     <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
       <PixelField className="-z-10" />
       <div className="relative z-10 text-foreground">
-        <h1 className="flex flex-col gap-[0.15em] text-4xl leading-[1.2] font-medium sm:text-5xl xl:text-6xl">
+        <h1 className="flex flex-col gap-[0.15em] text-4xl leading-[1.2] font-semibold sm:text-5xl xl:text-6xl">
           <span className={headingLine} style={{ animationDelay: "0.1s" }}>
             Growth marketing for AI-native
           </span>
@@ -23,6 +24,12 @@ export default function Hero() {
           We build visibility and pipeline through technical content, organic search, AI visibility,
           Reddit, and creator distribution.
         </p>
+        <div className={`mt-8 flex flex-wrap gap-3 ${line}`} style={{ animationDelay: "0.6s" }}>
+          <ArcButton href="#contact">Speak with the Team</ArcButton>
+          <ArcButton href="#case-studies" tone="amber">
+            View Case Studies
+          </ArcButton>
+        </div>
       </div>
       {/* Spans the right side and reaches in behind the headline on large screens. */}
       <GrowthEngine className="relative aspect-square w-full lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[72%]" />

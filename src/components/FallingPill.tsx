@@ -17,6 +17,9 @@ const LAND = {
 // Slightly uneven top radii give the hand-drawn, organic edge from the sketch.
 const RADIUS = "13vw 11vw 2.5vw 2.5vw / 15vw 12vw 2.5vw 2.5vw";
 const SMOOTHING = 8; // higher follows scroll more tightly
+// The fall completes by this share of the first screen's scroll, so it always
+// lands fully (and triggers the landed content) even if scrolling stops short.
+const LAND_BY = 0.8;
 
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 
@@ -41,11 +44,13 @@ export default function FallingPill({ children, landed }: Props) {
     let last = performance.now();
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      const target = Math.min(1, Math.max(0, window.scrollY / window.innerHeight));
+      const target = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * LAND_BY)));
       const dt = Math.min((now - last) / 1000, 1 / 30);
       last = now;
       shown = reduced ? target : shown + (target - shown) * (1 - Math.exp(-SMOOTHING * dt));
       el.style.setProperty("--fall", easeInOut(shown).toFixed(4));
+      // Mark the first full landing once; landed content animates off this (in-data-landed:).
+      if (shown > 0.97) el.dataset.landed = "true";
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -70,13 +75,13 @@ export default function FallingPill({ children, landed }: Props) {
       <section className="relative h-svh">
         {landed && (
           <div
-            className="absolute flex items-center px-[6vw]"
+            className="absolute flex items-center justify-center px-[6vw] text-center"
             style={{
               left: "calc(50vw - 75vh)",
               top: "calc(50% - 13vw)",
               width: "150vh",
               height: "26vw",
-              opacity: "clamp(0, calc((var(--fall) - 0.85) * 6.67), 1)",
+              opacity: "clamp(0, calc((var(--fall) - 0.95) * 20), 1)", // only once the pill is flat
             }}
           >
             {landed}

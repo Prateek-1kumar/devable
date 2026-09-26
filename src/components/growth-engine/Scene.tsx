@@ -39,7 +39,7 @@ export default function Scene({ still, active, onHover, onAnchor }: Props) {
       frameloop={still ? "demand" : active ? "always" : "never"}
       camera={{ position: CAMERA_POSITION.toArray(), fov: CAMERA_FOV, near: 5, far: 80 }}
     >
-      <CameraRig shift={still ? 0 : 0.02} />
+      <CameraRig shift={still ? 0 : 0.08} />
 
       {/* Soft window light from the upper left plus a gentle fill: a light, warm grey ceramic. */}
       <ambientLight intensity={0.6} />

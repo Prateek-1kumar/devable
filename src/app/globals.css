@@ -8,6 +8,7 @@
   --pixel-stone: #d6d2c4;
   --accent: #2a9093;
   --coral: #ec544b;
+  --amber: #fcb401;
 }
 
 @theme inline {
@@ -16,6 +17,7 @@
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
   --color-coral: var(--coral);
+  --color-amber: var(--amber);
   --font-sans: var(--font-fredoka);
   --font-mono: var(--font-fredoka);
   --font-heading: var(--font-outfit);

@@ -13,17 +13,24 @@ const LAYERS = [
   { color: "#031819", classes: "duration-500 group-hover:duration-600 group-hover:delay-150" }, // ink (final fill)
 ];
 
+// Resting look per tone; both end on the ink fill, so text turns white on hover.
+const TONES = {
+  accent: "bg-accent text-white",
+  amber: "bg-amber text-foreground transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
+};
+
 type Props = {
   href: string;
   children: ReactNode;
+  tone?: keyof typeof TONES;
   className?: string;
 };
 
-export default function ArcButton({ href, children, className = "" }: Props) {
+export default function ArcButton({ href, children, tone = "accent", className = "" }: Props) {
   return (
     <Link
       href={href}
-      className={`group relative isolate inline-flex items-center overflow-hidden rounded-full bg-accent px-5 py-2.5 font-bold tracking-wide text-white outline-offset-4 ${className}`}
+      className={`group relative isolate inline-flex items-center overflow-hidden rounded-full px-5 py-2.5 font-medium tracking-wide outline-offset-4 ${TONES[tone]} ${className}`}
     >
       {LAYERS.map(({ color, classes }) => (
         <span
