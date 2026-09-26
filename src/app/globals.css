@@ -21,8 +21,7 @@
   --color-amber: var(--amber);
   --font-sans: var(--font-fredoka);
   --font-mono: var(--font-fredoka);
-  --font-heading: var(--font-outfit);
-  --font-hero: var(--font-bricolage);
+  --font-heading: var(--font-geist-sans);
   --font-display: var(--font-mplus);
 
   /* Highlight pill entrance: color slides in from the left, text ink follows. */
@@ -56,7 +55,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Headings use the sharper Outfit face; body text stays Fredoka. */
+/* Headings use Geist (Vercel); body text stays Fredoka. */
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);

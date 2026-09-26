@@ -15,7 +15,7 @@ function read() {
     amber: "#fcb401",
     ink: "#031819",
     bodyFont: getComputedStyle(document.body).fontFamily,
-    headingFont: token("--font-outfit"),
+    headingFont: token("--font-geist-sans"),
   };
 }
 

@@ -1,7 +1,6 @@
 import ArcButton from "./ArcButton";
 import ChannelParagraph from "./ChannelParagraph";
 import GrowthEngine from "./growth-engine/GrowthEngine";
-import PixelField from "./PixelField";
 import RotatingText from "./RotatingText";
 
 // Each line rises in with a soft blur.
@@ -13,10 +12,9 @@ const headingLine = `${line} lg:whitespace-nowrap`;
 export default function Hero() {
   return (
     <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
-      <PixelField className="-z-10" />
       <div className="relative z-10 self-center text-foreground">
         {/* Debossed display headline with a rotating audience pill. */}
-        <h1 className="font-hero text-5xl leading-[1.02] font-bold tracking-[-0.02em] text-deboss sm:text-6xl xl:text-7xl">
+        <h1 className="font-heading text-5xl leading-[1.02] font-bold tracking-[-0.02em] text-deboss sm:text-6xl xl:text-7xl">
           <span className={headingLine} style={{ animationDelay: "0.1s" }}>
             Growth marketing
           </span>
