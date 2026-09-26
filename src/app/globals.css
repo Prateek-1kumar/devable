@@ -2,6 +2,7 @@
 
 :root {
   --background: #e7e5df;
+  --surface: #efeee9; /* a lighter step of the background */
   --foreground: #171717;
   --pixel-light: #f4f2ee;
   --pixel-stone: #d6d2c4;
@@ -11,6 +12,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
   --color-coral: var(--coral);
