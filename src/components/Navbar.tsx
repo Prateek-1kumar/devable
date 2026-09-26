@@ -31,7 +31,7 @@ export default function Navbar() {
           ))}
         </ul>
         <ArcButton href="#contact" className="ml-auto text-sm md:ml-0">
-          SPEAK WITH THE TEAM
+          Speak With Us
         </ArcButton>
       </nav>
     </header>

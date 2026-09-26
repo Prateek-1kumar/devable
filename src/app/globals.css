@@ -23,6 +23,12 @@
   --animate-pill-sweep: pill-sweep 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
   --animate-pill-ink: pill-ink 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
 
+  /* Soft rise-and-focus entrance for text lines. */
+  --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); }
+  }
   @keyframes pill-sweep {
     from { transform: translateX(-101%); }
     to { transform: translateX(0); }
