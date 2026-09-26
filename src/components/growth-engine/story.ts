@@ -170,6 +170,9 @@ export const StoryContext = createContext<Story | null>(null);
 /** Reports which layer the cursor is over (null when none), for the DOM hover card. */
 export const HoverContext = createContext<(index: number | null) => void>(() => {});
 
+/** A layer highlighted from outside the scene (the hero's channel keys). */
+export const FocusContext = createContext<number | null>(null);
+
 export function useStory() {
   const story = useContext(StoryContext);
   if (!story) throw new Error("useStory must be used inside the growth engine scene");

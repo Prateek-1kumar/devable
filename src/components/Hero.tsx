@@ -1,9 +1,12 @@
 import ArcButton from "./ArcButton";
+import ChannelParagraph from "./ChannelParagraph";
 import GrowthEngine from "./growth-engine/GrowthEngine";
 import PixelField from "./PixelField";
+import RotatingText from "./RotatingText";
 
 // Each line rises in with a soft blur.
-const line = "block animate-fade-up motion-reduce:animate-none";
+const rise = "animate-fade-up motion-reduce:animate-none";
+const line = `block ${rise}`;
 // Keep each heading line whole on desktop (it may run behind the 3D, which sits beneath it).
 const headingLine = `${line} lg:whitespace-nowrap`;
 
@@ -11,22 +14,29 @@ export default function Hero() {
   return (
     <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
       <PixelField className="-z-10" />
-      <div className="relative z-10 text-foreground">
-        <h1 className="flex flex-col gap-[0.15em] text-4xl leading-[1.2] font-semibold sm:text-5xl xl:text-6xl">
+      <div className="relative z-10 self-center text-foreground">
+        {/* Debossed display headline with a rotating audience pill. */}
+        <h1 className="font-hero text-5xl leading-[1.02] font-bold tracking-[-0.02em] text-deboss sm:text-6xl xl:text-7xl">
           <span className={headingLine} style={{ animationDelay: "0.1s" }}>
-            Growth marketing for AI-native
+            Growth marketing
           </span>
-          <span className={headingLine} style={{ animationDelay: "0.25s" }}>
-            dev tools and platforms.
+          <span className={`${headingLine} mt-[0.12em]`} style={{ animationDelay: "0.25s" }}>
+            for AI-native{" "}
+            <RotatingText
+              texts={["dev tools", "APIs", "AI agents", "platforms"]}
+              className="align-bottom"
+            />
           </span>
         </h1>
-        <p className={`mt-10 max-w-xl text-base leading-relaxed sm:text-lg ${line}`} style={{ animationDelay: "0.45s" }}>
-          We build visibility and pipeline through technical content, organic search, AI visibility,
-          Reddit, and creator distribution.
-        </p>
-        <div className={`mt-8 flex flex-wrap gap-3 ${line}`} style={{ animationDelay: "0.6s" }}>
-          <ArcButton href="#contact">Speak with the Team</ArcButton>
-          <ArcButton href="#case-studies" tone="amber">
+        <ChannelParagraph
+          className={`mt-9 max-w-xl text-base leading-relaxed text-foreground/75 sm:text-lg ${line}`}
+          style={{ animationDelay: "0.45s" }}
+        />
+        <div className={`mt-10 flex flex-wrap gap-3 ${rise}`} style={{ animationDelay: "0.7s" }}>
+          <ArcButton href="#contact" depth>
+            Speak with the Team
+          </ArcButton>
+          <ArcButton href="#case-studies" tone="amber" depth>
             View Case Studies
           </ArcButton>
         </div>

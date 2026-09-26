@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka, M_PLUS_Rounded_1c, Outfit } from "next/font/google";
+import { Bricolage_Grotesque, Fredoka, M_PLUS_Rounded_1c, Outfit } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 
@@ -14,6 +14,13 @@ const fredoka = Fredoka({
 const heading = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+});
+
+// Hero headline only: optical sizing gives it more character at display sizes.
+const hero = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  axes: ["opsz"],
 });
 
 // Display face for the wordmark only.
@@ -32,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fredoka.variable} ${heading.variable} ${display.variable} h-full antialiased`}
+      className={`${fredoka.variable} ${heading.variable} ${hero.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Navbar />

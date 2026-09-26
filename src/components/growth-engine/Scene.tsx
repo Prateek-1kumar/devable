@@ -11,7 +11,7 @@ import { palette } from "./palette";
 import PipelineGauge from "./PipelineGauge";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
-import { HoverContext, Story, StoryContext } from "./story";
+import { FocusContext, HoverContext, Story, StoryContext } from "./story";
 import Tether from "./Tether";
 import ChannelTokens from "./Tokens";
 import { useCursorTilt } from "./useCursorTilt";
@@ -25,12 +25,14 @@ type Props = {
   onHover?: (index: number | null) => void;
   /** The stack's right edge in page pixels, reported every frame, for pinning the hover card. */
   onAnchor?: (anchor: StackAnchor) => void;
+  /** Layer highlighted from outside the scene, or null. */
+  focus?: number | null;
 };
 
 export type StackAnchor = { x: number; top: number; bottom: number };
 
 /** The 3D canvas: camera, studio light, shadows, and the engine itself. */
-export default function Scene({ still, active, onHover, onAnchor }: Props) {
+export default function Scene({ still, active, onHover, onAnchor, focus = null }: Props) {
   return (
     <Canvas
       shadows="percentage"
@@ -60,7 +62,9 @@ export default function Scene({ still, active, onHover, onAnchor }: Props) {
         <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
       </Environment>
 
-      <Engine still={still} onHover={onHover} onAnchor={onAnchor} />
+      <FocusContext.Provider value={focus}>
+        <Engine still={still} onHover={onHover} onAnchor={onAnchor} />
+      </FocusContext.Provider>
       <ContactShadows position={[0, 0.001, 0]} scale={14} blur={2.4} far={2.5} opacity={0.35} resolution={512} color={palette().ink} />
     </Canvas>
   );

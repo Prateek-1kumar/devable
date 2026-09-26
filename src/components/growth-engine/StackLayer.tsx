@@ -5,7 +5,7 @@ import { AdditiveBlending, Color, type Group, type MeshBasicMaterial, type MeshS
 import { CHANNELS, drawGlyph } from "./channels";
 import { LAYER, layerWidth, layerY } from "./layout";
 import { INK_PX, materials, palette } from "./palette";
-import { HoverContext, clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
+import { FocusContext, HoverContext, clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
 const PANEL = { w: 2.4, h: 0.36, d: 0.05, radius: 0.08 };
@@ -30,6 +30,8 @@ export default function StackLayer({ index, children }: Props) {
 
   const [hovered, setHovered] = useState(false);
   const reportHover = useContext(HoverContext);
+  const focused = useContext(FocusContext) === index;
+  const raised = hovered || focused;
   const group = useRef<Group>(null);
   const sheen = useRef<MeshBasicMaterial>(null);
   const sheenMesh = useRef<Group>(null);
@@ -83,11 +85,11 @@ export default function StackLayer({ index, children }: Props) {
 
     const arrive = story.layerIn(index, t);
     g.visible = arrive > 0;
-    lift.current = settle(lift.current, hovered ? LIFT : 0, 10);
+    lift.current = settle(lift.current, raised ? LIFT : 0, 10);
     g.position.y = layerY(index) + (1 - easeOutBack(arrive)) * DROP + lift.current;
     g.scale.setScalar(0.85 + 0.15 * easeOutCubic(arrive));
 
-    glow.current = settle(glow.current, story.lit(index, t) * 0.35 + story.flash(index, t) + (hovered ? 0.5 : 0), 14);
+    glow.current = settle(glow.current, story.lit(index, t) * 0.35 + story.flash(index, t) + (raised ? 0.5 : 0), 14);
     for (const led of leds.current) {
       if (!led) continue;
       led.color.lerpColors(off, on, clamp01(glow.current * 2));

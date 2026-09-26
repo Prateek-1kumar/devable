@@ -9,6 +9,7 @@
   --accent: #2a9093;
   --coral: #ec544b;
   --amber: #fcb401;
+  --deboss-ink: #2b2a27; /* warm ink for letters pressed into the page */
 }
 
 @theme inline {
@@ -21,6 +22,7 @@
   --font-sans: var(--font-fredoka);
   --font-mono: var(--font-fredoka);
   --font-heading: var(--font-outfit);
+  --font-hero: var(--font-bricolage);
   --font-display: var(--font-mplus);
 
   /* Highlight pill entrance: color slides in from the left, text ink follows. */
@@ -32,6 +34,12 @@
 
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); }
+  }
+  --animate-pill-reveal: pill-reveal 0.7s cubic-bezier(0.65, 0, 0.35, 1) both;
+
+  @keyframes pill-reveal {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0 0 0 0); }
   }
   @keyframes pill-sweep {
     from { transform: translateX(-101%); }
@@ -53,4 +61,13 @@ body {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
   }
+}
+
+/* Letters pressed into the ceramic page: solid warm ink (always legible), a
+   light lip under each stroke and a soft shade over it. */
+@utility text-deboss {
+  color: var(--deboss-ink);
+  text-shadow:
+    0 1.5px 0 rgb(255 255 255 / 0.8),
+    0 -1px 0 rgb(0 0 0 / 0.14);
 }

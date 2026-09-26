@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import logo from "../../public/brand/devable-logo.png";
 import ArcButton from "./ArcButton";
 
 // ponytail: dropdown items show a chevron only; menus come when their content exists.
@@ -13,8 +15,8 @@ export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-transparent">
       <nav className="flex items-center gap-10 px-6 py-5 sm:px-12">
-        <Link href="/" className="font-display text-2xl text-foreground">
-          DEVABLE
+        <Link href="/" aria-label="Devable AI home" className="shrink-0">
+          <Image src={logo} alt="Devable AI" priority className="h-5 w-auto" />
         </Link>
         <ul className="ml-auto hidden items-center gap-8 md:flex">
           {LINKS.map(({ label, href, dropdown }) => (

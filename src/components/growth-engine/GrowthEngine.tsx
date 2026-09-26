@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { channelFocus } from "./channelFocus";
 import HoverCard from "./HoverCard";
 import type { StackAnchor } from "./Scene";
 
@@ -26,6 +27,7 @@ export default function GrowthEngine({ className = "" }: { className?: string })
   const box = useRef<HTMLDivElement>(null);
   const [onScreen, setOnScreen] = useState(true);
   const [hovered, setHovered] = useState<number | null>(null);
+  const focus = useSyncExternalStore(channelFocus.subscribe, channelFocus.get, () => null);
   const anchor = useRef<StackAnchor | null>(null);
   const onAnchor = useCallback((a: StackAnchor) => {
     anchor.current = a;
@@ -41,8 +43,8 @@ export default function GrowthEngine({ className = "" }: { className?: string })
 
   return (
     <div ref={box} aria-hidden="true" className={className}>
-      <Scene key={String(still)} still={still} active={onScreen} onHover={setHovered} onAnchor={still ? undefined : onAnchor} />
-      {!still && <HoverCard index={hovered} anchor={anchor} />}
+      <Scene key={String(still)} still={still} active={onScreen} onHover={setHovered} onAnchor={still ? undefined : onAnchor} focus={focus} />
+      {!still && <HoverCard index={hovered ?? focus} anchor={anchor} />}
     </div>
   );
 }

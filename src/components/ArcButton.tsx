@@ -15,22 +15,27 @@ const LAYERS = [
 
 // Resting look per tone; both end on the ink fill, so text turns white on hover.
 const TONES = {
-  accent: "bg-accent text-white",
-  amber: "bg-amber text-foreground transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
+  accent: "bg-accent text-white [--edge:color-mix(in_oklab,var(--accent),black_28%)]",
+  amber: "bg-amber text-foreground [--edge:color-mix(in_oklab,var(--amber),black_22%)] transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
 };
 
 type Props = {
   href: string;
   children: ReactNode;
   tone?: keyof typeof TONES;
+  /** A pressable edge underneath: sinks on hover, presses flat on click. */
+  depth?: boolean;
   className?: string;
 };
 
-export default function ArcButton({ href, children, tone = "accent", className = "" }: Props) {
+const DEPTH =
+  "shadow-[0_5px_0_0_var(--edge)] transition-[translate,box-shadow,color] hover:translate-y-0.5 hover:shadow-[0_3px_0_0_var(--edge)] active:translate-y-[5px] active:shadow-none";
+
+export default function ArcButton({ href, children, tone = "accent", depth = false, className = "" }: Props) {
   return (
     <Link
       href={href}
-      className={`group relative isolate inline-flex items-center overflow-hidden rounded-full px-5 py-2.5 font-medium tracking-wide outline-offset-4 ${TONES[tone]} ${className}`}
+      className={`group relative isolate inline-flex items-center overflow-hidden rounded-full px-5 py-2.5 font-medium tracking-wide outline-offset-4 ${TONES[tone]} ${depth ? DEPTH : ""} ${className}`}
     >
       {LAYERS.map(({ color, classes }) => (
         <span
