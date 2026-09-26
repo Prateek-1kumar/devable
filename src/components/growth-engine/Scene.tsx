@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
-import type { Group } from "three";
+import { Vector3, type Group } from "three";
 import { CHANNELS } from "./channels";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
 import LeadStream from "./LeadStream";
-import { CAMERA_FOV, CAMERA_POSITION, TARGET } from "./layout";
+import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
 import PipelineGauge from "./PipelineGauge";
 import SignalPath from "./SignalPath";
@@ -23,10 +23,14 @@ type Props = {
   active: boolean;
   /** Which channel layer the cursor is over, for the DOM hover card. */
   onHover?: (index: number | null) => void;
+  /** The stack's right edge in page pixels, reported every frame, for pinning the hover card. */
+  onAnchor?: (anchor: StackAnchor) => void;
 };
 
+export type StackAnchor = { x: number; top: number; bottom: number };
+
 /** The 3D canvas: camera, studio light, shadows, and the engine itself. */
-export default function Scene({ still, active, onHover }: Props) {
+export default function Scene({ still, active, onHover, onAnchor }: Props) {
   return (
     <Canvas
       shadows="percentage"
@@ -37,12 +41,12 @@ export default function Scene({ still, active, onHover }: Props) {
     >
       <CameraRig shift={still ? 0 : 0.02} />
 
-      {/* Soft window light from the upper left plus a low fill: keeps the ceramic a warm grey. */}
-      <ambientLight intensity={0.35} />
+      {/* Soft window light from the upper left plus a gentle fill: a light, warm grey ceramic. */}
+      <ambientLight intensity={0.6} />
       <directionalLight
         castShadow
         position={[-5, 11, 6]}
-        intensity={1.1}
+        intensity={1.25}
         shadow-mapSize={[2048, 2048]}
         shadow-radius={6}
         shadow-bias={-0.0005}
@@ -56,7 +60,7 @@ export default function Scene({ still, active, onHover }: Props) {
         <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
       </Environment>
 
-      <Engine still={still} onHover={onHover} />
+      <Engine still={still} onHover={onHover} onAnchor={onAnchor} />
       <ContactShadows position={[0, 0.001, 0]} scale={14} blur={2.4} far={2.5} opacity={0.35} resolution={512} color={palette().ink} />
     </Canvas>
   );
@@ -81,7 +85,7 @@ function CameraRig({ shift }: { shift: number }) {
 // The stack tilts around its middle.
 const PIVOT: [number, number, number] = [0, 1.2, 0];
 
-function Engine({ still, onHover = () => {} }: { still: boolean; onHover?: (index: number | null) => void }) {
+function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "onHover" | "onAnchor">) {
   const [story] = useState(() => new Story(still));
   const tilt = useCursorTilt({ enabled: !still });
 
@@ -92,6 +96,7 @@ function Engine({ still, onHover = () => {} }: { still: boolean; onHover?: (inde
     <StoryContext.Provider value={story}>
       <HoverContext.Provider value={onHover}>
         <group ref={tilt} position={PIVOT}>
+          {onAnchor && <AnchorReporter onAnchor={onAnchor} />}
           <Breathing still={still}>
             <DevtoolTerminal />
             <SignalPath />
@@ -122,4 +127,21 @@ function Breathing({ still, children }: { still: boolean; children: ReactNode })
       {children}
     </group>
   );
+}
+
+/** Projects the stack's right edge to page pixels each frame (follows tilt and resize). */
+function AnchorReporter({ onAnchor }: { onAnchor: (anchor: StackAnchor) => void }) {
+  const probe = useRef<Group>(null);
+  const [world] = useState(() => new Vector3());
+  useFrame(({ camera, gl }) => {
+    if (!probe.current) return;
+    const rect = gl.domElement.getBoundingClientRect();
+    const toPage = (y: number) => {
+      probe.current!.localToWorld(world.set(STACK_RIGHT.x, y, STACK_RIGHT.z)).project(camera);
+      return { x: rect.left + ((world.x + 1) / 2) * rect.width, y: rect.top + ((1 - world.y) / 2) * rect.height };
+    };
+    const mid = toPage(STACK_TOP / 2);
+    onAnchor({ x: mid.x, top: toPage(STACK_TOP).y, bottom: toPage(0).y });
+  });
+  return <group ref={probe} position={[0, -PIVOT[1], 0]} />;
 }

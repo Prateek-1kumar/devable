@@ -52,10 +52,13 @@ export const CABLE = new CatmullRomCurve3([
 /** Control-point offset for each token's single-file pearl line to the gauge. */
 export const LEAD_BOW = [onScreen(0.6, 1.2), onScreen(0.4, 0.9), onScreen(-0.3, 0.8), onScreen(-0.6, 1.4)];
 
-// Tether from the core's socket up to the nub under the PIPELINE card.
-export const GAUGE_CARD = { w: 2.5, h: 1.3, d: 0.2 };
+// Tether from the core's socket up to the nub under the PIPELINE dial.
+export const GAUGE_DIAL = { radius: 0.95, depth: 0.3, fillet: 0.1 };
 export const TETHER_FROM = new Vector3(0, STACK_TOP + 0.3, 0);
-export const TETHER_TO = GAUGE_POSITION.clone().setY(GAUGE_POSITION.y - GAUGE_CARD.h / 2 - 0.12);
+export const TETHER_TO = GAUGE_POSITION.clone().setY(GAUGE_POSITION.y - GAUGE_DIAL.radius - 0.12);
+
+/** The stack's right-hand edge, where the hover card pins itself. */
+export const STACK_RIGHT = { x: LAYER.baseWidth / 2, z: -LAYER.baseWidth / 2 };
 export const TETHER = new QuadraticBezierCurve3(
   TETHER_FROM,
   TETHER_FROM.clone().lerp(TETHER_TO, 0.5).add(onScreen(-0.7, 0.6)),

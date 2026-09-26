@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import HoverCard from "./HoverCard";
+import type { StackAnchor } from "./Scene";
 
 // The 3D bundle loads after the page, so the headline paints instantly.
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
@@ -25,6 +26,10 @@ export default function GrowthEngine({ className = "" }: { className?: string })
   const box = useRef<HTMLDivElement>(null);
   const [onScreen, setOnScreen] = useState(true);
   const [hovered, setHovered] = useState<number | null>(null);
+  const anchor = useRef<StackAnchor | null>(null);
+  const onAnchor = useCallback((a: StackAnchor) => {
+    anchor.current = a;
+  }, []);
 
   useEffect(() => {
     const el = box.current;
@@ -36,8 +41,8 @@ export default function GrowthEngine({ className = "" }: { className?: string })
 
   return (
     <div ref={box} aria-hidden="true" className={className}>
-      <Scene key={String(still)} still={still} active={onScreen} onHover={setHovered} />
-      {!still && <HoverCard index={hovered} />}
+      <Scene key={String(still)} still={still} active={onScreen} onHover={setHovered} onAnchor={still ? undefined : onAnchor} />
+      {!still && <HoverCard index={hovered} anchor={anchor} />}
     </div>
   );
 }
