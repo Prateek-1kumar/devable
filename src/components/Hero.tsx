@@ -1,40 +1,31 @@
 import ArcButton from "./ArcButton";
 import ChannelParagraph from "./ChannelParagraph";
+import HeroHeadline from "./HeroHeadline";
 import GrowthEngine from "./growth-engine/GrowthEngine";
-import RotatingText from "./RotatingText";
 
 // Each line rises in with a soft blur.
 const rise = "animate-fade-up motion-reduce:animate-none";
 const line = `block ${rise}`;
-// Keep each heading line whole on desktop (it may run behind the 3D, which sits beneath it).
-const headingLine = `${line} lg:whitespace-nowrap`;
 
 export default function Hero() {
   return (
     <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
       <div className="relative z-10 self-center text-foreground">
         {/* Debossed display headline with a rotating audience pill. */}
-        <h1 className="font-heading text-5xl leading-[1.02] font-bold tracking-[-0.02em] text-deboss sm:text-6xl xl:text-7xl">
-          <span className={headingLine} style={{ animationDelay: "0.1s" }}>
-            Growth marketing
-          </span>
-          <span className={`${headingLine} mt-[0.12em]`} style={{ animationDelay: "0.25s" }}>
-            for AI-native{" "}
-            <RotatingText
-              texts={["dev tools", "APIs", "AI agents", "platforms"]}
-              className="align-bottom"
-            />
-          </span>
-        </h1>
+        {/* Same scale as the section headings; line two never wraps. */}
+        <HeroHeadline
+          className="font-heading text-3xl leading-[1.15] font-bold tracking-[-0.03em] text-deboss sm:text-[2.35rem] xl:text-[2.8rem]"
+          lineClassName={rise}
+        />
         <ChannelParagraph
           className={`mt-9 max-w-xl text-base leading-relaxed text-foreground/75 sm:text-lg ${line}`}
           style={{ animationDelay: "0.45s" }}
         />
         <div className={`mt-10 flex flex-wrap gap-3 ${rise}`} style={{ animationDelay: "0.7s" }}>
-          <ArcButton href="#contact" depth>
+          <ArcButton href="#contact">
             Speak with the Team
           </ArcButton>
-          <ArcButton href="#case-studies" tone="amber" depth>
+          <ArcButton href="#case-studies" tone="coral">
             View Case Studies
           </ArcButton>
         </div>

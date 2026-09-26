@@ -2,25 +2,32 @@
 
 import { HaloReel, type HaloReelItem } from "@/components/ui/halo-reel";
 
-// ponytail: demo cards from the component's own CDN; swap for client proof items.
-const CDN = "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev";
+// Client logos. Each needs its artwork ratio (width ÷ height) so all render at the
+// same visual size; `scale` nudges ones that still read small.
 const CARDS: HaloReelItem[] = [
-  { src: `${CDN}/stock-images/767d99bb371a54d0d36751e8cecae43c.jpg`, alt: "Diver silhouetted inside a sunset seascape shaped like a profile" },
-  { src: `${CDN}/gradients/hero_gradient/hero-gradients-01.png`, alt: "Soft multi-tone gradient wash" },
-  { src: `${CDN}/stock-images/821d815affa6496c39cbdeeec7a84603.jpg`, alt: "Double-exposure portrait blended with a city skyline at dusk" },
-  { src: `${CDN}/gradients/moon/moon-grade-03.png`, alt: "Moon-toned gradient" },
-  { src: `${CDN}/stock-images/937438c560ada1c83317f2c11b3454b0.jpg`, alt: "Motion-blurred side-profile portrait against a deep orange backdrop" },
-  { src: `${CDN}/gradients/shade_shiters/shade-shifters-05.png`, alt: "Shifting shade gradient" },
-  { src: `${CDN}/stock-images/98f89cb9994f5c382ab964062c4039db.jpg`, alt: "Figure holding a racket that dissolves into a swirling colourful cloud" },
-  { src: `${CDN}/gradients/shade_shiters/shade-shifters-09.png`, alt: "Shifting shade gradient" },
-  { src: `${CDN}/stock-images/ddcbee38be8b7274e19e132d7ab35b53.jpg`, alt: "Hand gesture with a colourful cutout of a bird flying through the fingers" },
-  { src: `${CDN}/gradients/moon/moon-grade-06.png`, alt: "Moon-toned gradient" },
+  { logo: true, src: "/clients/statsig.png", ratio: 118 / 20, alt: "Statsig" },
+  { logo: true, src: "/clients/reflex.svg", ratio: 81 / 16, alt: "Reflex" },
+  { logo: true, src: "/clients/landingai.png", ratio: 160 / 32, alt: "LandingAI" },
+  { logo: true, src: "/clients/minimax.png", ratio: 560 / 129, alt: "MiniMax" },
+  {
+    // ponytail: Rockset's site is retired, so its bracketed wordmark is rebuilt here; swap for the file if you get one.
+    alt: "Rockset",
+    face: (
+      <span aria-label="Rockset" className="flex items-center font-heading text-[1.55em] font-bold tracking-tight text-[#5b1d8c]">
+        <span className="font-light text-[#7ac0dc]">[</span>ROCKSET<span className="font-light text-[#7ac0dc]">]</span>
+      </span>
+    ),
+  },
+  { logo: true, src: "/clients/twelvelabs.svg", ratio: 159 / 32, scale: 1.25, alt: "TwelveLabs" },
+  { logo: true, src: "/clients/apify.png", ratio: 362 / 100, alt: "Apify" },
+  { logo: true, src: "/clients/confident-ai.png", ratio: 967 / 265, scale: 1.25, alt: "Confident AI" },
+  { logo: true, src: "/clients/comet.svg", ratio: 140 / 59, alt: "Comet" },
 ];
 
 /** Embedded execution: who we are on the left, client proof reel on the right. */
 export default function EmbeddedExecution() {
   return (
-    <section className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2">
+    <section className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2 lg:px-20 xl:px-28">
       <div>
         {/* Dark pill, then an amber dot beside a coral pill; the live badge matches the pill height. */}
         <h2 className="flex flex-col items-start gap-[0.12em] font-heading text-2xl leading-none font-bold tracking-[-0.03em] whitespace-nowrap sm:text-3xl xl:text-4xl">
@@ -41,9 +48,9 @@ export default function EmbeddedExecution() {
       </div>
       <HaloReel
         items={CARDS}
-        aria-label="Recent work"
-        cardWidth={130}
-        cardHeight={180}
+        aria-label="Clients"
+        cardWidth={220}
+        cardHeight={120}
         minScale={0.4}
         radiusYRatio={0.36}
         holdDuration={1000}

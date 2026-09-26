@@ -30,7 +30,19 @@ export type HaloReelItem = {
   textColor?: string;
   title?: string;
   subtitle?: string;
+  /** Show `src` as a logo: contained on a light card, sized by `ratio` for equal visual weight. */
+  logo?: boolean;
+  /** Width ÷ height of the logo artwork (needed with `logo`). */
+  ratio?: number;
+  /** Size multiplier on top of the equal-area sizing, for logos that read small. @default 1 */
+  scale?: number;
+  /** Custom card face, when there is no image asset. */
+  face?: React.ReactNode;
 };
+
+// Logos of any shape get the same visual area: height ∝ 1/√ratio, so a wide
+// wordmark and a compact mark read as equally big regardless of file size.
+const LOGO_AREA = 5200; // px² at the front of the ring
 
 export interface HaloReelProps extends Omit<React.ComponentPropsWithoutRef<"div">, "children"> {
   items: HaloReelItem[];
@@ -326,9 +338,28 @@ function WheelCard({
         marginLeft: -width / 2,
         marginTop: -height / 2,
       }}
-      className="absolute overflow-hidden shadow-xl"
+      className="absolute overflow-hidden rounded-2xl"
     >
-      {item.src ? (
+      {item.logo && item.src ? (
+        <div className="flex h-full w-full items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- ring cards transform every frame */}
+          <img
+            src={item.src}
+            alt={decorative ? "" : (item.alt ?? "")}
+            draggable={false}
+            // multiply drops any white box baked into a logo file, so it sits on the page bg
+            className="pointer-events-none select-none object-contain mix-blend-multiply"
+            style={{
+              height: Math.sqrt(LOGO_AREA / (item.ratio ?? 4)) * (width / 220) * (item.scale ?? 1),
+              width: Math.sqrt(LOGO_AREA * (item.ratio ?? 4)) * (width / 220) * (item.scale ?? 1),
+            }}
+          />
+        </div>
+      ) : item.face ? (
+        <div className="flex h-full w-full items-center justify-center" style={{ fontSize: width / 220 + "rem" }}>
+          {item.face}
+        </div>
+      ) : item.src ? (
         // eslint-disable-next-line @next/next/no-img-element -- remote demo images; cards are transformed every frame
         <img
           src={item.src}
@@ -338,10 +369,10 @@ function WheelCard({
         />
       ) : (
         <div
-          className="flex h-full w-full flex-col items-center justify-center gap-1 bg-white p-3 text-center text-foreground"
+          className="flex h-full w-full flex-col items-center justify-center gap-1 p-3 text-center text-foreground"
           style={{ backgroundColor: item.bgColor, color: item.textColor }}
         >
-          {item.title ? <span className="text-2xl font-black leading-none">{item.title}</span> : null}
+          {item.title ? <span className="font-heading text-2xl font-bold leading-none tracking-tight">{item.title}</span> : null}
           {item.subtitle ? <span className="text-[0.6rem] uppercase tracking-[0.2em] opacity-70">{item.subtitle}</span> : null}
         </div>
       )}

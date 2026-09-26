@@ -16,6 +16,7 @@ const LAYERS = [
 // Resting look per tone; both end on the ink fill, so text turns white on hover.
 const TONES = {
   accent: "bg-accent text-white [--edge:color-mix(in_oklab,var(--accent),black_28%)]",
+  coral: "bg-coral text-foreground transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
   amber: "bg-amber text-foreground [--edge:color-mix(in_oklab,var(--amber),black_22%)] transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
 };
 
