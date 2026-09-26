@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka } from "next/font/google";
+import { Fredoka, M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
 
 // Variable font with the width axis, so headings can be stretched wider.
@@ -7,6 +7,13 @@ const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
   axes: ["wdth"],
+});
+
+// Display face for the wordmark only.
+const display = M_PLUS_Rounded_1c({
+  variable: "--font-mplus",
+  subsets: ["latin"],
+  weight: "800",
 });
 
 export const metadata: Metadata = {
@@ -18,7 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fredoka.variable} h-full antialiased`}
+      className={`${fredoka.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
