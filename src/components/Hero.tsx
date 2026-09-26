@@ -1,3 +1,4 @@
+import GrowthEngine from "./growth-engine/GrowthEngine";
 import Highlight from "./Highlight";
 import PixelField from "./PixelField";
 
@@ -8,7 +9,7 @@ export default function Hero() {
   return (
     <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
       <PixelField className="-z-10" />
-      <div className="text-foreground">
+      <div className="relative z-10 text-foreground">
         <h1 className="flex flex-col gap-[0.25em] text-4xl leading-[1.3] font-semibold sm:text-5xl xl:text-6xl">
           <span className={line} style={{ animationDelay: "0.1s" }}>
             <Highlight tone="accent" delay={0.4}>Growth marketing</Highlight> for
@@ -25,8 +26,8 @@ export default function Hero() {
           Reddit, and creator distribution.
         </p>
       </div>
-      {/* Reserved for the upcoming animation. */}
-      <div aria-hidden="true" className="aspect-square w-full" />
+      {/* Spans the right side and reaches in behind the headline on large screens. */}
+      <GrowthEngine className="relative aspect-square w-full lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[72%]" />
     </section>
   );
 }

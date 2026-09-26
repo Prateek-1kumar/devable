@@ -1,0 +1,172 @@
+import { createContext, useContext } from "react";
+import { Vector3 } from "three";
+import { layerY, STACK_TOP } from "./layout";
+
+// The growth engine's timeline: a one-time intro, then signal pulses at
+// random gaps (never a fixed loop). Components read it every frame through
+// useStory(); nothing here re-renders React.
+
+export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+export const easeOutCubic = (x: number) => 1 - (1 - x) ** 3;
+export const easeOutBack = (x: number) => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2;
+export const easeInOut = (x: number) => x * x * (3 - 2 * x);
+/** Frame-rate independent smoothing toward a target. */
+export const damp = (current: number, target: number, lambda: number, dt: number) =>
+  current + (target - current) * (1 - Math.exp(-lambda * dt));
+
+// Intro, in seconds from mount. Plays once.
+export const INTRO = { terminalAt: 0.2, terminalFor: 0.8, layersAt: 1.2, layerFor: 0.6, layerStagger: 0.35, signalAt: 2.8 };
+
+// Phases of every signal run, in seconds from the run's start.
+export const CABLE_FOR = 0.7; // bead travels the cable
+export const CLIMB_FOR = 0.7; // bead climbs the rail
+const CORE_AT = CABLE_FOR + CLIMB_FOR;
+const FLASH_FOR = 0.9;
+const SHEEN_FOR = 0.6;
+const CORE_FOR = 1.2;
+const RIPPLE_FOR = 1.1;
+const TOKEN_AT = 2.4;
+const TOKEN_STAGGER = 0.15;
+export const FLIGHT = 1.3;
+export const BURST = 0.25;
+const LEAD_SPREAD = 0.5;
+const LEAD_FLIGHT = 1.1;
+
+// Idle pulses after the intro.
+const PULSE_GAP: [number, number] = [8, 20];
+export const INTRO_LEADS = 1240;
+const PULSE_LEADS: [number, number] = [6, 38];
+const DOTS = { intro: 6, pulse: 5 }; // few, tiny amber beads
+
+/** When the climbing signal reaches layer i, from the run's start. */
+const litAt = (i: number) => CABLE_FOR + CLIMB_FOR * (layerY(i) / STACK_TOP);
+const between = ([min, max]: [number, number]) => min + Math.random() * (max - min);
+const decay = (dt: number, span: number) => (dt >= 0 && dt < span ? (1 - dt / span) ** 2 : 0);
+const progress = (dt: number, span: number) => (dt >= 0 && dt < span ? dt / span : -1);
+
+type Dot = { token: number; slot: number; delay: number; bend: Vector3 };
+type Run = { at: number; tokens: number[]; leads: number; dots: Dot[]; end: number };
+
+export class Story {
+  private runs: Run[] = [];
+  private settled = 0; // leads from finished runs
+  private nextPulse: number;
+
+  constructor(readonly still: boolean) {
+    const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], INTRO_LEADS, DOTS.intro);
+    this.runs.push(intro);
+    this.nextPulse = intro.end + between(PULSE_GAP);
+  }
+
+  /** Scene time; a still render is pinned to the settled end state. */
+  time(clock: number) {
+    return this.still ? 1e4 : clock;
+  }
+
+  update(t: number) {
+    if (this.still) return;
+    if (t >= this.nextPulse) {
+      const run = makeRun(t, [Math.floor(Math.random() * 4)], Math.round(between(PULSE_LEADS)), DOTS.pulse);
+      this.runs.push(run);
+      this.nextPulse = run.end + between(PULSE_GAP);
+    }
+    for (const run of this.runs) if (t > run.end) this.settled += run.leads;
+    this.runs = this.runs.filter((run) => t <= run.end);
+  }
+
+  terminalIn(t: number) {
+    return clamp01((t - INTRO.terminalAt) / INTRO.terminalFor);
+  }
+  layerIn(i: number, t: number) {
+    return clamp01((t - INTRO.layersAt - i * INTRO.layerStagger) / INTRO.layerFor);
+  }
+  /** 1 once the intro signal has reached layer i; lights stay softly on after. */
+  lit(i: number, t: number) {
+    return t >= INTRO.signalAt + litAt(i) ? 1 : 0;
+  }
+  flash(i: number, t: number) {
+    return this.peak((r) => decay(t - r.at - litAt(i), FLASH_FOR));
+  }
+  sheen(i: number, t: number) {
+    return this.first((r) => progress(t - r.at - litAt(i), SHEEN_FOR));
+  }
+  /** Bead progress along cable + rail (0..1), or -1. */
+  signal(t: number) {
+    return this.first((r) => progress(t - r.at, CABLE_FOR + CLIMB_FOR));
+  }
+  core(t: number) {
+    return this.peak((r) => decay(t - r.at - CORE_AT, CORE_FOR));
+  }
+  ripple(t: number) {
+    return this.first((r) => progress(t - r.at - CORE_AT, RIPPLE_FOR));
+  }
+  gaugeIn(t: number) {
+    return clamp01((t - INTRO.signalAt - CORE_AT) / 0.6);
+  }
+  /** Seconds since token k left its layer, or null when it isn't flying. */
+  tokenAge(k: number, t: number) {
+    for (const run of this.runs) {
+      const slot = run.tokens.indexOf(k);
+      if (slot < 0) continue;
+      const age = t - tokenAt(run, slot);
+      if (age >= 0 && age < FLIGHT + BURST) return age;
+    }
+    return null;
+  }
+  /** Calls back for every lead dot in flight, with its 0..1 progress. */
+  leads(t: number, each: (token: number, bend: Vector3, p: number) => void) {
+    for (const run of this.runs)
+      for (const dot of run.dots) {
+        const p = leadProgress(run, dot, t);
+        if (p > 0 && p < 1) each(dot.token, dot.bend, p);
+      }
+  }
+  /** Leads shown on the gauge: rises as dots arrive. */
+  count(t: number) {
+    let n = this.settled;
+    for (const run of this.runs) {
+      let arrived = 0;
+      for (const dot of run.dots) arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
+      n += (run.leads * arrived) / run.dots.length;
+    }
+    return n;
+  }
+
+  private peak(f: (run: Run) => number) {
+    let v = 0;
+    for (const run of this.runs) v = Math.max(v, f(run));
+    return v;
+  }
+  private first(f: (run: Run) => number) {
+    for (const run of this.runs) {
+      const v = f(run);
+      if (v >= 0) return v;
+    }
+    return -1;
+  }
+}
+
+const tokenAt = (run: Run, slot: number) => run.at + TOKEN_AT + slot * TOKEN_STAGGER;
+const leadProgress = (run: Run, dot: Dot, t: number) =>
+  (t - tokenAt(run, dot.slot) - FLIGHT - dot.delay) / LEAD_FLIGHT;
+
+function makeRun(at: number, tokens: number[], leads: number, dotsPerToken: number): Run {
+  const dots = tokens.flatMap((token, slot) =>
+    Array.from({ length: dotsPerToken }, () => ({
+      token,
+      slot,
+      delay: Math.random() * LEAD_SPREAD,
+      bend: new Vector3((Math.random() - 0.5) * 2.4, 0.6 + Math.random() * 1.2, (Math.random() - 0.5) * 2.4),
+    })),
+  );
+  const end = tokenAt({ at } as Run, tokens.length - 1) + FLIGHT + LEAD_SPREAD + LEAD_FLIGHT;
+  return { at, tokens, leads, dots, end };
+}
+
+export const StoryContext = createContext<Story | null>(null);
+
+export function useStory() {
+  const story = useContext(StoryContext);
+  if (!story) throw new Error("useStory must be used inside the growth engine scene");
+  return story;
+}
