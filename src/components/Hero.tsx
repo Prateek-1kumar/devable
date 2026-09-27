@@ -1,36 +1,39 @@
+import Link from "next/link";
 import ArcButton from "./ArcButton";
 import ChannelParagraph from "./ChannelParagraph";
-import HeroHeadline from "./HeroHeadline";
 import GrowthEngine from "./growth-engine/GrowthEngine";
 
-// Each line rises in with a soft blur.
+// Each block rises in with a soft blur.
 const rise = "animate-fade-up motion-reduce:animate-none";
-const line = `block ${rise}`;
 
 export default function Hero() {
   return (
-    <section className="relative isolate grid min-h-svh items-start gap-12 px-6 pt-36 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr]">
-      <div className="relative z-10 self-center text-foreground">
-        {/* Debossed display headline with a rotating audience pill. */}
-        {/* Same scale as the section headings; line two never wraps. */}
-        <HeroHeadline
-          className="font-heading text-3xl leading-[1.15] font-bold tracking-[-0.03em] text-deboss sm:text-[2.35rem] xl:text-[2.8rem]"
-          lineClassName={rise}
-        />
-        <ChannelParagraph
-          className={`mt-9 max-w-xl text-base leading-relaxed text-foreground/75 sm:text-lg ${line}`}
-          style={{ animationDelay: "0.45s" }}
-        />
-        <div className={`mt-10 flex flex-wrap gap-3 ${rise}`} style={{ animationDelay: "0.7s" }}>
-          <ArcButton href="#contact">
-            Speak with the Team
-          </ArcButton>
-          <ArcButton href="#case-studies" tone="coral">
-            View Case Studies
-          </ArcButton>
+    // The top padding leaves room for the hero-size wordmark, which lives in the Navbar.
+    <section className="relative isolate grid min-h-svh gap-12 px-6 pt-56 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr] lg:pt-80">
+      {/* One story block anchored to the bottom, with "GROWTH" pressed into its spine. */}
+      <div className={`relative z-10 grid max-w-2xl grid-cols-[auto_1fr] gap-x-6 self-end font-heading text-foreground sm:gap-x-8 ${rise}`} style={{ animationDelay: "0.2s" }}>
+        <span aria-hidden="true" className="rotate-180 text-[3.4rem] leading-[0.78] font-bold tracking-[-0.05em] uppercase select-none text-deboss [writing-mode:vertical-rl] sm:text-[4.6rem]">
+          Growth
+        </span>
+        <div>
+          <h1 className="text-3xl leading-[1.05] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
+            You ship the tool.
+            <br />
+            <span className="text-foreground/45">We ship the demand.</span>
+          </h1>
+          <hr className="my-6 border-foreground/15" />
+          <ChannelParagraph className="max-w-md text-base leading-relaxed text-foreground/70 sm:text-lg" />
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <ArcButton href="#contact" tone="coral" sweep={["#ec544b", "#fcb401", "#2a9093", "#f4f2ee"]}>
+              Speak with the team
+            </ArcButton>
+            <Link href="#case-studies" className="text-sm font-semibold tracking-[0.14em] uppercase underline-offset-[6px] hover:underline">
+              Case studies ↗
+            </Link>
+          </div>
         </div>
       </div>
-      {/* Spans the right side and reaches in behind the headline on large screens. */}
+      {/* Spans the right side and reaches in behind the text on large screens. */}
       <GrowthEngine className="relative aspect-square w-full lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[72%]" />
     </section>
   );

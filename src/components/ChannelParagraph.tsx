@@ -23,9 +23,9 @@ function Channel({ index, children }: { index: number; children: ReactNode }) {
 export default function ChannelParagraph({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
     <p className={className} style={style}>
-      We build visibility and pipeline through <Channel index={0}>technical content</Channel>,{" "}
-      <Channel index={1}>organic search</Channel>, <Channel index={1}>AI visibility</Channel>,{" "}
-      <Channel index={2}>Reddit</Channel>, and <Channel index={3}>creator distribution</Channel>.
+      <Channel index={0}>Technical content</Channel>, <Channel index={1}>organic search</Channel>,{" "}
+      <Channel index={1}>AI visibility</Channel>, <Channel index={2}>Reddit</Channel> and{" "}
+      <Channel index={3}>creator distribution</Channel>, run as one engine for AI-native dev tools.
     </p>
   );
 }
