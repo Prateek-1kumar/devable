@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
 // Inline pill that makes a key phrase pop. On load, amber and lime sweep in
-// from the left and the tone's own color settles on top (the same motion as
-// ArcButton). Pass `delay` to stagger several pills. The text starts in the
+// from the left and the tone's own color settles on top. Pass `delay` to
+// stagger several pills. The text starts in the
 // default ink and settles on the tone's text color.
-// Sweep colors are intentionally local, matching ArcButton.
+// Sweep colors are intentionally local.
 const SWEEP = ["var(--amber)", "var(--lime)"];
 const STEP = 0.1; // seconds between layers
 

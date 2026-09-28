@@ -54,7 +54,12 @@ export default function SignalPath() {
     const total = tube.index?.count ?? 0;
     tube.setDrawRange(0, Math.floor((total * revealAt(t)) / 6) * 6);
 
-    if (rail.current) rail.current.scale.y = Math.max(1e-4, easeOutCubic(clamp01((t - RAIL_BUILD.at) / RAIL_BUILD.for)));
+    if (rail.current) {
+      const build = easeOutCubic(clamp01((t - RAIL_BUILD.at) / RAIL_BUILD.for));
+      // Hidden until it starts growing: squashed flat it still shows as a dark disc on the ground.
+      rail.current.visible = build > 0;
+      rail.current.scale.y = Math.max(1e-4, build);
+    }
 
     const s = story.signal(t);
     TRAIN.forEach(({ lag, size }, i) => {
@@ -73,11 +78,13 @@ export default function SignalPath() {
   return (
     <group>
       <mesh geometry={tube} material={m.stone} castShadow receiveShadow>
-        <Outlines thickness={INK_PX} color={p.ink} />
+        {/* angle 0: the outline shares the tube's geometry, so it follows the draw-range reveal
+            (the default builds a creased copy that would show the whole cable from frame one). */}
+        <Outlines thickness={INK_PX} color={p.ink} angle={0} />
       </mesh>
       <Collar at={PORTS.terminal.at} dir={PORTS.terminal.dir} show={(t) => revealAt(t) > 0} />
       <Collar at={PORTS.stack.at} dir={PORTS.stack.dir} show={(t) => revealAt(t) >= 0.98} />
-      <group ref={rail} position={[RAIL.x, 0, RAIL.z]}>
+      <group ref={rail} position={[RAIL.x, 0, RAIL.z]} visible={false}>
         <mesh position={[0, STACK_TOP / 2, 0]} material={m.metal} castShadow>
           <cylinderGeometry args={[0.075, 0.075, STACK_TOP, 20]} />
           <Outlines thickness={1} color={p.ink} />

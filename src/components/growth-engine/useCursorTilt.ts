@@ -9,7 +9,8 @@ const DAMPING = 6.5; // slightly under-damped: a small settling bounce
  * Turns a group a few degrees toward the cursor anywhere on the page, on a
  * spring, so the object feels heavy. Returns the ref for the group.
  */
-export function useCursorTilt({ yaw = 0.14, pitch = 0.05, enabled = true } = {}) {
+// Max turn each way, in radians: yaw ≈ 6.2°, pitch ≈ 2.2°.
+export function useCursorTilt({ yaw = 0.108, pitch = 0.038, enabled = true } = {}) {
   const ref = useRef<Group>(null);
   const target = useRef({ x: 0, y: 0 });
   const spring = useRef({ x: 0, y: 0, vx: 0, vy: 0 });

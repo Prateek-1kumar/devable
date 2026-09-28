@@ -1,5 +1,4 @@
-import Link from "next/link";
-import ArcButton from "./ArcButton";
+import WaveButton from "./WaveButton";
 import ChannelParagraph from "./ChannelParagraph";
 import GrowthEngine from "./growth-engine/GrowthEngine";
 
@@ -28,16 +27,11 @@ export default function Hero() {
           className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
           style={{ animationDelay: "0.25s" }}
         />
-        <div className={`mt-10 flex flex-wrap items-center gap-3 ${rise}`} style={{ animationDelay: "0.4s" }}>
-          <ArcButton href="#contact" sweep={["var(--amber)", "var(--lime)", "var(--accent)"]}>
-            Speak with the team
-          </ArcButton>
-          <Link
-            href="#case-studies"
-            className="rounded-full border border-foreground/15 bg-surface/70 px-5 py-2.5 font-medium tracking-wide shadow-[0_1px_2px_rgb(15_26_20/0.06)] transition-colors hover:border-foreground/30 hover:bg-surface"
-          >
+        <div className={`mt-10 flex flex-wrap items-center gap-4 ${rise}`} style={{ animationDelay: "0.4s" }}>
+          <WaveButton href="#contact">Speak with the team</WaveButton>
+          <WaveButton href="#case-studies" tone="secondary">
             View case studies
-          </Link>
+          </WaveButton>
         </div>
       </div>
       {/* Spans the right side and reaches in behind the text on large screens. */}
