@@ -23,7 +23,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 // ── Beats ───────────────────────────────────────────────────────────────────
 export const BEATS = [
   { label: "Ready", start: 0, jump: 0 },
-  { label: "Baton", start: 0.07, jump: 0.125 },
+  { label: "Baton", start: 0.09, jump: 0.125 },
   { label: "Start", start: 0.19, jump: 0.29 },
   { label: "Sprint", start: 0.335, jump: 0.41 },
   { label: "Distance", start: 0.48, jump: 0.62 },
@@ -258,7 +258,7 @@ type Key = { p: number; leave?: number; t: [number, number, number]; az: number;
 export const KEYS: Key[] = [
   { p: 0, leave: 0.05, t: [2.8, 0.9, 2.6], az: -39, el: 12, dist: 15.9, fov: 22, shift: 0.18, fog: [0.95, 1.5] },
   { p: 0.13, leave: 0.155, t: [3.12, 1.6, 0.87], az: -52, el: 10, dist: 10, fov: 24, shift: 0.21, fog: [1.1, 2.2] },
-  { p: 0.2, leave: 0.245, t: [3.3, 1.82, 1.1], az: -46, el: 2, dist: 5.4, fov: 24, shift: 0.12, fog: [1.3, 3.0] },
+  { p: 0.2, leave: 0.245, t: [3.3, 1.7, 1.1], az: -46, el: 2, dist: 6.6, fov: 24, shift: 0.12, fog: [1.3, 3.0] },
   { p: 0.285, leave: 0.3, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 9.2, fov: 30, shift: 0.09, fog: [1.0, 1.8] },
   { p: 0.325, leave: 0.33, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 15.3, fov: 16, shift: 0.09, fog: [0.9, 1.5] },
   { p: 0.375, t: [2.7, 1.45, 3.26], az: -14, el: 12, dist: 24, fov: 26, shift: 0.22, fog: [0.95, 1.6] },

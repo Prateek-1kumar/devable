@@ -280,8 +280,8 @@ function Annotation() {
       if (k >= 1) {
         const top = curve[curve.length - 1];
         ctx.globalAlpha = 0.6;
-        ctx.font = `500 30px ${MONO}`;
-        ctx.letterSpacing = "4px";
+        ctx.font = `500 20px ${MONO}`; // ~112px wide: fits the 146px top step
+        ctx.letterSpacing = "2px";
         ctx.fillText("PIPELINE", top.x, top.y + 110);
       }
       ctx.restore();

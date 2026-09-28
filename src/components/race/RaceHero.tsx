@@ -147,7 +147,7 @@ export default function RaceHero() {
       flag("devable", p >= 0.12 && p < 0.26);
       flag("aside", p >= 0.43 && p < 0.48);
       flag("cta", p >= 0.95);
-      flag("roll", p >= 0.905);
+      flag("roll", growth(p) > 0); // in step with the monolith display, never "+0%"
       SECTIONS.forEach((s, i) => flag(s.key, mastRise(i, p) >= 0.8));
       if (copy.current && copy.current.inert !== p > 0.09) copy.current.inert = p > 0.09;
       if (cta.current && cta.current.inert !== p < 0.95) cta.current.inert = p < 0.95;
@@ -194,7 +194,7 @@ export default function RaceHero() {
     setProgress(p, cam);
     writeDom(p);
     const tick = (now: number) => {
-      const dt = Math.min((now - lastT) / 1000, 1 / 30);
+      const dt = Math.min(Math.max(0, now - lastT) / 1000, 1 / 30); // first tick can predate kick()
       lastT = now;
       const t = target();
       p = Math.abs(t - p) < 1e-5 ? t : damp(p, t, DAMP.p, dt);
@@ -248,7 +248,6 @@ export default function RaceHero() {
       <div className="relative lg:sticky lg:top-0 lg:h-svh lg:overflow-clip lg:motion-reduce:static lg:motion-reduce:h-auto lg:motion-reduce:min-h-svh">
         {/* Opening copy: server-rendered, fades up and away as the race begins. */}
         <div
-          ref={copy}
           className="relative z-10 px-6 pt-32 pb-10 sm:px-12 lg:absolute lg:inset-y-0 lg:left-0 lg:flex lg:flex-col lg:justify-center lg:px-[8vw] lg:pt-24 lg:pb-0"
           style={{ opacity: `calc(1 - ${OUT})`, transform: `translateY(calc(${OUT} * -24px))` }}
         >
@@ -256,19 +255,22 @@ export default function RaceHero() {
             <h1 className={`text-[clamp(2.6rem,4.6vw,4.4rem)] leading-[1.02] font-normal tracking-[-0.045em] ${rise}`} style={{ animationDelay: "0.1s" }}>
               Growth Marketing for AI&#8209;Native DevTools and Platforms
             </h1>
-            <ChannelParagraph
-              className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
-              style={{ animationDelay: "0.25s" }}
-            />
-            <div className={`mt-10 flex flex-wrap items-center gap-4 ${rise}`} style={{ animationDelay: "0.4s" }}>
-              <WaveButton href="#contact">Speak with the team</WaveButton>
-              <WaveButton href="#case-studies" tone="secondary">
-                View case studies
-              </WaveButton>
+            {/* Only the focusable part goes inert once faded; the H1 stays in the accessibility tree. */}
+            <div ref={copy}>
+              <ChannelParagraph
+                className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
+                style={{ animationDelay: "0.25s" }}
+              />
+              <div className={`mt-10 flex flex-wrap items-center gap-4 ${rise}`} style={{ animationDelay: "0.4s" }}>
+                <WaveButton href="#contact">Speak with the team</WaveButton>
+                <WaveButton href="#case-studies" tone="secondary">
+                  View case studies
+                </WaveButton>
+              </div>
+              <p className={`mt-8 ${MONO} text-foreground/55 lg:motion-safe:hidden ${rise}`} style={{ animationDelay: "0.55s" }}>
+                Sprints spike. Distance compounds. Devable runs both.
+              </p>
             </div>
-            <p className={`mt-8 ${MONO} text-foreground/55 lg:motion-safe:hidden ${rise}`} style={{ animationDelay: "0.55s" }}>
-              Sprints spike. Distance compounds. Devable runs both.
-            </p>
           </div>
         </div>
 
@@ -286,7 +288,7 @@ export default function RaceHero() {
         {/* Page fog: the model dissolves into white behind the copy column, so type always sits on paper. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-[5] hidden lg:block lg:motion-reduce:hidden"
+          className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=0]/race:opacity-100 group-data-[beat=6]/race:opacity-100 lg:block lg:motion-reduce:hidden"
           style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.97) 0%, rgb(255 255 255 / 0.9) 30%, rgb(255 255 255 / 0.55) 43%, rgb(255 255 255 / 0) 56%)" }}
         />
 
@@ -329,13 +331,17 @@ export default function RaceHero() {
               <p className={SUPPORT}>Distance fills the stands. Sprints land harder when they&apos;re already full.</p>
             </Caption>
             <Caption beat={6} kicker="06 · Finish">
-              <p
-                ref={figureEl}
-                className="mt-4 font-heading text-[clamp(4rem,7vw,7rem)] leading-none tracking-[-0.05em] tabular-nums text-foreground opacity-0 transition-opacity duration-500 group-data-[roll=1]/race:opacity-100"
-              >
-                +312%
-              </p>
-              <p className={`mt-2 ${MONO} text-foreground/50`}>pipeline growth</p>
+              <div className="opacity-0 transition-opacity duration-500 group-data-[roll=1]/race:opacity-100">
+                <span className="sr-only">+312%</span>
+                <p
+                  ref={figureEl}
+                  aria-hidden="true"
+                  className="mt-4 font-heading text-[clamp(4rem,7vw,7rem)] leading-none tracking-[-0.05em] tabular-nums text-foreground"
+                >
+                  +312%
+                </p>
+                <p className={`mt-2 ${MONO} text-foreground/50`}>pipeline growth</p>
+              </div>
               <h2 className={`${LINE} mt-6`}>Devable runs both.</h2>
               <p className="mt-3 font-mono text-[12px] uppercase tracking-[0.1em] text-foreground/55">Sprints spike. Distance compounds.</p>
               <div
