@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useLenis } from "lenis/react";
+import type Lenis from "lenis";
 import { clamp01, damp } from "../growth-engine/ease";
 import MissionCopy, { StillExtras } from "./MissionCopy";
 import MissionHud, { type DomNodes } from "./MissionHud";
 import type { Progress } from "./Scene";
-import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, status, theta, velKms } from "./timeline";
+import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, scrollS, status, storyP, theta, velKms } from "./timeline";
 
 // Mission DVB-01, the pinned hero: a tall section whose sticky frame holds the
 // copy, the 3D world and its instruments. One smoothed scroll progress (0..1)
@@ -24,7 +26,9 @@ const subscribe = (onChange: () => void) => {
   return () => mq.removeEventListener("change", onChange);
 };
 
-const SMOOTHING = 4.5;
+// Lenis already smooths the scroll; this only absorbs frame jitter on top of it.
+const SMOOTHING = 20;
+const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 const write = (el: HTMLElement | null | undefined, s: string) => {
   if (el && el.textContent !== s) el.textContent = s;
 };
@@ -43,6 +47,11 @@ export default function MissionHero() {
   const [ready, setReady] = useState(false);
   const [caption, setCaption] = useState(0);
   const [beat, setBeat] = useState(0);
+  const lenis = useLenis();
+  const lenisRef = useRef<Lenis | undefined>(undefined);
+  useEffect(() => {
+    lenisRef.current = lenis;
+  }, [lenis]);
 
   useEffect(() => {
     const el = section.current;
@@ -66,13 +75,14 @@ export default function MissionHero() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     window.addEventListener("resize", measure);
-    const target = () => clamp01((window.scrollY - box.top) / box.span);
+    // The section scroll fraction, read from Lenis's animated scroll when it runs.
+    const scrolled = () => clamp01(((lenisRef.current?.animatedScroll ?? window.scrollY) - box.top) / box.span);
     const pr = progress.current;
-    pr.shown = target(); // a mid-page reload lands on its frame, never replays
+    pr.shown = storyP(scrolled()); // a mid-page reload lands on its frame, never replays
     let beatNow = -1;
     let captionNow = -2;
 
-    const writeDom = (p: number) => {
+    const writeDom = (p: number, s: number) => {
       const n = dom.current;
       const h = (key: string) => n.get(key);
       const r = craftR(p);
@@ -88,7 +98,7 @@ export default function MissionHero() {
       flag(h("altField"), "data-on", p >= 0.125);
       flag(h("velField"), "data-on", p >= 0.125);
       flag(h("pipeField"), "data-on", p >= 0.685);
-      h("rail")?.style.setProperty("--p", p.toFixed(4));
+      h("rail")?.style.setProperty("--p", s.toFixed(4)); // the rail tracks scroll linearly
       for (let i = 0; i < 4; i++) {
         write(h(`go${i}`), arrayGo(p, i) ? "GO" : "—");
         flag(h(`go${i}`), "data-go", arrayGo(p, i));
@@ -109,10 +119,11 @@ export default function MissionHero() {
       raf = requestAnimationFrame(tick);
       const dt = Math.min((now - last) / 1000, 1 / 30);
       last = now;
-      pr.shown = damp(pr.shown, target(), SMOOTHING, dt);
-      writeDom(pr.shown);
+      const s = scrolled();
+      pr.shown = damp(pr.shown, storyP(s), SMOOTHING, dt);
+      writeDom(pr.shown, s);
     };
-    writeDom(pr.shown);
+    writeDom(pr.shown, scrolled());
     raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
@@ -123,7 +134,11 @@ export default function MissionHero() {
 
   const jump = useCallback((at: number) => {
     const { top, span: s } = span.current;
-    window.scrollTo({ top: top + at * s, behavior: "smooth" });
+    const to = top + scrollS(at) * s;
+    const l = lenisRef.current;
+    if (!l) return window.scrollTo({ top: to, behavior: "smooth" });
+    const ds = Math.abs(to - l.animatedScroll) / s;
+    l.scrollTo(to, { duration: 1.1 + 1.3 * Math.min(1, ds / 0.35), easing: easeInOutCubic });
   }, []);
   const onReady = useCallback(() => setReady(true), []);
   const bind = useCallback(
@@ -135,7 +150,7 @@ export default function MissionHero() {
   );
 
   return (
-    <section ref={section} aria-labelledby="hero-title" className="relative motion-safe:lg:h-[500svh]">
+    <section ref={section} aria-labelledby="hero-title" className="relative motion-safe:lg:h-[1000svh]">
       <a
         href="#trusted"
         className="sr-only focus:not-sr-only focus:fixed focus:top-24 focus:left-[8vw] focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:font-mono focus:text-xs"
@@ -149,7 +164,7 @@ export default function MissionHero() {
           className="relative -mx-6 aspect-square w-[calc(100%+3rem)] transition-opacity duration-700 sm:-mx-12 sm:w-[calc(100%+6rem)] lg:absolute lg:inset-0 lg:mx-0 lg:aspect-auto lg:w-auto"
           style={{ opacity: ready ? 1 : 0 }}
         >
-          <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} onReady={onReady} />
+          <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={beat <= 2} onReady={onReady} />
         </div>
         <StillExtras className="relative z-10 motion-safe:lg:hidden" />
         {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}

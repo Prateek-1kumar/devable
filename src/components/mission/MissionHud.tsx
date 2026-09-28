@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { channelFocus } from "../growth-engine/channelFocus";
 import { CHANNELS } from "../growth-engine/channels";
-import { BEATS, type LabelId } from "./timeline";
+import { BEATS, scrollS, type LabelId } from "./timeline";
 
 // The mission's instrument layer: a telemetry strip under the navbar, the
 // clickable flight plan along the bottom and the drafting labels that the
@@ -107,7 +107,7 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
           <div className="absolute inset-0 origin-left bg-forest [transform:scaleX(var(--p))]" />
           <div className="absolute top-[-4px] left-[calc(var(--p)*100%)] h-[9px] w-px bg-forest" />
           {BEATS.map((b) => (
-            <span key={b.label} aria-hidden="true" className="absolute top-0 h-[5px] w-px bg-foreground/25" style={{ left: `${b.start * 100}%` }} />
+            <span key={b.label} aria-hidden="true" className="absolute top-0 h-[5px] w-px bg-foreground/25" style={{ left: `${scrollS(b.start) * 100}%` }} />
           ))}
         </div>
         <div className="relative mt-2.5 h-3">
@@ -121,7 +121,7 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
               className={`absolute top-0 ${MONO} cursor-pointer text-[10px] leading-3 transition-colors hover:text-foreground/80 focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-forest ${
                 i === beat ? "text-foreground/80" : "text-foreground/35"
               }`}
-              style={{ left: `${b.start * 100}%` }}
+              style={{ left: `${scrollS(b.start) * 100}%` }}
             >
               {b.label}
             </button>

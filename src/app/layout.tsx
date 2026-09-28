@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Instrument_Sans } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import SmoothScroll from "@/components/SmoothScroll";
 import "./globals.css";
 
 // The site's one typeface: headings and body. Variable, with the width axis.
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${instrument.variable} ${GeistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <SmoothScroll />
         <Navbar />
         {children}
       </body>

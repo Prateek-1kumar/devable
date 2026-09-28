@@ -34,7 +34,7 @@ export default function LandedPill({ children, below }: { children: ReactNode; b
       {/* On main the dot field spanned two screens, which kept its cluster around the pill. Here it spans one,
           so it is masked out above the Stats row (the host stays the whole screen, so the cursor reveal still works). */}
       <PixelField className="z-0 [mask-image:linear-gradient(to_bottom,#000_calc(50%_+_13vw_-_15vh_-_6rem),transparent_calc(50%_+_13vw_-_15vh))]" />
-      <section className="relative h-svh">
+      <section id="case-studies" className="relative h-svh">
         <div aria-hidden="true" className="absolute z-0 bg-surface" style={{ ...BOX, borderRadius: RADIUS }} />
         <div className="absolute flex items-center justify-center px-[6vw] text-center" style={BOX}>
           {children}

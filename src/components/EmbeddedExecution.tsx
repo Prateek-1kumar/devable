@@ -3,7 +3,7 @@ import ClientProof from "./ClientProof";
 /** Embedded execution: who we are on the left, client proof on the right. */
 export default function EmbeddedExecution() {
   return (
-    <section className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2 lg:px-20 xl:px-28">
+    <section id="contact" className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2 lg:px-20 xl:px-28">
       <div>
         {/* Dark pill, then an amber dot beside a coral pill; the live badge matches the pill height. */}
         <h2 className="flex flex-col items-start gap-[0.12em] font-heading text-2xl leading-none font-bold tracking-[-0.03em] whitespace-nowrap sm:text-3xl xl:text-4xl">

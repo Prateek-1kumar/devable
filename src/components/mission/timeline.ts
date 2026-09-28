@@ -40,7 +40,7 @@ export const CAPTION_WINDOWS: { id: number; from: number; to: number }[] = [
   { id: 0, from: -1, to: 0.085 },
   { id: 2, from: 0.13, to: 0.255 },
   { id: 3, from: 0.275, to: 0.395 },
-  { id: 4, from: 0.45, to: 0.545 },
+  { id: 4, from: 0.43, to: 0.545 },
   { id: 5, from: 0.625, to: 0.745 },
   { id: 6, from: 0.765, to: 0.85 },
   { id: 7, from: 0.87, to: 2 },
@@ -64,6 +64,39 @@ export function captionAt(p: number, prev = -2) {
   return -1;
 }
 
+// ── Scroll pacing ────────────────────────────────────────────────────────
+// The story keeps its p numbers; only the scroll → story mapping is shaped. Piecewise-linear
+// knots [s, p]: each beat gets 850–1780px of travel at a 900px viewport, the count and the
+// ignition dwell, and the caption-less camera moves (the close-up swoop, the pull-back) run fast.
+const PACE: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [0.075, 0.1],
+  [0.105, 0.12],
+  [0.125, 0.13],
+  [0.215, 0.26],
+  [0.345, 0.4],
+  [0.37, 0.43],
+  [0.5, 0.54],
+  [0.54, 0.625],
+  [0.72, 0.745],
+  [0.845, 0.85],
+  [0.965, 0.97],
+  [1, 1],
+];
+function piecewise(x: number, from: 0 | 1) {
+  const to = from === 0 ? 1 : 0;
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let i = 0;
+  while (i < PACE.length - 2 && x > PACE[i + 1][from]) i++;
+  const [a, b] = [PACE[i], PACE[i + 1]];
+  return a[to] + ((b[to] - a[to]) * (x - a[from])) / (b[from] - a[from]);
+}
+/** Story progress p for a section scroll fraction s. */
+export const storyP = (s: number) => piecewise(s, 0);
+/** The section scroll fraction s where the story reaches p. */
+export const scrollS = (p: number) => piecewise(p, 1);
+
 // ── Craft kinematics ─────────────────────────────────────────────────────
 /** Exploded lift of module + arrays on the pad (1 → 0). */
 export const explodeModule = (p: number) => 1 - easeOutCubic(seg(p, 0.02, 0.05));
@@ -77,7 +110,7 @@ export const latchAt = (i: number) => 0.505 + 0.008 * i;
 export const hingeAngle = (p: number, i: number) => (Math.PI / 2) * easeOutBack(seg(p, latchAt(i) - 0.03, latchAt(i)));
 export const latched = (p: number, i: number) => p >= latchAt(i);
 
-export const vehicleScale = (p: number) => (p < 0.56 ? 1 - 0.4 * eio(seg(p, 0.24, 0.36)) : 0.6 + 1.2 * eio(seg(p, 0.56, 0.64)));
+export const vehicleScale = (p: number) => (p < 0.56 ? 1 - 0.4 * eio(seg(p, 0.24, 0.36)) : 0.6 + 1.8 * eio(seg(p, 0.56, 0.64)));
 
 /** Height added to MODULE_Y0 during the vertical rise: a short climb, so the path reads as a gravity turn, not an "L". */
 export const riseY = (p: number) => 1.2 * seg(p, 0.125, 0.26) ** 3;
@@ -312,4 +345,15 @@ if (process.env.NODE_ENV !== "production") {
     return 2;
   });
   console.assert(firstAt.every((v, k) => k === 0 || v > firstAt[k - 1]), "mission: contact order", firstAt);
+  console.assert(
+    PACE.every((k, i) => i === 0 || (k[0] > PACE[i - 1][0] && k[1] > PACE[i - 1][1])),
+    "mission: scroll pacing must be monotone",
+  );
+  let roundTrip = 0;
+  for (let s = 0; s <= 1.0000001; s += 0.001) roundTrip = Math.max(roundTrip, Math.abs(scrollS(storyP(s)) - s));
+  console.assert(roundTrip < 1e-6, "mission: storyP/scrollS round trip", roundTrip);
+  console.assert(
+    BEATS.every((b) => Math.abs(storyP(scrollS(b.land)) - b.land) < 1e-9),
+    "mission: beat jumps must land on their p",
+  );
 }

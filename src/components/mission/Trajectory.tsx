@@ -1,18 +1,18 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Line, Outlines } from "@react-three/drei";
-import { Color, LineCurve3, TubeGeometry, Vector3, type Mesh } from "three";
+import { Line } from "@react-three/drei";
+import { BufferAttribute, BufferGeometry, Color, LineCurve3, Quaternion, TubeGeometry, Vector3, type Group, type Mesh } from "three";
 import type { Line2 } from "three-stdlib";
-import { palette } from "../growth-engine/palette";
+import { glowFromWithin } from "../growth-engine/palette";
+import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
-import { R0, seg, windowed } from "./timeline";
+import { clamp01, R0, seg, windowed } from "./timeline";
 import { BELL_Y, craftPosition, ghostImpactFrame, ghostPoint, polar } from "./world";
 
-// The paths: the contrail off the pad, the dashed plan, the solid flown path,
-// the colour spiral of the compounding orbit, and the suborbital "launch
-// spike" ghost that falls back to the ground.
+// The paths: the contrail off the pad, the dashed plan, the forest flown path,
+// the thickening colour tube of the compounding orbit, and the coral
+// suborbital "launch spike" ghost that falls back to the ground.
 
-const INK = "#16191d";
 const TRAIL_TOP = 1.4;
 const TRAIL_SEGS = 32;
 const TRAIL_RADIAL = 24;
@@ -20,24 +20,85 @@ const TRAIL_RADIAL = 24;
 // the current lap, so the first can step aside while the correction dips below the plan.
 const FLOWN = { from: 0.125, to: 0.745, n: 1030 };
 const LAP = { from: 0.745, to: 0.85, n: 260 };
-const SPIRAL = { from: 0.85, to: 0.97, n: 400 };
+const SPIRAL = { from: 0.85, to: 0.97, n: 400, radial: 12 };
 const GRADIENT = ["#4f46e5", "#0ea5e9", "#10b981", "#f5b301"].map((c) => new Color(c));
+const FOREST = new Color("#0c3b29");
+const AMBER = new Color("#fcb401");
+const CORAL = "#ec544b";
+/** Spiral tube radius along its length: thin where the orbit starts, thick where it has compounded. */
+const tubeR = (u: number) => 0.1 + 0.4 * u ** 1.6;
 
 function contrail() {
   const g = new TubeGeometry(new LineCurve3(new Vector3(0, BELL_Y, 0), new Vector3(0, TRAIL_TOP, 0)), TRAIL_SEGS, 0.07, TRAIL_RADIAL, false);
   // Taper: wide where it billows off the pad, thin where the vehicle climbs out of it.
   const pos = g.attributes.position;
+  const colors = new Float32Array(pos.count * 4);
+  const [bottom, top, c] = [new Color("#ffffff"), new Color("#e8ecea"), new Color()];
   for (let i = 0; i < pos.count; i++) {
-    const j = Math.floor(i / (TRAIL_RADIAL + 1));
-    const k = 1 + 1.8 * (1 - j / TRAIL_SEGS) ** 2;
+    const u = Math.floor(i / (TRAIL_RADIAL + 1)) / TRAIL_SEGS;
+    const k = 1 + 1.8 * (1 - u) ** 2;
     pos.setX(i, pos.getX(i) * k);
     pos.setZ(i, pos.getZ(i) * k);
+    c.lerpColors(bottom, top, u).toArray(colors, i * 4);
+    colors[i * 4 + 3] = 0.95 * (1 - u) ** 1.2;
   }
+  g.setAttribute("color", new BufferAttribute(colors, 4));
   g.computeVertexNormals();
   return g;
 }
 
 const samples = (from: number, to: number, n: number) => Array.from({ length: n }, (_, i) => craftPosition(from + ((to - from) * i) / (n - 1)));
+
+/** A tube through the spiral samples (one ring per sample, so its reveal matches the craft), tapered and colour-graded. */
+function spiralTube(pts: Vector3[]) {
+  const { radial } = SPIRAL;
+  const n = pts.length;
+  const pos = new Float32Array(n * (radial + 1) * 3);
+  const col = new Float32Array(n * (radial + 1) * 3);
+  const nor = new Float32Array(n * (radial + 1) * 3);
+  const [t, b, off, c] = [new Vector3(), new Vector3(), new Vector3(), new Color()];
+  const Z = new Vector3(0, 0, 1); // the mission plane is XY
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1);
+    t.subVectors(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]).normalize();
+    b.crossVectors(t, Z).normalize();
+    const g = u * (GRADIENT.length - 1);
+    const j = Math.min(GRADIENT.length - 2, Math.floor(g));
+    c.lerpColors(GRADIENT[j], GRADIENT[j + 1], g - j);
+    for (let k = 0; k <= radial; k++) {
+      const a = (k / radial) * Math.PI * 2;
+      off.copy(Z).multiplyScalar(Math.cos(a)).addScaledVector(b, Math.sin(a));
+      const at = (i * (radial + 1) + k) * 3;
+      off.toArray(nor, at);
+      off.multiplyScalar(tubeR(u)).add(pts[i]).toArray(pos, at);
+      c.toArray(col, at);
+    }
+  }
+  const index: number[] = [];
+  for (let i = 0; i < n - 1; i++)
+    for (let k = 0; k < radial; k++) {
+      const a = i * (radial + 1) + k;
+      const d = a + radial + 1;
+      index.push(a, a + 1, d, d, a + 1, d + 1); // counter-clockwise seen from outside
+    }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(pos, 3));
+  g.setAttribute("normal", new BufferAttribute(nor, 3));
+  g.setAttribute("color", new BufferAttribute(col, 3));
+  g.setIndex(index);
+  g.setDrawRange(0, 0);
+  return g;
+}
+
+function drawScorch(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, "rgba(12,59,41,0.25)");
+  g.addColorStop(1, "rgba(12,59,41,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
 
 /** Reveals the first `n` segments of a Line2; hides it when there are none. */
 function reveal(line: Line2 | null, n: number) {
@@ -49,14 +110,15 @@ function reveal(line: Line2 | null, n: number) {
 
 export default function Trajectory() {
   const frame = useMission();
-  const slate = palette().slate;
   const trail = useRef<Mesh>(null);
   const plan = useRef<Line2>(null);
   const flown = useRef<Line2>(null);
   const lap = useRef<Line2>(null);
-  const spiral = useRef<Line2>(null);
+  const spiral = useRef<Mesh>(null);
+  const head = useRef<Mesh>(null);
   const ghost = useRef<Line2>(null);
   const cross = useRef<Line2>(null);
+  const scorch = useRef<Group>(null);
 
   const trailGeometry = useMemo(() => contrail(), []);
   const planPts = useMemo(
@@ -66,25 +128,22 @@ export default function Trajectory() {
   const flownPts = useMemo(() => [new Vector3(0, TRAIL_TOP, 0), ...samples(FLOWN.from, FLOWN.to, FLOWN.n)], []);
   const lapPts = useMemo(() => samples(LAP.from, LAP.to, LAP.n), []);
   const spiralPts = useMemo(() => samples(SPIRAL.from, SPIRAL.to, SPIRAL.n), []);
-  const spiralColors = useMemo(
-    () =>
-      spiralPts.map((_, i) => {
-        const u = (i / (SPIRAL.n - 1)) * (GRADIENT.length - 1);
-        const j = Math.min(GRADIENT.length - 2, Math.floor(u));
-        return new Color().lerpColors(GRADIENT[j], GRADIENT[j + 1], u - j);
-      }),
-    [spiralPts],
-  );
+  const tube = useMemo(() => spiralTube(spiralPts), [spiralPts]);
   const ghostPts = useMemo(() => Array.from({ length: 120 }, (_, i) => ghostPoint(i / 119)), []);
-  const crossPts = useMemo(() => {
-    const { at, along, across } = ghostImpactFrame();
+  const impact = useMemo(() => {
+    const { at, n, along, across } = ghostImpactFrame();
     const d1 = along.clone().add(across).normalize().multiplyScalar(0.3);
     const d2 = along.clone().sub(across).normalize().multiplyScalar(0.3);
-    return [at.clone().sub(d1), at.clone().add(d1), at.clone().sub(d2), at.clone().add(d2)];
+    return {
+      cross: [at.clone().sub(d1), at.clone().add(d1), at.clone().sub(d2), at.clone().add(d2)],
+      at: at.clone().addScaledVector(n, 0.004),
+      quat: new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), n),
+    };
   }, []);
+  const scorchTex = useCanvasTexture(256, 256, drawScorch);
 
   useLayoutEffect(() => {
-    [plan, flown, lap, spiral, ghost].forEach((l) => reveal(l.current, 0));
+    [plan, flown, lap, ghost].forEach((l) => reveal(l.current, 0));
     if (cross.current) cross.current.visible = false;
   }, []);
 
@@ -105,7 +164,6 @@ export default function Trajectory() {
         const bell = frame.craft.y - 2.01 * s; // bell exit, world y
         const k = Math.round(TRAIL_SEGS * Math.min(1, Math.max(0, (bell - BELL_Y) / (TRAIL_TOP - BELL_Y))));
         tr.geometry.setDrawRange(0, k * TRAIL_RADIAL * 6);
-        // It widens as it drifts, then thins away to a hairline (cutting it from the bottom left a floating open cup).
         const widen = (1 + 0.6 * seg(p, 0.24, 0.34)) * (1 - 0.97 * seg(p, 0.27, 0.34));
         tr.scale.set(widen, 1, widen);
       }
@@ -118,6 +176,10 @@ export default function Trajectory() {
     // Flown path: its head is the craft.
     reveal(flown.current, p <= FLOWN.from ? 0 : 1 + (FLOWN.n - 1) * seg(p, FLOWN.from, FLOWN.to));
     reveal(lap.current, (LAP.n - 1) * seg(p, LAP.from, LAP.to));
+    // Below plan, the current lap turns amber in proportion to the residual, and returns to forest with the burn.
+    // (Eased, so the lap reads amber early instead of passing through a muddy olive.)
+    const off = p >= 0.785 && p < 0.85 ? clamp01((R0 - frame.r) / 0.45) : 0;
+    if (lap.current) lap.current.material.color.lerpColors(FOREST, AMBER, off * off * (3 - 2 * off));
     // During the close-up the trail behind the craft would cut across the copy: it recedes, then returns with the pull-back.
     const recede = 1 - windowed(p, 0.425, 0.45, 0.565, 0.6);
     // Through the correction the earlier laps step aside, so the dashed plan is the reference the current lap dips under.
@@ -129,31 +191,71 @@ export default function Trajectory() {
     };
     fadeTo(flown.current, earlier);
     fadeTo(plan.current, recede);
-    reveal(spiral.current, (SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
+
+    // Spiral: the tube grows ring by ring behind the craft, a white bead at its head.
+    const n = Math.floor((SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
+    const sp = spiral.current;
+    if (sp) {
+      sp.visible = n > 0;
+      sp.geometry.setDrawRange(0, n * SPIRAL.radial * 6);
+    }
+    const hd = head.current;
+    if (hd) {
+      hd.visible = n > 0 && p < 0.97;
+      if (hd.visible) {
+        hd.position.copy(spiralPts[n]);
+        hd.scale.setScalar(1.6 * tubeR(n / (SPIRAL.n - 1)));
+      }
+    }
 
     // The launch spike: a suborbital arc that falls back, marked where it lands.
     const fade = 1 - seg(p, 0.56, 0.62);
     reveal(ghost.current, p < 0.3 || p >= 0.62 ? 0 : 119 * seg(p, 0.3, 0.37));
-    if (ghost.current) ghost.current.material.opacity = 0.35 * fade;
+    if (ghost.current) ghost.current.material.opacity = 0.7 * fade;
     dash(ghost.current);
+    const hit = fade * windowed(p, 0.37, 0.375, 2, 3);
     if (cross.current) {
       cross.current.visible = p >= 0.37 && p < 0.62;
-      cross.current.material.opacity = 0.6 * fade * windowed(p, 0.37, 0.375, 2, 3);
+      cross.current.material.opacity = 0.9 * hit;
+    }
+    if (scorch.current) {
+      scorch.current.visible = p >= 0.37 && p < 0.62;
+      scorch.current.scale.setScalar(Math.max(0.01, hit));
     }
   });
 
   return (
     <group>
       <mesh ref={trail} geometry={trailGeometry} visible={false}>
-        <meshStandardMaterial color="#f7f8f6" roughness={1} emissive="#ffffff" emissiveIntensity={0.5} />
-        <Outlines thickness={1} color={slate} angle={0} />
+        <meshStandardMaterial vertexColors transparent depthWrite={false} roughness={1} emissive="#ffffff" emissiveIntensity={0.35} />
       </mesh>
-      <Line ref={plan} points={planPts} color="#b9bdba" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
-      <Line ref={flown} points={flownPts} color="#4a4f4c" lineWidth={1.25} renderOrder={2} transparent />
-      <Line ref={lap} points={lapPts} color="#4a4f4c" lineWidth={1.25} renderOrder={2} transparent />
-      <Line ref={spiral} points={spiralPts} vertexColors={spiralColors} lineWidth={2.4} renderOrder={3} />
-      <Line ref={ghost} points={ghostPts} color={INK} lineWidth={1} dashed dashSize={0.05} gapSize={0.04} transparent opacity={0.35} />
-      <Line ref={cross} points={crossPts} segments color={INK} lineWidth={1.25} transparent opacity={0} />
+      <Line ref={plan} points={planPts} color="#a9b3ad" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
+      <Line ref={flown} points={flownPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
+      <Line ref={lap} points={lapPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
+      <mesh ref={spiral} geometry={tube} visible={false} frustumCulled={false}>
+        <meshPhysicalMaterial
+          ref={(m) => {
+            if (m) glowFromWithin(m);
+          }}
+          vertexColors
+          color="#ffffff"
+          roughness={0.3}
+          clearcoat={0.6}
+          clearcoatRoughness={0.15}
+        />
+      </mesh>
+      <mesh ref={head} visible={false}>
+        <sphereGeometry args={[1, 24, 16]} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} />
+      </mesh>
+      <Line ref={ghost} points={ghostPts} color={CORAL} lineWidth={1.25} dashed dashSize={0.05} gapSize={0.04} transparent opacity={0.7} />
+      <Line ref={cross} points={impact.cross} segments color={CORAL} lineWidth={1.5} transparent opacity={0} />
+      <group ref={scorch} position={impact.at} quaternion={impact.quat} visible={false}>
+        <mesh>
+          <circleGeometry args={[0.35, 48]} />
+          <meshBasicMaterial map={scorchTex.texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+        </mesh>
+      </group>
     </group>
   );
 }

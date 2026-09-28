@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { Vector3, type PerspectiveCamera } from "three";
 import { channelFocus } from "../growth-engine/channelFocus";
 import { FrameContext, MissionFrame, useMission } from "./frame";
@@ -10,7 +10,7 @@ import Stations from "./Stations";
 import { CAMERA_KEYS, explodeCapsule, KARMAN, LABEL_IDS, labelOpacity, R0, STILL_SQUARE, type LabelId } from "./timeline";
 import Trajectory from "./Trajectory";
 import Vehicle from "./Vehicle";
-import { cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, polar } from "./world";
+import { cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar } from "./world";
 
 export type Progress = { shown: number };
 
@@ -23,11 +23,13 @@ type Props = {
   progress: RefObject<Progress>;
   /** Projected label nodes in the overlay (pinned mode only). */
   labels?: RefObject<Map<string, HTMLElement>>;
+  /** Mount the soft contact shadow under the pad (only while the pad is on screen). */
+  padShadows?: boolean;
   onReady?: () => void;
 };
 
 /** Mission DVB-01: the pinned hero's 3D world. */
-export default function Scene({ still, active, progress, labels, onReady }: Props) {
+export default function Scene({ still, active, progress, labels, padShadows = false, onReady }: Props) {
   return (
     <Canvas
       flat
@@ -37,12 +39,12 @@ export default function Scene({ still, active, progress, labels, onReady }: Prop
       camera={{ fov: 22, near: 0.05, far: 2000, position: [6.95, 3.31, 12.03] }}
       onCreated={() => onReady?.()}
     >
-      <Mission still={still} progress={progress} labels={labels} />
+      <Mission still={still} progress={progress} labels={labels} padShadows={padShadows && !still} />
     </Canvas>
   );
 }
 
-function Mission({ still, progress, labels }: Omit<Props, "active" | "onReady">) {
+function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" | "onReady">) {
   const [frame] = useState(() => new MissionFrame());
   return (
     <FrameContext.Provider value={frame}>
@@ -50,24 +52,29 @@ function Mission({ still, progress, labels }: Omit<Props, "active" | "onReady">)
       <CameraRig />
       {still && <FocusInvalidate />}
 
-      {/* Soft window light from the upper left, a neutral fill, and the studio environment for the gloss. */}
-      <hemisphereLight args={["#ffffff", "#e9ece9", 0.8]} />
+      {/* Studio light: a soft sky, a shadow-casting key from the upper left, a cool rim from behind,
+          and an environment of softboxes for the gloss, the clearcoat streaks and the warm metal. */}
+      <hemisphereLight args={["#ffffff", "#e3ece6", 0.75]} />
       <directionalLight
         castShadow
         position={[-6, 10, 8]}
-        intensity={1.3}
-        shadow-mapSize={[1024, 1024]}
-        shadow-radius={4}
+        intensity={1.35}
+        shadow-mapSize={[2048, 2048]}
+        shadow-radius={6}
         shadow-bias={-0.0005}
         shadow-normalBias={0.02}
       >
-        <orthographicCamera attach="shadow-camera" args={[-4, 4, 4, -4, 1, 30]} />
+        <orthographicCamera attach="shadow-camera" args={[-3, 3, 3, -3, 1, 30]} />
       </directionalLight>
+      <directionalLight position={[8, 4, -10]} intensity={0.6} color="#eaf6ff" />
       <Environment resolution={128} frames={1}>
         <Lightformer form="rect" intensity={1.2} position={[-4, 5, 4]} scale={[8, 4, 1]} target={[0, 0, 0]} />
         <Lightformer form="rect" intensity={0.5} position={[5, 3, -3]} scale={[6, 3, 1]} target={[0, 0, 0]} />
         <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
+        <Lightformer form="rect" intensity={0.9} position={[0, 3, -9]} scale={[12, 3, 1]} target={[0, 0, 0]} />
+        <Lightformer form="rect" intensity={0.3} color="#ffe7c7" position={[6, -2, 4]} scale={[4, 2, 1]} target={[0, 0, 0]} />
       </Environment>
+      {padShadows && <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.4} far={3.5} opacity={0.3} resolution={1024} color="#0c3b29" />}
 
       <Planet />
       <LaunchSite />
