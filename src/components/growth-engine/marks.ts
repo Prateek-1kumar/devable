@@ -54,3 +54,44 @@ export function paintMark(ctx: CanvasRenderingContext2D, mark: Mark) {
   ctx.fillRect(12, 9.5, 12, 5); // crossbar
   ctx.restore();
 }
+
+/**
+ * The Devable mark's striped "D" (proportions from public/brand/devable-mark.png)
+ * on a transparent canvas of width w. `stripes` colors the four stripes, top → bottom.
+ */
+export function drawMark(ctx: CanvasRenderingContext2D, w: number, stripes: readonly string[] = ["#fff", "#fff", "#fff", "#fff"]) {
+  const s = w / 512;
+  const [left, top, bottom, bend] = [110 * s, 103 * s, 408 * s, 265 * s];
+  const rx = 150 * s;
+  const ry = (bottom - top) / 2;
+  ctx.save(); // repaints reuse the context, so don't let the clip stack up
+  // The D: a flat left half and a rounded right half.
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(bend, top);
+  ctx.ellipse(bend, top + ry, rx, ry, 0, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(left, bottom);
+  ctx.closePath();
+  ctx.clip();
+  // Four equal stripes with three gaps a third of their height.
+  const stripe = (bottom - top) / (4 + 3 / 3);
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = stripes[i];
+    ctx.fillRect(left, top + i * stripe * (4 / 3), w, stripe);
+  }
+  ctx.restore();
+}
+
+/** A platform badge: a white disc with the mark in its brand colors. */
+export function drawBadge(ctx: CanvasRenderingContext2D, w: number, h: number, mark: Mark) {
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
+  ctx.fill();
+  const s = (w * MARK_STYLE[mark].fit) / 24;
+  ctx.save(); // repaints reuse the context, so don't let the transform stack up
+  ctx.translate(w / 2 - 12 * s, h / 2 - 12 * s);
+  ctx.scale(s, s);
+  paintMark(ctx, mark);
+  ctx.restore();
+}

@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Line, RoundedBox } from "@react-three/drei";
 import { Color, Object3D, Vector3, type InstancedMesh, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
 import type { LineSegments2 } from "three-stdlib";
+import { drawMark } from "./marks";
 import { useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
@@ -63,31 +64,12 @@ function layout() {
   return { pins, segments, vias };
 }
 
-/** The mark's striped "D" (proportions from public/brand/devable-mark.png), white on transparent. */
-function drawMark(ctx: CanvasRenderingContext2D, w: number) {
-  const s = w / 512;
-  const [left, top, bottom, bend] = [110 * s, 103 * s, 408 * s, 265 * s];
-  const rx = 150 * s;
-  const ry = (bottom - top) / 2;
-  ctx.save(); // repaints reuse the context, so don't let the clip stack up
-  // The D: a flat left half and a rounded right half.
-  ctx.beginPath();
-  ctx.moveTo(left, top);
-  ctx.lineTo(bend, top);
-  ctx.ellipse(bend, top + ry, rx, ry, 0, -Math.PI / 2, Math.PI / 2);
-  ctx.lineTo(left, bottom);
-  ctx.closePath();
-  ctx.clip();
-  // Four equal stripes with three gaps a third of their height.
-  const stripe = (bottom - top) / (4 + 3 / 3);
-  ctx.fillStyle = "#ffffff";
-  for (let i = 0; i < 4; i++) ctx.fillRect(left, top + i * stripe * (4 / 3), w, stripe);
-  ctx.restore();
-}
+/** The mark's striped "D", white on transparent (useCanvasTexture's draw signature). */
+const drawWhiteMark = (ctx: CanvasRenderingContext2D, w: number) => drawMark(ctx, w);
 
 export default function EngineCore() {
   const story = useStory();
-  const mark = useCanvasTexture(1024, 1024, drawMark);
+  const mark = useCanvasTexture(1024, 1024, drawWhiteMark);
   const body = useRef<MeshPhysicalMaterial>(null);
   const pinInk = useRef<MeshStandardMaterial>(null);
   const pins = useRef<InstancedMesh>(null);
