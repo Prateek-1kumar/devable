@@ -9,7 +9,7 @@ import PixelField from "./PixelField";
 
 // How far above screen 2's center the pill lands. The fall's translate, the
 // landed content box and the space below all subtract it, so they stay aligned.
-const RAISE = "10vh";
+const RAISE = "15vh";
 
 // Standing geometry (viewport units): left L, top T, width W, height H.
 // Rotating 90° clockwise about the bottom-right corner lays it across

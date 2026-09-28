@@ -7,6 +7,7 @@ import { INK_PX, materials, palette } from "./palette";
 import { CABLE_FOR, CLIMB_FOR, INTRO, clamp01, easeOutCubic, useStory } from "./story";
 
 const TUBE = { segments: 80, radial: 14 };
+const RAIL_CAP = 0.06; // how far the rail's post cap rises above the top block
 const CABLE_REVEAL = { at: INTRO.terminalAt + INTRO.terminalFor, for: 0.6 };
 const RAIL_BUILD = { at: INTRO.layersAt, for: INTRO.layerStagger * 3 + INTRO.layerFor };
 // The signal is a short single-file train of pearls: lead pearl first, smaller ones behind.
@@ -85,8 +86,9 @@ export default function SignalPath() {
       <Collar at={PORTS.terminal.at} dir={PORTS.terminal.dir} show={(t) => revealAt(t) > 0} />
       <Collar at={PORTS.stack.at} dir={PORTS.stack.dir} show={(t) => revealAt(t) >= 0.98} />
       <group ref={rail} position={[RAIL.x, 0, RAIL.z]} visible={false}>
-        <mesh position={[0, STACK_TOP / 2, 0]} material={m.alu} castShadow>
-          <cylinderGeometry args={[0.075, 0.075, STACK_TOP, 20]} />
+        {/* Stands a touch above the top block: level with its top face, the two surfaces flicker. */}
+        <mesh position={[0, (STACK_TOP + RAIL_CAP) / 2, 0]} material={m.alu} castShadow>
+          <cylinderGeometry args={[0.075, 0.075, STACK_TOP + RAIL_CAP, 20]} />
           <Outlines thickness={1} color={p.slate} />
         </mesh>
       </group>

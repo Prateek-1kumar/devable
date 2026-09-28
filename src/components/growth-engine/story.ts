@@ -20,7 +20,6 @@ const POWER = { for: 0.6 };
 // Once the top block (with the chip) has landed, the chip's arm grows out, then the screen rises onto it.
 const ARM = { at: INTRO.layersAt + 3 * INTRO.layerStagger + INTRO.layerFor + 0.05, for: 0.7 };
 const SCREEN = { at: ARM.at + ARM.for, for: 0.5 };
-const GROWTH = { after: 0.45, for: 1.6 }; // after the chip powers up
 
 // Phases of every signal run, in seconds from the run's start.
 export const CABLE_FOR = 0.7; // bead travels the cable
@@ -37,6 +36,7 @@ const RIPPLE_FOR = 1.1;
 const HOLD = 0.25; // beat on the platform before the leads go
 const LEAD_SPACING = 0.075; // seconds between pearls in a single-file line
 const TAIL_FOR = 1.6; // chip → the growth screen
+const LAND = 0.35; // a lead flying from where the arm enters the screen onto the chart's tip
 
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
@@ -53,10 +53,12 @@ type Run = { at: number; tokens: number[]; dots: Dot[]; end: number };
 
 export class Story {
   private runs: Run[] = [];
+  private readonly intro: Run;
   private nextPulse: number;
 
   constructor(readonly still: boolean) {
     const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], DOTS.intro);
+    this.intro = intro;
     this.runs.push(intro);
     this.nextPulse = intro.end + between(PULSE_GAP);
   }
@@ -130,9 +132,21 @@ export class Story {
   powerIn(t: number) {
     return clamp01((t - INTRO.signalAt - CORE_AT) / POWER.for);
   }
-  /** The growth screen's chart drawing on, after the chip's energy reaches it (0..1). */
-  growthIn(t: number) {
-    return clamp01((t - INTRO.signalAt - CORE_AT - GROWTH.after) / GROWTH.for);
+  /** Calls back for every lead landing on the growth screen, with its channel and 0..1 progress onto the chart. */
+  landing(t: number, each: (token: number, k: number) => void) {
+    for (const run of this.runs)
+      for (const dot of run.dots) {
+        const k = landProgress(run, dot, t);
+        if (k >= 0 && k < 1) each(dot.token, k);
+      }
+  }
+  /** How much of the growth chart the intro's leads have built so far (0..1): each landed lead adds its step. */
+  built(t: number) {
+    const run = this.intro;
+    if (this.still || t > run.end) return 1;
+    let sum = 0;
+    for (const dot of run.dots) sum += easeOutCubic(clamp01(landProgress(run, dot, t)));
+    return sum / run.dots.length;
   }
   /** Calls back for every lead pearl on the chip's bus, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
@@ -160,13 +174,15 @@ export class Story {
 /** When a slot's leads leave their platform: after its route out and a beat there. */
 const tailAt = (run: Pick<Run, "at" | "tokens">, slot: number) => run.at + litAt(run.tokens[slot]) + ROUTE_FOR + HOLD;
 const leadProgress = (run: Run, dot: Dot, t: number) => (t - tailAt(run, dot.slot) - dot.delay) / TAIL_FOR;
+/** A lead's flight on the screen after it reaches it: < 0 before, 0..1 while landing, ≥ 1 after. */
+const landProgress = (run: Run, dot: Dot, t: number) => (t - tailAt(run, dot.slot) - dot.delay - TAIL_FOR) / LAND;
 
 function makeRun(at: number, tokens: number[], dotsPerToken: number): Run {
   const dots = tokens.flatMap((token, slot) =>
     Array.from({ length: dotsPerToken }, (_, i) => ({ token, slot, delay: i * LEAD_SPACING })),
   );
   const last = Math.max(...tokens.map((_, slot) => tailAt({ at, tokens }, slot)));
-  const end = last + (dotsPerToken - 1) * LEAD_SPACING + TAIL_FOR;
+  const end = last + (dotsPerToken - 1) * LEAD_SPACING + TAIL_FOR + LAND;
   return { at, tokens, dots, end };
 }
 

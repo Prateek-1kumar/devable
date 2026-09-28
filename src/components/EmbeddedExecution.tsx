@@ -1,30 +1,6 @@
-"use client";
+import ClientProof from "./ClientProof";
 
-import { HaloReel, type HaloReelItem } from "@/components/ui/halo-reel";
-
-// Client logos. Each needs its artwork ratio (width ÷ height) so all render at the
-// same visual size; `scale` nudges ones that still read small.
-const CARDS: HaloReelItem[] = [
-  { logo: true, src: "/clients/statsig.png", ratio: 118 / 20, alt: "Statsig" },
-  { logo: true, src: "/clients/reflex.svg", ratio: 81 / 16, alt: "Reflex" },
-  { logo: true, src: "/clients/landingai.png", ratio: 160 / 32, alt: "LandingAI" },
-  { logo: true, src: "/clients/minimax.png", ratio: 560 / 129, alt: "MiniMax" },
-  {
-    // ponytail: Rockset's site is retired, so its bracketed wordmark is rebuilt here; swap for the file if you get one.
-    alt: "Rockset",
-    face: (
-      <span aria-label="Rockset" className="flex items-center font-heading text-[1.55em] font-bold tracking-tight text-[#5b1d8c]">
-        <span className="font-light text-[#7ac0dc]">[</span>ROCKSET<span className="font-light text-[#7ac0dc]">]</span>
-      </span>
-    ),
-  },
-  { logo: true, src: "/clients/twelvelabs.svg", ratio: 159 / 32, scale: 1.25, alt: "TwelveLabs" },
-  { logo: true, src: "/clients/apify.png", ratio: 362 / 100, alt: "Apify" },
-  { logo: true, src: "/clients/confident-ai.png", ratio: 967 / 265, scale: 1.25, alt: "Confident AI" },
-  { logo: true, src: "/clients/comet.svg", ratio: 140 / 59, alt: "Comet" },
-];
-
-/** Embedded execution: who we are on the left, client proof reel on the right. */
+/** Embedded execution: who we are on the left, client proof on the right. */
 export default function EmbeddedExecution() {
   return (
     <section className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2 lg:px-20 xl:px-28">
@@ -46,21 +22,7 @@ export default function EmbeddedExecution() {
           We are a team of engineers, technical writers, creators, and marketers building growth and distribution for AI-native and developer companies.
         </p>
       </div>
-      <HaloReel
-        items={CARDS}
-        aria-label="Clients"
-        cardWidth={220}
-        cardHeight={120}
-        minScale={0.4}
-        radiusYRatio={0.36}
-        holdDuration={1000}
-        stepDuration={700}
-        centerXRatio={1}
-        mirror
-        farBlur={1.5}
-        // Ring centred on the right edge, front facing left; a soft fade where cards turn away.
-        className="h-[560px] [mask-image:linear-gradient(to_left,transparent,black_14%)]"
-      />
+      <ClientProof />
     </section>
   );
 }
