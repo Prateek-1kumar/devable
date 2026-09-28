@@ -29,7 +29,7 @@ type Cell = {
 
 // ── Tuning knobs ─────────────────────────────────────────────
 // Visibility
-const MAX_ALPHA = 1; // peak opacity of any shape (0–1)
+const MAX_ALPHA = 0.8; // peak opacity of any shape (0–1)
 
 // Center cluster
 const CLUSTER_RADIUS = 18; // in grid cells; area (≈ count) grows with the square
