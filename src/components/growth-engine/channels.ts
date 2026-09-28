@@ -3,7 +3,8 @@
 // Your devtool's signal leaves as white light and each channel turns it into its
 // own color: its layer, its token, its lead pearls and its band on the monitor.
 // `color` is the vivid signal (pearls, traces, chart, lit lights), `pastel` the frosted
-// body tint (slabs, tokens) and `deep` the text-safe shade for glyphs on white.
+// tint (panels), `fade` the block's two-hue light gradient (bottom → top) and
+// `deep` the text-safe shade for glyphs on white.
 export const CHANNELS = [
   {
     n: "01",
@@ -14,6 +15,7 @@ export const CHANNELS = [
     line: "Docs, tutorials and deep dives developers actually bookmark.",
     color: "#4f46e5",
     pastel: "#d4d2ff",
+    fade: ["#9d9aff", "#f0c8ff"] as [string, string],
     deep: "#4338ca",
   },
   {
@@ -25,6 +27,7 @@ export const CHANNELS = [
     line: "Found on Google, and cited by ChatGPT, Perplexity and Claude.",
     color: "#0ea5e9",
     pastel: "#c6e8fb",
+    fade: ["#6fd0ff", "#a8f4f0"] as [string, string],
     deep: "#0369a1",
   },
   {
@@ -36,6 +39,7 @@ export const CHANNELS = [
     line: "Real conversations in the communities your users already live in.",
     color: "#10b981",
     pastel: "#c4f1dc",
+    fade: ["#6ee8b5", "#d6f78c"] as [string, string],
     deep: "#047857",
   },
   {
@@ -47,6 +51,7 @@ export const CHANNELS = [
     line: "Creators your audience follows, showing your tool in action.",
     color: "#f5b301",
     pastel: "#ffe9a8",
+    fade: ["#ffb07a", "#ffe48a"] as [string, string],
     deep: "#b45309",
   },
 ] as const;

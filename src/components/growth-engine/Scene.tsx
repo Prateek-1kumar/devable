@@ -6,8 +6,7 @@ import { CHANNELS } from "./channels";
 import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
-import GrowthChart from "./GrowthChart";
-import LightBridge from "./LightBridge";
+import GrowthScreen from "./GrowthScreen";
 import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
 import SignalPath from "./SignalPath";
@@ -42,9 +41,8 @@ export default function Scene({ still, active, onHover, onAnchor, focus = null }
     >
       <CameraRig shift={still ? 0 : 0.08} />
 
-      {/* Soft window light from the upper left; the fill is white from above and mint from
-          below, so shaded faces keep their color instead of going grey. */}
-      <hemisphereLight args={["#ffffff", "#b7dcc2", 0.7]} />
+      {/* Soft window light from the upper left and a neutral fill, so every block's hue shows true. */}
+      <hemisphereLight args={["#ffffff", "#eceef2", 0.7]} />
       <directionalLight
         castShadow
         position={[-5, 11, 6]}
@@ -105,8 +103,7 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
             <DevtoolTerminal />
             <SignalPath />
             <Destinations />
-            <GrowthChart />
-            <LightBridge />
+            <GrowthScreen />
             {CHANNELS.map((channel, i) => (
               <StackLayer key={channel.n} index={i}>
                 {i === CHANNELS.length - 1 && <EngineCore />}

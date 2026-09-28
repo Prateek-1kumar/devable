@@ -8,16 +8,14 @@ import { layerY, STACK_TOP } from "./layout";
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 export const easeOutCubic = (x: number) => 1 - (1 - x) ** 3;
 export const easeOutBack = (x: number) => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2;
-export const easeInOut = (x: number) => x * x * (3 - 2 * x);
 /** Frame-rate independent smoothing toward a target. */
 export const damp = (current: number, target: number, lambda: number, dt: number) =>
   current + (target - current) * (1 - Math.exp(-lambda * dt));
 
-// The chart's past weeks build in once the layers have landed.
-export const WEEKS = { at: 2.2, stagger: 0.18, for: 0.5 };
-
 // Intro, in seconds from mount. Plays once.
 export const INTRO = { terminalAt: 0.2, terminalFor: 0.8, layersAt: 1.2, layerFor: 0.6, layerStagger: 0.35, signalAt: 2.8 };
+// The growth screen's chart draws on once the last slab has landed.
+const GROWTH = { at: INTRO.layersAt + 3 * INTRO.layerStagger + INTRO.layerFor, for: 1.6 };
 
 // Phases of every signal run, in seconds from the run's start.
 export const CABLE_FOR = 0.7; // bead travels the cable
@@ -29,19 +27,14 @@ const ROUTE_FOR = 0.9; // a pulse runs a channel's floor traces out to its desti
 const LAND_GLOW_FOR = 1.4; // a destination tile's glow as the pulse arrives
 const CORE_FOR = 1.2;
 const RIPPLE_FOR = 1.1;
-// Onward to the pipeline: after a platform lights, its channel's leads leave it
-// as a train of pearls, run the rest of the route onto the pipeline bus and
-// along the rail into this week's bar of the growth chart.
-const HOLD = 0.25; // beat on the platform before the leads move on
+// Growth: after a platform lights, its channel's leads run the output cable from
+// the stack into the growth screen as a train of pearls.
+const HOLD = 0.25; // beat on the platform before the leads go
 const LEAD_SPACING = 0.075; // seconds between pearls in a single-file line
-const TAIL_FOR = 1.6; // platform → this week's bar
+const TAIL_FOR = 1.6; // stack → the growth screen
 
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
-export const INTRO_LEADS = 1240;
-// How the intro's leads split across channels 01 → 04 (sums to 1).
-const INTRO_SPLIT = [0.31, 0.27, 0.23, 0.19];
-const PULSE_LEADS: [number, number] = [6, 38];
 const DOTS = { intro: 7, pulse: 5 }; // pearls per token
 
 /** When the climbing signal reaches layer i, from the run's start. */
@@ -51,16 +44,14 @@ const decay = (dt: number, span: number) => (dt >= 0 && dt < span ? (1 - dt / sp
 const progress = (dt: number, span: number) => (dt >= 0 && dt < span ? dt / span : -1);
 
 type Dot = { token: number; slot: number; delay: number };
-/** `leads[slot]` is what the token in that slot brings in. */
-type Run = { at: number; tokens: number[]; leads: number[]; dots: Dot[]; end: number };
+type Run = { at: number; tokens: number[]; dots: Dot[]; end: number };
 
 export class Story {
   private runs: Run[] = [];
-  private settled = [0, 0, 0, 0]; // leads from finished runs, per channel
   private nextPulse: number;
 
   constructor(readonly still: boolean) {
-    const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], INTRO_SPLIT.map((share) => Math.round(share * INTRO_LEADS)), DOTS.intro);
+    const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], DOTS.intro);
     this.runs.push(intro);
     this.nextPulse = intro.end + between(PULSE_GAP);
   }
@@ -81,11 +72,10 @@ export class Story {
   update(t: number) {
     if (this.still) return;
     if (t >= this.nextPulse) {
-      const run = makeRun(t, [Math.floor(Math.random() * 4)], [Math.round(between(PULSE_LEADS))], DOTS.pulse);
+      const run = makeRun(t, [Math.floor(Math.random() * 4)], DOTS.pulse);
       this.runs.push(run);
       this.nextPulse = run.end + between(PULSE_GAP);
     }
-    for (const run of this.runs) if (t > run.end) run.tokens.forEach((token, slot) => (this.settled[token] += run.leads[slot]));
     this.runs = this.runs.filter((run) => t <= run.end);
   }
 
@@ -123,37 +113,17 @@ export class Story {
   ripple(t: number) {
     return this.first((r) => progress(t - r.at - CORE_AT, RIPPLE_FOR));
   }
-  /** Past week w's bar building in (0..1). */
-  weekIn(w: number, t: number) {
-    return clamp01((t - WEEKS.at - w * WEEKS.stagger) / WEEKS.for);
+  /** The growth screen's chart drawing on (0..1). */
+  growthIn(t: number) {
+    return clamp01((t - GROWTH.at) / GROWTH.for);
   }
-  /** Calls back for every lead pearl on its way from a platform to the chart, with its channel and 0..1 progress. */
+  /** Calls back for every lead pearl on the output cable, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
     for (const run of this.runs)
       for (const dot of run.dots) {
         const p = leadProgress(run, dot, t);
         if (p > 0 && p < 1) each(dot.token, p);
       }
-  }
-  private counted = { t: NaN, by: [0, 0, 0, 0] };
-  /** Leads landed so far, per channel: each rises as that channel's dots arrive. Computed once per frame. */
-  countBy(t: number) {
-    const cache = this.counted;
-    if (cache.t === t) return cache.by;
-    cache.t = t;
-    cache.by = [...this.settled];
-    for (const run of this.runs)
-      run.tokens.forEach((token, slot) => {
-        let arrived = 0;
-        let n = 0;
-        for (const dot of run.dots) {
-          if (dot.slot !== slot) continue;
-          arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
-          n++;
-        }
-        cache.by[token] += (run.leads[slot] * arrived) / n;
-      });
-    return cache.by;
   }
 
   private peak(f: (run: Run) => number) {
@@ -174,13 +144,13 @@ export class Story {
 const tailAt = (run: Pick<Run, "at" | "tokens">, slot: number) => run.at + litAt(run.tokens[slot]) + ROUTE_FOR + HOLD;
 const leadProgress = (run: Run, dot: Dot, t: number) => (t - tailAt(run, dot.slot) - dot.delay) / TAIL_FOR;
 
-function makeRun(at: number, tokens: number[], leads: number[], dotsPerToken: number): Run {
+function makeRun(at: number, tokens: number[], dotsPerToken: number): Run {
   const dots = tokens.flatMap((token, slot) =>
     Array.from({ length: dotsPerToken }, (_, i) => ({ token, slot, delay: i * LEAD_SPACING })),
   );
   const last = Math.max(...tokens.map((_, slot) => tailAt({ at, tokens }, slot)));
   const end = last + (dotsPerToken - 1) * LEAD_SPACING + TAIL_FOR;
-  return { at, tokens, leads, dots, end };
+  return { at, tokens, dots, end };
 }
 
 export const StoryContext = createContext<Story | null>(null);

@@ -48,8 +48,3 @@ export const CABLE = new CatmullRomCurve3([
 
 /** The stack's right-hand edge, where the hover card pins itself. */
 export const STACK_RIGHT = { x: LAYER.baseWidth / 2, z: -LAYER.baseWidth / 2 };
-
-// The growth chart behind the platforms. Weeks run from the front (oldest) to
-// the back (now), so each taller bar stands behind the last and the chart climbs
-// toward the upper right.
-export const PIPELINE = { chartX: 0.95, bar: 0.42, weeks: [-3.85, -4.4, -4.95, -5.5, -6.05] };

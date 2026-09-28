@@ -22,8 +22,6 @@ function read() {
 
 // Soft satin: mostly matte with a light clearcoat, so shapes read by form, not gloss.
 const GLOSS = { roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.3 };
-// A little self-glow keeps pastels and whites luminous on the shaded faces instead of greying.
-const LIFT = { emissive: "#ffffff", emissiveIntensity: 0.12 };
 
 /** Ink outline width in pixels: thin, technical-illustration lines. */
 export const INK_PX = 1;
@@ -52,6 +50,22 @@ export function paintFade(mesh: Mesh, low: string, high: string, height: number,
   mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
 }
 
+/**
+ * Adds a soft self-glow in the vertex color itself (not white), so shaded faces
+ * keep their hue instead of greying and light gradients stay vivid.
+ */
+const INNER_GLOW = 0.28;
+function glowFromWithin<T extends MeshPhysicalMaterial>(material: T) {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <emissivemap_fragment>",
+      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vColor.rgb * ${INNER_GLOW.toFixed(2)};`,
+    );
+  };
+  material.customProgramCacheKey = () => "glow-from-within";
+  return material;
+}
+
 /** `a` moved toward `b` by `k` (0..1), as a hex string. */
 export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
 
@@ -60,9 +74,9 @@ export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(ne
  * band that separates it from the block below, `panel` its label plate and `edge`
  * a deep tone for fine lines (the route pucks).
  */
-export const TONES = CHANNELS.map(({ color, pastel, deep }) => ({
-  low: mix(color, "#ffffff", 0.3),
-  high: mix(pastel, "#ffffff", 0.25),
+export const TONES = CHANNELS.map(({ color, pastel, deep, fade }) => ({
+  low: fade[0],
+  high: fade[1],
   seam: mix(color, "#ffffff", 0.05),
   panel: mix(pastel, "#ffffff", 0.75),
   edge: mix(deep, color, 0.25),
@@ -76,8 +90,8 @@ function build() {
   return {
     /** Glazed ceramic: the cream bodies. */
     ceramic: new MeshPhysicalMaterial({ color: p.cream, ...GLOSS }),
-    /** Block bodies: white, tinted per vertex with the channel's fade; a crisp clearcoat glints on the edges. */
-    frost: new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.12, ...LIFT }),
+    /** Block bodies: tinted per vertex with the channel's fade, glowing gently in that same color. */
+    frost: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.2 })),
     /** Label panels, a whisper of their channel's tint. */
     panelTint: TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
     /** The thin seam under each block, in the channel's full tone. */
