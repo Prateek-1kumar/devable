@@ -13,6 +13,9 @@ export const easeInOut = (x: number) => x * x * (3 - 2 * x);
 export const damp = (current: number, target: number, lambda: number, dt: number) =>
   current + (target - current) * (1 - Math.exp(-lambda * dt));
 
+// The chart's past weeks build in once the layers have landed.
+export const WEEKS = { at: 2.2, stagger: 0.18, for: 0.5 };
+
 // Intro, in seconds from mount. Plays once.
 export const INTRO = { terminalAt: 0.2, terminalFor: 0.8, layersAt: 1.2, layerFor: 0.6, layerStagger: 0.35, signalAt: 2.8 };
 
@@ -26,13 +29,12 @@ const ROUTE_FOR = 0.9; // a pulse runs a channel's floor traces out to its desti
 const LAND_GLOW_FOR = 1.4; // a destination tile's glow as the pulse arrives
 const CORE_FOR = 1.2;
 const RIPPLE_FOR = 1.1;
-// The way back: after a platform lights, its channel's leads run the route home,
-// rise through the stack to the core and fly the arc into the pipeline monitor.
-const HOLD = 0.25; // beat on the platform before the leads head back
-const RETURN_FOR = 0.9; // leads run the route back to the stack
-const INTO_CORE = 0.35; // hidden climb from the port to the core
+// Onward to the pipeline: after a platform lights, its channel's leads leave it
+// as a train of pearls, run the rest of the route onto the pipeline bus and
+// along the rail into this week's bar of the growth chart.
+const HOLD = 0.25; // beat on the platform before the leads move on
 const LEAD_SPACING = 0.075; // seconds between pearls in a single-file line
-const LEAD_FLIGHT = 1.3; // core → monitor along the arc
+const TAIL_FOR = 1.6; // platform → this week's bar
 
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
@@ -107,10 +109,6 @@ export class Story {
   route(i: number, t: number) {
     return this.first((r) => progress(t - r.at - litAt(i), ROUTE_FOR));
   }
-  /** Leads' progress (0..1) running layer i's routes back home, or -1. Only channels that brought leads this run. */
-  returning(i: number, t: number) {
-    return this.first((r) => (r.tokens.includes(i) ? progress(t - r.at - litAt(i) - ROUTE_FOR - HOLD, RETURN_FOR) : -1));
-  }
   /** Glow (1 → 0) on layer i's destination tiles once its pulse lands. */
   landed(i: number, t: number) {
     return this.peak((r) => decay(t - r.at - litAt(i) - ROUTE_FOR, LAND_GLOW_FOR));
@@ -125,7 +123,11 @@ export class Story {
   ripple(t: number) {
     return this.first((r) => progress(t - r.at - CORE_AT, RIPPLE_FOR));
   }
-  /** Calls back for every lead pearl on the arc, with its channel and 0..1 progress. */
+  /** Past week w's bar building in (0..1). */
+  weekIn(w: number, t: number) {
+    return clamp01((t - WEEKS.at - w * WEEKS.stagger) / WEEKS.for);
+  }
+  /** Calls back for every lead pearl on its way from a platform to the chart, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
     for (const run of this.runs)
       for (const dot of run.dots) {
@@ -168,16 +170,16 @@ export class Story {
   }
 }
 
-/** When a slot's leads leave the core for the arc: after its route out, the beat, the route back and the climb. */
-const arcAt = (run: Pick<Run, "at" | "tokens">, slot: number) => run.at + litAt(run.tokens[slot]) + ROUTE_FOR + HOLD + RETURN_FOR + INTO_CORE;
-const leadProgress = (run: Run, dot: Dot, t: number) => (t - arcAt(run, dot.slot) - dot.delay) / LEAD_FLIGHT;
+/** When a slot's leads leave their platform: after its route out and a beat there. */
+const tailAt = (run: Pick<Run, "at" | "tokens">, slot: number) => run.at + litAt(run.tokens[slot]) + ROUTE_FOR + HOLD;
+const leadProgress = (run: Run, dot: Dot, t: number) => (t - tailAt(run, dot.slot) - dot.delay) / TAIL_FOR;
 
 function makeRun(at: number, tokens: number[], leads: number[], dotsPerToken: number): Run {
   const dots = tokens.flatMap((token, slot) =>
     Array.from({ length: dotsPerToken }, (_, i) => ({ token, slot, delay: i * LEAD_SPACING })),
   );
-  const last = Math.max(...tokens.map((_, slot) => arcAt({ at, tokens }, slot)));
-  const end = last + (dotsPerToken - 1) * LEAD_SPACING + LEAD_FLIGHT;
+  const last = Math.max(...tokens.map((_, slot) => tailAt({ at, tokens }, slot)));
+  const end = last + (dotsPerToken - 1) * LEAD_SPACING + TAIL_FOR;
   return { at, tokens, leads, dots, end };
 }
 

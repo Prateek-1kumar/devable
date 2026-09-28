@@ -6,6 +6,8 @@ import { CHANNELS } from "./channels";
 import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
+import GrowthChart from "./GrowthChart";
+import LightBridge from "./LightBridge";
 import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
 import SignalPath from "./SignalPath";
@@ -103,6 +105,8 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
             <DevtoolTerminal />
             <SignalPath />
             <Destinations />
+            <GrowthChart />
+            <LightBridge />
             {CHANNELS.map((channel, i) => (
               <StackLayer key={channel.n} index={i}>
                 {i === CHANNELS.length - 1 && <EngineCore />}

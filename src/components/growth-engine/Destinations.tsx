@@ -11,14 +11,11 @@ import { easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
 // Where the work lands. Each channel's route leaves the stack's right face from
-// its own port and runs along the floor grid (straight legs, rounded turns) to
-// the platforms it reaches; Search forks at a junction into Google and ChatGPT.
-// Routes are nested so none cross: the front one runs furthest before turning.
-// Each ends on a white puck carrying the platform's real logo. When the signal
-// lights a layer, a pulse runs its routes, the junctions blink as it passes and
-// the puck lifts with a ring of the channel's color on arrival. Then the leads
-// come home: a short train of pearls runs the route back into the stack, on
-// its way to the core and up the arc (see PipelineArc).
+// its own port and runs the floor grid (straight legs, rounded turns) to the
+// platforms it reaches: white pucks with the real logos. Search forks at a
+// junction into Google and ChatGPT. Routes are nested so none cross.
+// When the signal lights a layer, a pulse runs out to its platforms, the
+// junctions blink as it passes and each puck lifts with a ring of its color.
 
 type XZ = [number, number];
 type Route = { k: number; mark: Mark; path: XZ[] };
@@ -26,17 +23,15 @@ type Route = { k: number; mark: Mark; path: XZ[] };
 const FLOOR = 0.01;
 const PORT_X = LAYER.baseWidth / 2 + 0.02;
 const TURN = 0.22; // corner radius
-const PUCK = { r: 0.26, h: 0.09 };
-const TRAIN = [1, 0.8, 0.62]; // returning lead pearls, head first (scale)
-const TRAIN_GAP = 0.05; // along the route (0..1) between pearls
+const PUCK = { r: 0.24, h: 0.09 };
+// Each path ends at its puck.
 const ROUTES: Route[] = [
-  { k: 0, mark: "hackernews", path: [[PORT_X, -0.2], [3.68, -0.2]] },
-  { k: 1, mark: "chatgpt", path: [[PORT_X, -0.6], [2.96, -0.6], [2.96, -1.95]] },
-  { k: 1, mark: "google", path: [[PORT_X, -0.6], [4.25, -0.6], [4.25, -1.95]] },
-  { k: 2, mark: "reddit", path: [[PORT_X, -1.0], [2.5, -1.0], [2.5, -3.06], [3.2, -3.06]] },
-  { k: 3, mark: "youtube", path: [[PORT_X, -1.4], [2.05, -1.4], [2.05, -2.75]] },
+  { k: 0, mark: "hackernews", path: [[PORT_X, -0.2], [3.6, -0.2], [3.6, -1.2]] },
+  { k: 1, mark: "chatgpt", path: [[PORT_X, -0.6], [2.7, -0.6], [2.7, -1.6]] },
+  { k: 1, mark: "google", path: [[PORT_X, -0.6], [3.15, -0.6], [3.15, -2.3]] },
+  { k: 2, mark: "reddit", path: [[PORT_X, -1.0], [2.3, -1.0], [2.3, -2.6]] },
+  { k: 3, mark: "youtube", path: [[PORT_X, -1.4], [1.95, -1.4], [1.95, -2.1]] },
 ];
-
 const at = ([x, z]: XZ, y = FLOOR) => new Vector3(x, y, z);
 
 /** Straight legs joined by rounded corners. Returns the curve and each corner's 0..1 position along it. */
@@ -120,7 +115,18 @@ function Puck({ route }: { route: Route }) {
   );
 }
 
-/** A route line with its junction nodes and running pulse; fades in with its channel's layer. */
+/** A junction node: a small white disc edged in `edge`, flashing `lit` when something passes. */
+function Node({ at: xz, edge, nodeRef }: { at: XZ; edge: string; nodeRef: (el: MeshBasicMaterial | null) => void }) {
+  return (
+    <mesh position={at(xz, 0.02)}>
+      <cylinderGeometry args={[0.07, 0.07, 0.03, 32]} />
+      <meshBasicMaterial ref={nodeRef} color="#ffffff" toneMapped={false} />
+      <Outlines thickness={INK_PX} color={edge} />
+    </mesh>
+  );
+}
+
+/** A route in its channel's color, from the port to its puck, with its outbound pulse. */
 function RouteLine({ route }: { route: Route }) {
   const story = useStory();
   const channel = CHANNELS[route.k];
@@ -129,7 +135,6 @@ function RouteLine({ route }: { route: Route }) {
   const points = useMemo(() => curve.getSpacedPoints(96), [curve]);
   const line = useRef<Line2>(null);
   const pulse = useRef<Mesh>(null);
-  const train = useRef<(Mesh | null)[]>([]);
   const nodes = useRef<(MeshBasicMaterial | null)[]>([]);
   const group = useRef<Group>(null);
   const [rest, lit] = useMemo(() => [new Color("#ffffff"), new Color(channel.color)], [channel]);
@@ -144,20 +149,9 @@ function RouteLine({ route }: { route: Route }) {
       pulse.current.visible = r >= 0;
       if (r >= 0) curve.getPointAt(r, pulse.current.position);
     }
-    // The way home: pearls run from the puck back to the port.
-    const back = story.returning(route.k, t);
-    TRAIN.forEach((_, j) => {
-      const pearl = train.current[j];
-      if (!pearl) return;
-      const u = 1 - (back - j * TRAIN_GAP);
-      pearl.visible = back >= 0 && u >= 0 && u <= 1;
-      if (pearl.visible) curve.getPointAt(u, pearl.position);
-    });
-    // Junction nodes blink as a pulse or the returning leads pass them.
+    // Corner nodes blink as the pulse passes them.
     corners.forEach((u, i) => {
-      const node = nodes.current[i];
-      const near = (x: number) => (x >= 0 ? Math.max(0, 1 - Math.abs(x - u) / 0.12) : 0);
-      if (node) node.color.lerpColors(rest, lit, Math.max(near(r), near(back >= 0 ? 1 - back : -1)));
+      nodes.current[i]?.color.lerpColors(rest, lit, r >= 0 ? Math.max(0, 1 - Math.abs(r - u) / 0.12) : 0);
     });
   });
 
@@ -165,35 +159,19 @@ function RouteLine({ route }: { route: Route }) {
     <group ref={group} visible={false}>
       <Line ref={line} points={points} color={channel.color} lineWidth={1.8} transparent opacity={0} />
       {route.path.slice(1, -1).map((corner, i) => (
-        <mesh key={i} position={at(corner, 0.02)}>
-          <cylinderGeometry args={[0.075, 0.075, 0.03, 32]} />
-          <meshBasicMaterial
-            ref={(el) => {
-              nodes.current[i] = el;
-            }}
-            color="#ffffff"
-            toneMapped={false}
-          />
-          <Outlines thickness={INK_PX} color={tone.edge} />
-        </mesh>
+        <Node
+          key={i}
+          at={corner}
+          edge={tone.edge}
+          nodeRef={(el) => {
+            nodes.current[i] = el;
+          }}
+        />
       ))}
       <mesh ref={pulse} visible={false}>
         <sphereGeometry args={[0.045, 16, 12]} />
         <meshBasicMaterial color={channel.color} toneMapped={false} />
       </mesh>
-      {TRAIN.map((size, j) => (
-        <mesh
-          key={j}
-          ref={(el) => {
-            train.current[j] = el;
-          }}
-          visible={false}
-          scale={size}
-        >
-          <sphereGeometry args={[0.038, 16, 12]} />
-          <meshBasicMaterial color={channel.color} toneMapped={false} />
-        </mesh>
-      ))}
     </group>
   );
 }

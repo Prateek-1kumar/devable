@@ -8,16 +8,6 @@ const rise = "animate-fade-up motion-reduce:animate-none";
 export default function Hero() {
   return (
     <section className="relative isolate grid min-h-svh items-center gap-12 px-6 pt-32 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr] lg:px-[8vw]">
-      {/* A soft green bloom behind the engine with a lime core; fades out before the section's edges. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(ellipse 22% 26% at 70% 60%, color-mix(in oklab, var(--lime) 22%, transparent), transparent 70%)," +
-            "radial-gradient(ellipse 48% 52% at 70% 58%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 72%)",
-        }}
-      />
       {/* Light, precise type: the weight comes from size and tracking, not boldness. */}
       <div className="relative z-10 max-w-[38rem] text-foreground">
         <h1 className={`text-[clamp(2.6rem,4.6vw,4.4rem)] leading-[1.02] font-normal tracking-[-0.045em] ${rise}`} style={{ animationDelay: "0.1s" }}>
