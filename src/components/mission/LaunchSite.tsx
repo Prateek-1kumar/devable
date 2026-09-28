@@ -586,7 +586,8 @@ export default function LaunchSite() {
       </group>
 
       <instancedMesh ref={cloud} args={[puff, undefined, CLOUD]} visible={false} frustumCulled={false}>
-        <meshStandardMaterial color="#ffffff" roughness={1} emissive="#ffffff" emissiveIntensity={0.4} />
+        {/* A little self-light only, so the billows keep a shaded underside and read as volume. */}
+        <meshStandardMaterial color="#ffffff" roughness={1} emissive="#ffffff" emissiveIntensity={0.16} />
       </instancedMesh>
       <instancedMesh ref={pool} args={[puff, undefined, POOL]} visible={false} frustumCulled={false}>
         <meshStandardMaterial color="#f1f2f0" roughness={1} emissive="#ffffff" emissiveIntensity={0.4} />

@@ -38,6 +38,7 @@ export const BEATS = [
 /** Caption windows; index 0 is the intro block (the H1). */
 export const CAPTION_WINDOWS: { id: number; from: number; to: number }[] = [
   { id: 0, from: -1, to: 0.085 },
+  { id: 1, from: 0.09, to: 0.125 }, // the terminal count, so the copy column is never empty
   { id: 2, from: 0.13, to: 0.255 },
   { id: 3, from: 0.275, to: 0.395 },
   { id: 4, from: 0.43, to: 0.545 },

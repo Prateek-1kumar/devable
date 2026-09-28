@@ -20,6 +20,7 @@ const MONO = "font-mono uppercase tracking-[0.12em] tabular-nums";
 
 type Caption = { index: string; title: string; body?: string; extra?: "marks" | "outcome" };
 const CAPTIONS: Record<number, Caption> = {
+  1: { index: "01 / 07 · TERMINAL COUNT", title: "Integrated. Go for launch.", body: "Your product rides on top. Devable carries it, with four channel systems latched on." },
   2: { index: "02 / 07 · LAUNCH", title: "A launch is a burst.", body: "Show HN, the creator drop, the announcement, sequenced to the hour. It gets you off the pad." },
   3: { index: "03 / 07 · TRAJECTORY", title: "Most launches are suborbital.", body: "A spike, then gravity. We plan the path to orbit before anything lights." },
   4: {

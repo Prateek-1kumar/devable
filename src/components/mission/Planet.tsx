@@ -20,68 +20,98 @@ const INNER_GLOW = 0.12; // as glowFromWithin: the surface colour glows a little
 
 /**
  * The land field: a seeded sum of sines over a gently warped sphere (8 continent-scale terms,
- * 5 finer ones for ragged coasts), plus a soft bump under the pad and every station so they all
- * sit on land. Evaluated per fragment, so coastlines stay crisp at every distance.
+ * then two finer tiers for ragged coasts, islands and relief), plus a soft bump under the pad
+ * and every station so they all sit on land. Evaluated per fragment, so coastlines stay crisp
+ * at every distance; the same field is the terrain height for a shaded relief.
  */
+const N_TERMS = 21;
 function landField() {
   const rand = mulberry32(11);
   const terms: { d: Vector3; f: number; ph: number; a: number }[] = [];
-  for (let k = 0; k < 8; k++) {
-    const d = new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
-    terms.push({ d, f: 3 + 4 * rand(), ph: 2 * Math.PI * rand(), a: (k + 1) ** -0.4 });
-  }
+  const dir = () => new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
+  for (let k = 0; k < 8; k++) terms.push({ d: dir(), f: 3 + 4 * rand(), ph: 2 * Math.PI * rand(), a: (k + 1) ** -0.4 });
   const sumA = terms.reduce((s, t) => s + t.a, 0);
-  for (let k = 0; k < 5; k++) {
-    const d = new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
-    terms.push({ d, f: 8 + 6 * rand(), ph: 2 * Math.PI * rand(), a: (0.18 * sumA) / 5 });
-  }
+  for (let k = 0; k < 7; k++) terms.push({ d: dir(), f: 9 + 7 * rand(), ph: 2 * Math.PI * rand(), a: (0.3 * sumA) / 7 });
+  for (let k = 0; k < 6; k++) terms.push({ d: dir(), f: 22 + 14 * rand(), ph: 2 * Math.PI * rand(), a: (0.12 * sumA) / 6 });
   const caps = [{ n: new Vector3(0, 1, 0), r: 14 }, ...STATIONS.map((_, k) => ({ n: stationNormal(k), r: 12 }))];
   return {
     uTermA: { value: terms.map((t) => new Vector4(t.d.x, t.d.y, t.d.z, t.f)) },
     uTermB: { value: terms.map((t) => new Vector4(t.ph, t.a / sumA, 0, 0)) },
     uCaps: { value: caps.map((c) => new Vector4(c.n.x, c.n.y, c.n.z, c.r)) },
     uSun: { value: SUN },
-    uDeep: { value: new Color("#0e5e41") },
-    uShallow: { value: new Color("#25b47a") },
-    uDay: { value: new Color("#5fe0a6") },
-    uCoast: { value: new Color("#9ff0cc") },
-    uLow: { value: new Color("#dfe8e1") },
-    uHigh: { value: new Color("#fbfdf9") },
+    uDeep: { value: new Color("#0a4a33") },
+    uMid: { value: new Color("#0f6b48") },
+    uShallow: { value: new Color("#1f9a68") },
+    uCoast: { value: new Color("#6fd8ae") },
+    uLow: { value: new Color("#cde6d4") }, // sage coastal plain
+    uMidLand: { value: new Color("#e9f3ec") },
+    uHigh: { value: new Color("#fbfdf9") }, // porcelain highlands
   };
 }
 
 const PLANET_PARS = /* glsl */ `
-  uniform vec4 uTermA[13];
-  uniform vec4 uTermB[13];
+  uniform vec4 uTermA[${N_TERMS}];
+  uniform vec4 uTermB[${N_TERMS}];
   uniform vec4 uCaps[6];
-  uniform vec3 uSun, uDeep, uShallow, uDay, uCoast, uLow, uHigh;
+  uniform vec3 uSun, uDeep, uMid, uShallow, uCoast, uLow, uMidLand, uHigh;
   varying vec3 vObjN;
+  float pCoast; // 1 on land, 0 at sea (drives the gloss)
+  float pHeight; // terrain height for the relief
   vec3 planetColor() {
     vec3 n = normalize(vObjN);
     vec3 m = normalize(n + 0.3 * vec3(sin(5.1 * n.y + 1.3), sin(4.7 * n.z + 0.2), sin(5.3 * n.x + 2.2)));
     float land = 0.0;
-    for (int i = 0; i < 13; i++) land += uTermB[i].y * sin(uTermA[i].w * dot(m, uTermA[i].xyz) + uTermB[i].x);
+    float fine = 0.0;
+    for (int i = 0; i < ${N_TERMS}; i++) {
+      float t = uTermB[i].y * sin(uTermA[i].w * dot(m, uTermA[i].xyz) + uTermB[i].x);
+      land += t;
+      if (i >= 8) fine += t;
+    }
     for (int i = 0; i < 6; i++) {
       float ang = degrees(acos(clamp(dot(n, uCaps[i].xyz), -1.0, 1.0))) / uCaps[i].w;
       land += 0.45 * exp(-ang * ang);
     }
     float w = max(fwidth(land) * 0.8, 0.0015); // about a pixel, whatever the distance
     float coast = smoothstep(${T.toFixed(3)} - w, ${T.toFixed(3)} + w, land);
-    float depth = 1.0 - smoothstep(${(T - 0.12).toFixed(3)}, ${(T - 0.02).toFixed(3)}, land); // mostly deep, a narrow shallow band at the coast
+    pCoast = coast;
+    float sea = ${T.toFixed(3)} - land; // > 0 offshore, growing with depth
     float sun = smoothstep(-0.4, 0.95, dot(n, uSun));
-    vec3 ocean = mix(mix(uShallow, uDeep, depth), uDay, 0.35 * sun);
-    float shore = 1.0 - smoothstep(max(0.012, 2.5 * w), max(0.012, 2.5 * w) + w, ${T.toFixed(3)} - land);
-    ocean = mix(ocean, uCoast, shore);
-    return mix(ocean, mix(uLow, uHigh, sun), coast);
+    // Ocean: a shelf by the coast, then mid water, then the deep; the sun side lifts it a little.
+    vec3 ocean = mix(uShallow, uMid, smoothstep(0.0, 0.06, sea));
+    ocean = mix(ocean, uDeep, smoothstep(0.08, 0.3, sea));
+    ocean = mix(ocean, uShallow, 0.22 * sun);
+    float shore = 1.0 - smoothstep(max(0.008, 2.0 * w), max(0.008, 2.0 * w) + w, sea);
+    ocean = mix(ocean, uCoast, 0.75 * shore);
+    // Land: crisp terraces, a sage coastal plain, pale uplands, porcelain highlands.
+    float e = -sea + 0.5 * fine;
+    float we = max(fwidth(e) * 0.8, 0.0015);
+    float t1 = smoothstep(0.035 - we, 0.035 + we, e);
+    float t2 = smoothstep(0.11 - we, 0.11 + we, e);
+    vec3 ground = mix(mix(uLow, uMidLand, t1), uHigh, t2) * mix(0.94, 1.0, sun);
+    pHeight = coast * (0.5 * max(-sea, 0.0) + fine);
+    return mix(ocean, ground, coast);
+  }
+  // As three's bump mapping (perturbNormalArb), from screen-space derivatives of the height.
+  vec3 reliefNormal(vec3 surf_pos, vec3 surf_norm, float h, float faceDirection) {
+    vec2 dHdxy = vec2(dFdx(h), dFdy(h));
+    vec3 vSigmaX = normalize(dFdx(surf_pos));
+    vec3 vSigmaY = normalize(dFdy(surf_pos));
+    vec3 vN = surf_norm;
+    vec3 R1 = cross(vSigmaY, vN);
+    vec3 R2 = cross(vN, vSigmaX);
+    float fDet = dot(vSigmaX, R1) * faceDirection;
+    vec3 vGrad = sign(fDet) * (dHdxy.x * R1 + dHdxy.y * R2);
+    return normalize(abs(fDet) * surf_norm - vGrad);
   }
 `;
+
+const RELIEF = 0.6; // bump strength (height is in field units)
 
 function planetMaterial(uniforms: ReturnType<typeof landField>) {
   const mat = new MeshPhysicalMaterial({
     color: "#ffffff",
-    roughness: 0.55,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.06, // one small crisp glaze highlight, not large soft blobs
+    roughness: 0.6,
+    specularIntensity: 0.5, // the glaze's grazing sheen, without milking the limb
     emissive: "#ffffff",
     emissiveIntensity: GLOW,
     polygonOffset: true,
@@ -96,12 +126,18 @@ function planetMaterial(uniforms: ReturnType<typeof landField>) {
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${PLANET_PARS}`)
       .replace("#include <color_fragment>", "#include <color_fragment>\nvec3 surface = planetColor();\ndiffuseColor.rgb *= surface;")
+      // Glazed water, matte land: the soft studio glints only run across the sea.
+      .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(0.4, 0.92, pCoast);")
+      .replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>\nnormal = reliefNormal(-vViewPosition, normal, ${RELIEF.toFixed(2)} * pHeight, faceDirection);`,
+      )
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>\ntotalEmissiveRadiance += surface * ${INNER_GLOW.toFixed(2)};`,
       );
   };
-  mat.customProgramCacheKey = () => "mission-planet";
+  mat.customProgramCacheKey = () => "mission-planet-2";
   return mat;
 }
 
@@ -142,7 +178,7 @@ export default function Planet() {
     const p = frame.p;
     // Page white on the pad. 3 (not 1.4): at grazing angles the clearcoat dims the base layer,
     // emissive included, and a lower value let the ocean show as a mint rim along the horizon.
-    bodyRef.current.emissiveIntensity = GLOW * (1 - eio(seg(p, 0.28, 0.4)));
+    bodyRef.current.emissiveIntensity = GLOW * (1 - eio(seg(p, 0.27, 0.35)));
     // The halo stays out until the pull-back: on the pad its shell floats 0.63 above the ground.
     if (atmos.current) atmos.current.visible = p >= 0.3;
     // (It steps out during the deploy close-up, where only its edge would peek in under the copy.)
