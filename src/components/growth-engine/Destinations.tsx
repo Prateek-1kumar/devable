@@ -1,160 +1,170 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Line, Outlines, RoundedBox } from "@react-three/drei";
-import { Color, CubicBezierCurve3, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { Line, Outlines } from "@react-three/drei";
+import { Color, CurvePath, LineCurve3, QuadraticBezierCurve3, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import type { Line2 } from "three-stdlib";
 import { CHANNELS } from "./channels";
 import { LAYER } from "./layout";
-import { MARKS, type Mark } from "./marks";
-import { INK_PX, materials, palette } from "./palette";
+import { MARK_STYLE, paintMark, type Mark } from "./marks";
+import { GLASS_TONES, INK_PX, materials } from "./palette";
 import { easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-// Where the work lands: a row of platform tiles on the floor along the stack's
-// right side, each wired to the base by a circuit trace in its channel's color.
-// When the signal lights a layer, a pulse runs its traces and the tiles light up.
+// Where the work lands. Each channel's route leaves the stack's right face from
+// its own port and runs along the floor grid (straight legs, rounded turns) to
+// the platforms it reaches; Search forks at a junction into Google and ChatGPT.
+// Routes are nested so none cross: the front one runs furthest before turning.
+// Each ends on a white puck carrying the platform's real logo. When the signal
+// lights a layer, a pulse runs its routes, the junctions blink as it passes and
+// the puck lifts with a ring of the channel's color on arrival.
 
-const FLOOR = 0.012;
-const TILE = { size: 0.46, height: 0.06, x: 2.7, front: 1.85, step: 0.6 };
-const PORT = { x: LAYER.baseWidth / 2 + 0.02, front: 1.3, back: -1.3 };
-const BEND_X = 2.08; // where the traces turn toward their tiles
+type XZ = [number, number];
+type Route = { k: number; mark: Mark; path: XZ[] };
 
-const TILES = CHANNELS.flatMap((channel, k) => channel.lands.map((mark) => ({ mark, k })));
-const tileZ = (i: number) => TILE.front - i * TILE.step;
+const FLOOR = 0.01;
+const PORT_X = LAYER.baseWidth / 2 + 0.02;
+const TURN = 0.22; // corner radius
+const PUCK = { r: 0.26, h: 0.09 };
+const ROUTES: Route[] = [
+  { k: 0, mark: "hackernews", path: [[PORT_X, -0.2], [3.68, -0.2]] },
+  { k: 1, mark: "chatgpt", path: [[PORT_X, -0.6], [2.96, -0.6], [2.96, -1.95]] },
+  { k: 1, mark: "google", path: [[PORT_X, -0.6], [4.25, -0.6], [4.25, -1.95]] },
+  { k: 2, mark: "reddit", path: [[PORT_X, -1.0], [2.5, -1.0], [2.5, -3.06], [3.2, -3.06]] },
+  { k: 3, mark: "youtube", path: [[PORT_X, -1.4], [2.05, -1.4], [2.05, -2.75]] },
+];
 
-// One S-curve per tile, fanning out from evenly spaced ports on the base, so no two cross.
-const TRACES = TILES.map((_, i) => {
-  const zp = PORT.front + ((PORT.back - PORT.front) * i) / (TILES.length - 1);
-  const zt = tileZ(i);
-  return new CubicBezierCurve3(
-    new Vector3(PORT.x, FLOOR, zp),
-    new Vector3(BEND_X, FLOOR, zp),
-    new Vector3(BEND_X, FLOOR, zt),
-    new Vector3(TILE.x - TILE.size / 2, FLOOR, zt),
-  );
-});
+const at = ([x, z]: XZ, y = FLOOR) => new Vector3(x, y, z);
 
-/** A platform tile: white key with the mark on top, graphite at rest, the channel color when a pulse lands. */
-function Tile({ mark, k, z }: { mark: Mark; k: number; z: number }) {
+/** Straight legs joined by rounded corners. Returns the curve and each corner's 0..1 position along it. */
+function build(path: XZ[]) {
+  const curve = new CurvePath<Vector3>();
+  const pts = path.map((p) => at(p));
+  let from = pts[0];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const corner = pts[i];
+    const into = corner.clone().addScaledVector(corner.clone().sub(pts[i - 1]).normalize(), -TURN);
+    const out = corner.clone().addScaledVector(pts[i + 1].clone().sub(corner).normalize(), TURN);
+    curve.add(new LineCurve3(from, into));
+    curve.add(new QuadraticBezierCurve3(into, corner, out));
+    from = out;
+  }
+  curve.add(new LineCurve3(from, pts[pts.length - 1]));
+  const lengths = curve.getCurveLengths();
+  const total = curve.getLength();
+  // Corner i is curve 2i + 1; its midpoint along the route.
+  const corners = path.slice(1, -1).map((_, i) => (lengths[2 * i] + (lengths[2 * i + 1] - lengths[2 * i]) / 2) / total);
+  return { curve, corners };
+}
+
+/** A platform puck at the end of a route: white badge with the real logo filling it; lifts with a colored ring on arrival. */
+function Puck({ route }: { route: Route }) {
   const story = useStory();
-  const p = palette();
   const m = materials();
   const group = useRef<Group>(null);
-  const ink = useRef<MeshBasicMaterial>(null);
-  const [rest, lit] = useMemo(() => [new Color(p.ink), new Color(CHANNELS[k].color)], [p, k]);
+  const ring = useRef<MeshBasicMaterial>(null);
+  const tone = GLASS_TONES[route.k];
 
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      const s = (w * 0.56) / 24;
+      // Pure white badge (the face is unlit), then the logo at its brand size.
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
+      ctx.fill();
+      const s = (w * MARK_STYLE[route.mark].fit) / 24;
       ctx.save(); // repaints reuse the context, so don't let the transform stack up
       ctx.translate(w / 2 - 12 * s, h / 2 - 12 * s);
       ctx.scale(s, s);
-      ctx.fillStyle = "#ffffff"; // tinted by the material color
-      ctx.fill(new Path2D(MARKS[mark]));
+      paintMark(ctx, route.mark);
       ctx.restore();
     },
-    [mark],
+    [route.mark],
   );
-  const face = useCanvasTexture(256, 256, draw);
+  const face = useCanvasTexture(512, 512, draw);
+  const end = route.path[route.path.length - 1];
 
   useFrame((state) => {
     const t = story.time(state.clock.elapsedTime);
-    const arrive = story.layerIn(k, t);
-    const glow = story.landed(k, t);
+    const arrive = story.layerIn(route.k, t);
+    const glow = story.landed(route.k, t);
     const g = group.current;
     if (g) {
       g.visible = arrive > 0;
       g.scale.setScalar(Math.max(1e-4, easeOutBack(arrive)));
       g.position.y = glow * 0.06;
     }
-    // Rests in graphite with a hint of its channel; floods with color as the pulse lands.
-    ink.current?.color.lerpColors(rest, lit, 0.18 + 0.82 * glow);
+    if (ring.current) ring.current.opacity = glow;
   });
 
   return (
-    <group ref={group} position={[TILE.x, 0, z]} visible={false}>
-      <RoundedBox args={[TILE.size, TILE.height, TILE.size]} radius={0.025} smoothness={3} position-y={TILE.height / 2} material={m.panel} castShadow receiveShadow>
-        <Outlines thickness={INK_PX} color={p.ink} />
-      </RoundedBox>
-      <mesh rotation-x={-Math.PI / 2} position-y={TILE.height + 0.002}>
-        <planeGeometry args={[TILE.size * 0.9, TILE.size * 0.9]} />
-        <meshBasicMaterial ref={ink} map={face.texture} transparent toneMapped={false} />
-      </mesh>
+    <group position={at(end, 0)}>
+      <group ref={group} visible={false}>
+        <mesh position-y={PUCK.h / 2} material={m.panel} castShadow receiveShadow>
+          <cylinderGeometry args={[PUCK.r, PUCK.r, PUCK.h, 48]} />
+          <Outlines thickness={INK_PX} color={tone.edge} />
+        </mesh>
+        <mesh rotation-x={-Math.PI / 2} position-y={PUCK.h + 0.002}>
+          <circleGeometry args={[PUCK.r - 0.012, 64]} />
+          <meshBasicMaterial map={face.texture} transparent toneMapped={false} />
+        </mesh>
+        <mesh rotation-x={-Math.PI / 2} position-y={PUCK.h + 0.004}>
+          <ringGeometry args={[PUCK.r - 0.035, PUCK.r + 0.01, 64]} />
+          <meshBasicMaterial ref={ring} color={CHANNELS[route.k].color} transparent opacity={0} depthWrite={false} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
 
-/** A floor trace with its running pulse; fades in with its channel's layer. */
-function Trace({ i, k }: { i: number; k: number }) {
+/** A route line with its junction nodes and running pulse; fades in with its channel's layer. */
+function RouteLine({ route }: { route: Route }) {
   const story = useStory();
-  const curve = TRACES[i];
-  const points = useMemo(() => curve.getPoints(48), [curve]);
+  const channel = CHANNELS[route.k];
+  const tone = GLASS_TONES[route.k];
+  const { curve, corners } = useMemo(() => build(route.path), [route]);
+  const points = useMemo(() => curve.getSpacedPoints(96), [curve]);
   const line = useRef<Line2>(null);
   const pulse = useRef<Mesh>(null);
+  const nodes = useRef<(MeshBasicMaterial | null)[]>([]);
+  const group = useRef<Group>(null);
+  const [rest, lit] = useMemo(() => [new Color("#ffffff"), new Color(channel.color)], [channel]);
 
   useFrame((state) => {
     const t = story.time(state.clock.elapsedTime);
-    if (line.current) line.current.material.opacity = 0.55 * story.layerIn(k, t);
-    const r = story.route(k, t);
+    const shown = story.layerIn(route.k, t);
+    if (group.current) group.current.visible = shown > 0;
+    if (line.current) line.current.material.opacity = 0.9 * shown;
+    const r = story.route(route.k, t);
     if (pulse.current) {
       pulse.current.visible = r >= 0;
       if (r >= 0) curve.getPointAt(r, pulse.current.position);
     }
-  });
-
-  return (
-    <>
-      <Line ref={line} points={points} color={CHANNELS[k].color} lineWidth={1.6} transparent opacity={0} />
-      <mesh ref={pulse} visible={false}>
-        <sphereGeometry args={[0.04, 16, 12]} />
-        <meshBasicMaterial color={CHANNELS[k].color} toneMapped={false} />
-      </mesh>
-    </>
-  );
-}
-
-/** The channel's label chip lying on the floor beside its tiles, reading along the row. */
-function Chip({ k }: { k: number }) {
-  const story = useStory();
-  const p = palette();
-  const channel = CHANNELS[k];
-  const group = useRef<Group>(null);
-  const tiles = TILES.flatMap((tile, i) => (tile.k === k ? [tileZ(i)] : []));
-  const z = tiles.reduce((a, b) => a + b, 0) / tiles.length;
-
-  const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      const r = (h - 8) / 2;
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = channel.color;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(4, 4, w - 8, h - 8, r);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = channel.color;
-      ctx.beginPath();
-      ctx.arc(4 + r, h / 2, h * 0.14, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = channel.deep;
-      ctx.font = `600 ${h * 0.44}px ${p.bodyFont}`;
-      ctx.textBaseline = "middle";
-      ctx.fillText(channel.chip, 4 + r * 1.9, h / 2 + 2);
-    },
-    [channel, p],
-  );
-  const chip = useCanvasTexture(512, 96, draw);
-
-  useFrame((state) => {
-    if (group.current) group.current.visible = story.layerIn(k, story.time(state.clock.elapsedTime)) >= 1;
+    // Junction nodes blink as the pulse passes them.
+    corners.forEach((u, i) => {
+      const node = nodes.current[i];
+      if (node) node.color.lerpColors(rest, lit, r >= 0 ? Math.max(0, 1 - Math.abs(r - u) / 0.12) : 0);
+    });
   });
 
   return (
     <group ref={group} visible={false}>
-      {/* Flat on the floor; text runs along the row (world -z) with its top toward the stack. */}
-      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[TILE.x + 0.5, FLOOR, z]}>
-        <planeGeometry args={[1.05, 0.2]} />
-        <meshBasicMaterial map={chip.texture} transparent toneMapped={false} />
+      <Line ref={line} points={points} color={channel.color} lineWidth={1.8} transparent opacity={0} />
+      {route.path.slice(1, -1).map((corner, i) => (
+        <mesh key={i} position={at(corner, 0.02)}>
+          <cylinderGeometry args={[0.075, 0.075, 0.03, 32]} />
+          <meshBasicMaterial
+            ref={(el) => {
+              nodes.current[i] = el;
+            }}
+            color="#ffffff"
+            toneMapped={false}
+          />
+          <Outlines thickness={INK_PX} color={tone.edge} />
+        </mesh>
+      ))}
+      <mesh ref={pulse} visible={false}>
+        <sphereGeometry args={[0.045, 16, 12]} />
+        <meshBasicMaterial color={channel.color} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -163,14 +173,11 @@ function Chip({ k }: { k: number }) {
 export default function Destinations() {
   return (
     <group>
-      {TILES.map(({ mark, k }, i) => (
-        <group key={mark}>
-          <Trace i={i} k={k} />
-          <Tile mark={mark} k={k} z={tileZ(i)} />
+      {ROUTES.map((route) => (
+        <group key={route.mark}>
+          <RouteLine route={route} />
+          <Puck route={route} />
         </group>
-      ))}
-      {CHANNELS.map((channel, k) => (
-        <Chip key={channel.n} k={k} />
       ))}
     </group>
   );

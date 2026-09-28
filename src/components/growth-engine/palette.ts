@@ -1,4 +1,4 @@
-import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from "three";
+import { BufferAttribute, Color, MeshPhysicalMaterial, MeshStandardMaterial, type Mesh } from "three";
 import { CHANNELS } from "./channels";
 
 // A neutral stage (porcelain, graphite, soft white) so the four channel colors
@@ -29,6 +29,21 @@ const LIFT = { emissive: "#ffffff", emissiveIntensity: 0.12 };
 
 /** Ink outline width in pixels: thin, technical-illustration lines. */
 export const INK_PX = 1;
+
+/** Paints a vertical fade onto a centered mesh's vertices: `low` at the bottom into `high` at the top (use a `vertexColors` material). */
+export function paintFade(mesh: Mesh, low: string, high: string, height: number) {
+  const pos = mesh.geometry.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const from = new Color(low);
+  const to = new Color(high);
+  const c = new Color();
+  for (let i = 0; i < pos.count; i++) {
+    const k = Math.min(1, Math.max(0, pos.getY(i) / height + 0.5)); // 0 at the bottom, 1 at the top
+    c.lerpColors(from, to, k * k * (3 - 2 * k));
+    c.toArray(colors, i * 3);
+  }
+  mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
+}
 
 /** `a` moved toward `b` by `k` (0..1), as a hex string. */
 export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
@@ -87,19 +102,6 @@ function build() {
     deep: CHANNELS.map(({ deep }) => new MeshPhysicalMaterial({ color: deep, ...VINYL })),
     /** Magnifier lens: faintly frosted glass. */
     lens: new MeshPhysicalMaterial({ color: "#ffffff", transparent: true, opacity: 0.35, roughness: 0.1, clearcoat: 1, depthWrite: false }),
-    /** Clear frosted glass: the compartments on the stack top (no outline, same reason as `shell`). */
-    frosted: new MeshPhysicalMaterial({
-      color: "#ffffff",
-      transparent: true,
-      opacity: 0.35,
-      roughness: 0.2,
-      clearcoat: 1,
-      clearcoatRoughness: 0.1,
-      sheen: 1,
-      sheenColor: "#ffffff",
-      sheenRoughness: 0.4,
-      depthWrite: false,
-    }),
     /** White label panels on the slab fronts. */
     panel: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.18 }),
     /** Brushed aluminum trim between slabs: light, so the seams stay crisp without weight. */

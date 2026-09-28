@@ -1,12 +1,9 @@
-import type { Mark } from "./marks";
-
 // The four channels, bottom (foundation) to top.
 // Colors tell the "dawn rise" story, deep to radiant: indigo → azure → emerald → sun.
 // Your devtool's signal leaves as white light and each channel turns it into its
 // own color: its layer, its token, its lead pearls and its band on the monitor.
 // `color` is the vivid signal (pearls, traces, chart, lit lights), `pastel` the frosted
 // body tint (slabs, tokens) and `deep` the text-safe shade for glyphs on white.
-// `lands` are the destination tiles it wires to; `chip` labels its trace.
 export const CHANNELS = [
   {
     n: "01",
@@ -18,8 +15,6 @@ export const CHANNELS = [
     color: "#4f46e5",
     pastel: "#d4d2ff",
     deep: "#4338ca",
-    lands: ["hackernews"] as Mark[],
-    chip: "front page · HN",
   },
   {
     n: "02",
@@ -31,8 +26,6 @@ export const CHANNELS = [
     color: "#0ea5e9",
     pastel: "#c6e8fb",
     deep: "#0369a1",
-    lands: ["google", "chatgpt", "perplexity", "claude"] as Mark[],
-    chip: "#1 · cited by AI",
   },
   {
     n: "03",
@@ -44,8 +37,6 @@ export const CHANNELS = [
     color: "#10b981",
     pastel: "#c4f1dc",
     deep: "#047857",
-    lands: ["reddit"] as Mark[],
-    chip: "r/programming",
   },
   {
     n: "04",
@@ -57,8 +48,6 @@ export const CHANNELS = [
     color: "#f5b301",
     pastel: "#ffe9a8",
     deep: "#b45309",
-    lands: ["youtube", "x"] as Mark[],
-    chip: "48k views",
   },
 ] as const;
 
