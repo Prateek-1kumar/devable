@@ -179,15 +179,22 @@ function drawHazard(ctx: CanvasRenderingContext2D, w: number, h: number) {
 
 /** A cauliflower puff: an icosphere pushed out by a few seeded lobes, smooth-shaded. */
 function puffGeometry() {
-  const g = mergeVertices(new IcosahedronGeometry(1, 4));
+  // Dense enough that a 300px puff has a round silhouette; uv and normal go first so mergeVertices welds the seams.
+  const base = new IcosahedronGeometry(1, 12);
+  base.deleteAttribute("uv");
+  base.deleteAttribute("normal");
+  const g = mergeVertices(base);
   const rand = mulberry32(19);
   const lobes = Array.from({ length: 9 }, () => new Vector3(rand() * 2 - 1, rand() * 1.6 - 0.4, rand() * 2 - 1).normalize());
+  // A second, finer layer of billows, so a puff reads as cauliflower rather than an egg.
+  const billows = Array.from({ length: 28 }, () => new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize());
   const pos = g.attributes.position;
   const v = new Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i).normalize();
     const bump = lobes.reduce((s, b) => s + Math.exp(-((1 - v.dot(b)) / 0.32)), 0);
-    v.multiplyScalar(0.84 + 0.2 * Math.min(1.8, bump));
+    const fine = billows.reduce((s, b) => s + Math.exp(-((1 - v.dot(b)) / 0.06)), 0);
+    v.multiplyScalar(0.84 + 0.2 * Math.min(1.8, bump) + 0.13 * Math.min(1.3, fine));
     pos.setXYZ(i, v.x, v.y, v.z);
   }
   g.computeVertexNormals();
@@ -443,7 +450,8 @@ export default function LaunchSite() {
     <group>
       {/* Apron: concrete, trenches, chevrons and the pad stencil, fading into the page. */}
       <group ref={apronMesh}>
-        <mesh position={C} geometry={apronGeo} receiveShadow>
+        {/* No receiveShadow: the key light's long stage shadow smeared across it; ContactShadows grounds the pad instead. */}
+        <mesh position={C} geometry={apronGeo}>
           <meshStandardMaterial
             ref={apron}
             map={apronTex.texture}
@@ -528,11 +536,11 @@ export default function LaunchSite() {
           [-1, 1],
         ].map(([x, z]) => (
           <mesh key={`${x}${z}`} position={[x * POST.half, POST.base + POST.h / 2, z * POST.half]} material={mm.towerSteel} castShadow>
-            <cylinderGeometry args={[0.016, 0.016, POST.h, 10]} />
+            <cylinderGeometry args={[0.028, 0.028, POST.h, 12]} />
           </mesh>
         ))}
         <instancedMesh ref={braces} args={[undefined, undefined, 4 * BAYS * 2]} material={mm.towerSteel} castShadow>
-          <boxGeometry args={[0.006, 1, 0.006]} />
+          <boxGeometry args={[0.014, 1, 0.014]} />
         </instancedMesh>
         {[3, 6, 9].map((b) => (
           <RoundedBox key={b} args={[0.34, 0.016, 0.34]} radius={0.006} smoothness={2} position-y={b * BAY + 0.03} material={m.porcelain} castShadow receiveShadow />
@@ -578,10 +586,10 @@ export default function LaunchSite() {
       </group>
 
       <instancedMesh ref={cloud} args={[puff, undefined, CLOUD]} visible={false} frustumCulled={false}>
-        <meshStandardMaterial color="#ffffff" roughness={1} emissive="#ffffff" emissiveIntensity={0.22} />
+        <meshStandardMaterial color="#ffffff" roughness={1} emissive="#ffffff" emissiveIntensity={0.4} />
       </instancedMesh>
       <instancedMesh ref={pool} args={[puff, undefined, POOL]} visible={false} frustumCulled={false}>
-        <meshStandardMaterial color="#f1f2f0" roughness={1} emissive="#ffffff" emissiveIntensity={0.22} />
+        <meshStandardMaterial color="#f1f2f0" roughness={1} emissive="#ffffff" emissiveIntensity={0.4} />
       </instancedMesh>
     </group>
   );

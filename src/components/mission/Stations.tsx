@@ -117,8 +117,8 @@ function Puck({ k, register }: { k: number; register: Register }) {
             toneMapped={false}
           />
         </mesh>
-        {/* Ground-station dish, beside the puck on its east side. */}
-        <group position={[1.7, -0.1, 0]}>
+        {/* Ground-station dish, beside the puck on its east side (1.8x, so it reads as a dish at orbit distance, not a fleck). */}
+        <group position={[2.05, -0.1, 0]} scale={1.8}>
           <mesh position-y={0.275} material={m.alu}>
             <cylinderGeometry args={[0.05, 0.05, 0.55, 12]} />
           </mesh>

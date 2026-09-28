@@ -39,7 +39,7 @@ export default function Scene({ still, active, progress, labels, padShadows = fa
       camera={{ fov: 22, near: 0.05, far: 2000, position: [6.95, 3.31, 12.03] }}
       onCreated={() => onReady?.()}
     >
-      <Mission still={still} progress={progress} labels={labels} padShadows={padShadows && !still} />
+      <Mission still={still} progress={progress} labels={labels} padShadows={padShadows} />
     </Canvas>
   );
 }
@@ -74,7 +74,13 @@ function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" |
         <Lightformer form="rect" intensity={0.9} position={[0, 3, -9]} scale={[12, 3, 1]} target={[0, 0, 0]} />
         <Lightformer form="rect" intensity={0.3} color="#ffe7c7" position={[6, -2, 4]} scale={[4, 2, 1]} target={[0, 0, 0]} />
       </Environment>
-      {padShadows && <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.4} far={3.5} opacity={0.3} resolution={1024} color="#0c3b29" />}
+      {/* Mounted once and gated by props: drei never disposes its render targets, so remounting leaked them.
+          frames 0 stops its per-frame shadow pass once the pad is off screen. */}
+      {!still && (
+        <group visible={padShadows}>
+          <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.4} far={3.5} opacity={0.3} resolution={1024} color="#0c3b29" frames={padShadows ? Infinity : 0} />
+        </group>
+      )}
 
       <Planet />
       <LaunchSite />

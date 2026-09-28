@@ -189,10 +189,14 @@ function drawLabel(i: number) {
     const font = palette().bodyFont;
     ctx.save();
     drawGlyph(ctx, glyph, h * 0.55, h / 2, h * 0.5, deep, font);
+    const label = `${n} ${ROLE[i]}`;
     ctx.fillStyle = deep;
     ctx.font = `600 ${h * 0.4}px ${font}`;
+    // Shrink to fit the plate after the glyph ("04 CREATORS" is the widest).
+    const size = Math.min(h * 0.4, (h * 0.4 * (w - h * 1.05 - 16)) / ctx.measureText(label).width);
+    ctx.font = `600 ${size}px ${font}`;
     ctx.textBaseline = "middle";
-    ctx.fillText(`${n} ${ROLE[i]}`, h * 1.05, h * 0.53);
+    ctx.fillText(label, h * 1.05, h * 0.53);
     ctx.restore();
   };
 }

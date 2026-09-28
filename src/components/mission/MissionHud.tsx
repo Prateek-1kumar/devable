@@ -119,14 +119,14 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
               aria-current={i === beat ? "step" : undefined}
               onClick={() => onJump(b.land)}
               className={`absolute top-0 ${MONO} cursor-pointer text-[10px] leading-3 transition-colors hover:text-foreground/80 focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-forest ${
-                i === beat ? "text-foreground/80" : "text-foreground/35"
+                i === beat ? "text-foreground/80" : "text-foreground/55"
               }`}
               style={{ left: `${scrollS(b.start) * 100}%` }}
             >
               {b.label}
             </button>
           ))}
-          <span aria-hidden="true" className={`absolute top-0 right-0 ${MONO} text-[10px] leading-3 text-foreground/35`}>
+          <span aria-hidden="true" className={`absolute top-0 right-0 ${MONO} text-[10px] leading-3 text-foreground/55`}>
             NOT TO SCALE
           </span>
         </div>

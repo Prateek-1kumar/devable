@@ -47,6 +47,7 @@ export default function MissionHero() {
   const [ready, setReady] = useState(false);
   const [caption, setCaption] = useState(0);
   const [beat, setBeat] = useState(0);
+  const [padShadows, setPadShadows] = useState(true);
   const lenis = useLenis();
   const lenisRef = useRef<Lenis | undefined>(undefined);
   useEffect(() => {
@@ -68,19 +69,29 @@ export default function MissionHero() {
     const box = span.current;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      box.top = r.top + window.scrollY;
-      box.span = Math.max(1, el.offsetHeight - window.innerHeight);
+      const [top, span] = [r.top + window.scrollY, Math.max(1, el.offsetHeight - window.innerHeight)];
+      const s = scrolled();
+      const moved = box.span > 1 && (Math.abs(top - box.top) > 0.5 || Math.abs(span - box.span) > 0.5);
+      box.top = top;
+      box.span = span;
+      // A resize or zoom mid-hero keeps the story where it was, instead of jumping by the span change.
+      if (moved && s > 0 && s < 1) {
+        const y = top + s * span;
+        if (lenisRef.current) lenisRef.current.scrollTo(y, { immediate: true, force: true });
+        else window.scrollTo({ top: y, behavior: "instant" });
+      }
     };
+    // The section scroll fraction, read from Lenis's animated scroll when it runs.
+    const scrolled = () => clamp01(((lenisRef.current?.animatedScroll ?? window.scrollY) - box.top) / box.span);
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     window.addEventListener("resize", measure);
-    // The section scroll fraction, read from Lenis's animated scroll when it runs.
-    const scrolled = () => clamp01(((lenisRef.current?.animatedScroll ?? window.scrollY) - box.top) / box.span);
     const pr = progress.current;
     pr.shown = storyP(scrolled()); // a mid-page reload lands on its frame, never replays
     let beatNow = -1;
     let captionNow = -2;
+    let padNow: boolean | null = null;
 
     const writeDom = (p: number, s: number) => {
       const n = dom.current;
@@ -109,6 +120,8 @@ export default function MissionHero() {
 
       const b = beatAt(p, beatNow);
       if (b !== beatNow) setBeat((beatNow = b));
+      const ps = p < 0.3; // the pad's contact shadow: only while the pad is on screen (the apron is gone by 0.36)
+      if (ps !== padNow) setPadShadows((padNow = ps));
       const c = captionAt(p, captionNow);
       if (c !== captionNow) setCaption((captionNow = c));
     };
@@ -164,7 +177,7 @@ export default function MissionHero() {
           className="relative -mx-6 aspect-square w-[calc(100%+3rem)] transition-opacity duration-700 sm:-mx-12 sm:w-[calc(100%+6rem)] lg:absolute lg:inset-0 lg:mx-0 lg:aspect-auto lg:w-auto"
           style={{ opacity: ready ? 1 : 0 }}
         >
-          <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={beat <= 2} onReady={onReady} />
+          <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={padShadows} onReady={onReady} />
         </div>
         <StillExtras className="relative z-10 motion-safe:lg:hidden" />
         {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}

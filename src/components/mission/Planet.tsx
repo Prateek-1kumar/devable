@@ -16,7 +16,7 @@ const T = 0.12; // land threshold
 const GLOW = 3;
 /** The key light's direction, so the continents and the ocean brighten on the sun side. */
 const SUN = new Vector3(-0.43, 0.72, 0.57).normalize();
-const INNER_GLOW = 0.28; // as glowFromWithin: the surface colour glows a little, so shaded faces keep their hue
+const INNER_GLOW = 0.12; // as glowFromWithin: the surface colour glows a little, so shaded faces keep their hue
 
 /**
  * The land field: a seeded sum of sines over a gently warped sphere (8 continent-scale terms,
@@ -67,7 +67,7 @@ const PLANET_PARS = /* glsl */ `
     }
     float w = max(fwidth(land) * 0.8, 0.0015); // about a pixel, whatever the distance
     float coast = smoothstep(${T.toFixed(3)} - w, ${T.toFixed(3)} + w, land);
-    float depth = 1.0 - smoothstep(${(T - 0.3).toFixed(3)}, ${(T - 0.02).toFixed(3)}, land);
+    float depth = 1.0 - smoothstep(${(T - 0.12).toFixed(3)}, ${(T - 0.02).toFixed(3)}, land); // mostly deep, a narrow shallow band at the coast
     float sun = smoothstep(-0.4, 0.95, dot(n, uSun));
     vec3 ocean = mix(mix(uShallow, uDeep, depth), uDay, 0.35 * sun);
     float shore = 1.0 - smoothstep(max(0.012, 2.5 * w), max(0.012, 2.5 * w) + w, ${T.toFixed(3)} - land);
@@ -80,8 +80,8 @@ function planetMaterial(uniforms: ReturnType<typeof landField>) {
   const mat = new MeshPhysicalMaterial({
     color: "#ffffff",
     roughness: 0.55,
-    clearcoat: 0.4,
-    clearcoatRoughness: 0.25,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.06, // one small crisp glaze highlight, not large soft blobs
     emissive: "#ffffff",
     emissiveIntensity: GLOW,
     polygonOffset: true,
@@ -121,8 +121,10 @@ const ATMOS_FRAG = /* glsl */ `
   varying vec3 vV;
   void main() {
     float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
-    vec3 rgb = mix(vec3(0.624, 0.910, 0.816), vec3(0.812, 0.933, 1.0), fres);
-    gl_FragColor = vec4(rgb, 0.6 * fres * uReveal);
+    vec3 rgb = mix(vec3(0.624, 0.910, 0.816), vec3(0.72, 0.93, 0.88), fres);
+    // Brightest just outside the limb, fading to nothing at the shell's own silhouette (no hard ring).
+    float edge = 1.0 - smoothstep(0.45, 1.0, fres); // 0.45 is about the planet's own limb: the glow falls off outward from it
+    gl_FragColor = vec4(rgb, 0.9 * fres * edge * uReveal);
   }
 `;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import ChannelParagraph from "../ChannelParagraph";
 import { CHANNELS } from "../growth-engine/channels";
 import { MARKS } from "../growth-engine/marks";
@@ -65,7 +65,6 @@ type Props = {
 
 export default function MissionCopy({ caption, pinned, bind }: Props) {
   const intro = !pinned || caption === 0;
-  const current = pinned ? CAPTIONS[caption] : undefined;
   return (
     <div className="relative z-10 max-w-[38rem] text-foreground">
       <motion.div initial={false} animate={{ opacity: intro ? 1 : 0, y: intro ? 0 : -16 }} transition={{ duration: 0.45, ease: EASE }}>
@@ -93,39 +92,41 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
 
       {pinned && (
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
-          <AnimatePresence mode="wait">
-            {current && (
-              <motion.div
-                key={caption}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } }}
-                exit={{ opacity: 0, y: -12, transition: { duration: 0.25, ease: EASE } }}
-              >
-                <div aria-hidden="true">
-                  <p className={`${MONO} text-[11px] text-foreground/45`}>{current.index}</p>
-                  <p className="mt-5 max-w-[30rem] text-[clamp(2rem,3.4vw,3.2rem)] leading-[1.05] font-normal tracking-[-0.035em] text-balance">{current.title}</p>
-                  {current.body && <p className="mt-4 max-w-[26rem] text-lg leading-relaxed text-foreground/60">{current.body}</p>}
-                  {current.extra === "marks" && <MarksRow bind={bind} />}
-                </div>
-                {current.extra === "outcome" && (
-                  <div className="mt-8">
-                    <p aria-hidden="true" className="flex items-baseline gap-4">
-                      <span
-                        ref={bind("outcome")}
-                        className="text-[clamp(4rem,7vw,6.5rem)] leading-none tracking-[-0.05em] tabular-nums"
-                      >
-                        +{OUTCOME}%
-                      </span>
-                      <span className={`${MONO} text-[12px] text-foreground/50`}>pipeline growth · illustrative</span>
-                    </p>
-                    <div className="mt-9">
-                      <Ctas />
-                    </div>
+          {/* Every caption is stacked in one grid cell and shown by a CSS state, so a fast glide through
+              several beats (a flight-plan jump, an anchor) can never leave a stale caption behind. */}
+          <div className="grid">
+            {Object.entries(CAPTIONS).map(([id, c]) => {
+              const on = caption === Number(id);
+              return (
+                <div
+                  key={id}
+                  data-on={on}
+                  inert={!on}
+                  className="invisible translate-y-3.5 self-center opacity-0 transition-[opacity,translate,visibility] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] [grid-area:1/1] data-[on=true]:visible data-[on=true]:translate-y-0 data-[on=true]:opacity-100 data-[on=true]:delay-150 data-[on=true]:duration-550"
+                >
+                  <div aria-hidden="true">
+                    <p className={`${MONO} text-[11px] text-foreground/45`}>{c.index}</p>
+                    <p className="mt-5 max-w-[30rem] text-[clamp(2rem,3.4vw,3.2rem)] leading-[1.05] font-normal tracking-[-0.035em] text-balance">{c.title}</p>
+                    {c.body && <p className="mt-4 max-w-[26rem] text-lg leading-relaxed text-foreground/60">{c.body}</p>}
+                    {c.extra === "marks" && <MarksRow bind={bind} />}
                   </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  {c.extra === "outcome" && (
+                    <div className="mt-8">
+                      <p aria-hidden="true" className="flex items-baseline gap-4">
+                        <span ref={bind("outcome")} className="text-[clamp(4rem,7vw,6.5rem)] leading-none tracking-[-0.05em] tabular-nums">
+                          +{OUTCOME}%
+                        </span>
+                        <span className={`${MONO} text-[12px] text-foreground/50`}>pipeline growth · illustrative</span>
+                      </p>
+                      <div className="mt-9">
+                        <Ctas />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
           <ol className="sr-only">
             {Object.values(CAPTIONS).map((c) => (
               <li key={c.index}>

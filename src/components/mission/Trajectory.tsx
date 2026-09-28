@@ -189,8 +189,11 @@ export default function Trajectory() {
       l.material.opacity = o;
       if (o < 0.001) l.visible = false; // fully faded lines still write depth: take them out of the pass
     };
-    fadeTo(flown.current, earlier);
-    fadeTo(plan.current, recede);
+    // Once the spiral tube takes over, the ink paths (flown, lap and the dashed plan) retire: the payoff is solid, not a line drawing.
+    const retire = 1 - seg(p, 0.87, 0.93);
+    fadeTo(flown.current, earlier * retire);
+    fadeTo(lap.current, retire);
+    fadeTo(plan.current, recede * retire);
 
     // Spiral: the tube grows ring by ring behind the craft, a white bead at its head.
     const n = Math.floor((SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
