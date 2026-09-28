@@ -58,9 +58,17 @@ export class Story {
     this.nextPulse = intro.end + between(PULSE_GAP);
   }
 
+  private lastClock = 0;
+  private offset = 0;
+
   /** Scene time; a still render is pinned to the settled end state. */
   time(clock: number) {
-    return this.still ? 1e4 : clock;
+    if (this.still) return 1e4;
+    // r3f zeroes the clock whenever frameloop resumes (scrolled back on screen);
+    // carry the time forward so the intro doesn't replay.
+    if (clock < this.lastClock) this.offset += this.lastClock;
+    this.lastClock = clock;
+    return this.offset + clock;
   }
 
   update(t: number) {

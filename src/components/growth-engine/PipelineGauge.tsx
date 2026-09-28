@@ -1,72 +1,101 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Outlines } from "@react-three/drei";
-import { LatheGeometry, Vector2, type Group, type Mesh } from "three";
+import { Outlines, RoundedBox } from "@react-three/drei";
+import type { Group } from "three";
 import { FACING_YAW, GAUGE_DIAL as DIAL, GAUGE_POSITION } from "./layout";
 import { INK_PX, materials, palette } from "./palette";
 import { INTRO_LEADS, clamp01, easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-// The progress arc runs clockwise around the rim with its gap at the bottom,
-// where the tether plugs in. Angles are canvas angles (y down).
-const ARC = { from: (3 * Math.PI) / 4, sweep: (3 * Math.PI) / 2, radius: 0.43 }; // radius as a share of the face texture
-const FACE_RADIUS = DIAL.radius - 0.08;
+// A slim LCD panel, a sibling of the devtool terminal. Its bottom edge sits
+// where the old dial's did, so the tether still plugs into the nub below.
+const W = 2.3;
+const H = 1.25;
+const D = DIAL.depth;
+const BEZEL = 0.12;
+const TEX = { w: 1024, h: Math.round((1024 * (H - 2 * BEZEL)) / (W - 2 * BEZEL)) };
+const TILT = -0.3; // radians the panel leans back from its base, so the screen faces up at the viewer
+// The sparkline's fixed path (x, y in 0..1, y up): a steady climb with small dips.
+// It draws itself left to right as the intro's leads land, then stays whole.
+const PATH = [
+  [0, 0.05], [0.1, 0.14], [0.2, 0.1], [0.3, 0.28], [0.4, 0.24],
+  [0.5, 0.45], [0.6, 0.4], [0.7, 0.62], [0.8, 0.58], [0.9, 0.8], [1, 0.95],
+];
 
-/** A soap-bar puck profile: flat faces, filleted rim, spun into a solid of revolution. */
-function puckGeometry() {
-  const { radius: r, depth: d, fillet: f } = DIAL;
-  const pts = [new Vector2(0, d / 2), new Vector2(r - f, d / 2)];
-  for (let i = 1; i <= 8; i++) {
-    const a = (Math.PI / 2) * (1 - i / 8);
-    pts.push(new Vector2(r - f + f * Math.cos(a), d / 2 - f + f * Math.sin(a)));
-  }
-  for (let i = 0; i <= 8; i++) {
-    const a = -(Math.PI / 2) * (i / 8);
-    pts.push(new Vector2(r - f + f * Math.cos(a), -d / 2 + f + f * Math.sin(a)));
-  }
-  pts.push(new Vector2(0, -d / 2));
-  // Lathe normals face outward when the profile runs bottom → top.
-  return new LatheGeometry(pts.reverse(), 96);
-}
-
-/** Round PIPELINE dial: counts leads up as pearls land, with an amber arc filling around the rim. */
+/** PIPELINE readout: lead count plus a sparkline that climbs as pearls land. */
 export default function PipelineGauge() {
   const story = useStory();
   const p = palette();
+  const m = materials();
   const group = useRef<Group>(null);
-  const tip = useRef<Mesh>(null);
   const view = useRef({ leads: 0, drawn: 0 });
-  const puck = useMemo(() => puckGeometry(), []);
 
   const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, w: number) => {
+    (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       const { leads, drawn } = view.current;
-      const c = w / 2;
-      ctx.textAlign = "center";
-      ctx.fillStyle = p.ink;
+      const pad = w * 0.06;
+      ctx.textBaseline = "alphabetic";
 
-      // Arc track, then the filled part.
-      ctx.lineCap = "round";
-      ctx.lineWidth = w * 0.03;
-      ctx.strokeStyle = p.stone;
+      // Header: label left, live dot right.
+      ctx.font = `500 ${h * 0.085}px ${p.bodyFont}`;
+      ctx.fillStyle = p.cream;
+      ctx.globalAlpha = 0.55;
+      ctx.fillText("PIPELINE", pad, pad + h * 0.07);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = p.amber;
       ctx.beginPath();
-      ctx.arc(c, c, w * ARC.radius, ARC.from, ARC.from + ARC.sweep);
-      ctx.stroke();
-      if (drawn > 0) {
-        ctx.strokeStyle = p.amber;
-        ctx.beginPath();
-        ctx.arc(c, c, w * ARC.radius, ARC.from, ARC.from + ARC.sweep * drawn);
-        ctx.stroke();
-      }
+      ctx.arc(w - pad - h * 0.025, pad + h * 0.045, h * 0.025, 0, Math.PI * 2);
+      ctx.fill();
 
-      ctx.font = `600 ${w * 0.2}px ${p.headingFont}`;
-      ctx.fillText(`+${Math.round(leads).toLocaleString("en-US")}`, c, w * 0.54);
-      ctx.font = `500 ${w * 0.07}px ${p.bodyFont}`;
-      ctx.fillText("leads", c, w * 0.65);
+      // Count.
+      ctx.fillStyle = p.cream;
+      ctx.font = `600 ${h * 0.26}px ${p.headingFont}`;
+      const num = `+${Math.round(leads).toLocaleString("en-US")}`;
+      ctx.fillText(num, pad, h * 0.47);
+      ctx.font = `500 ${h * 0.085}px ${p.bodyFont}`;
+      ctx.globalAlpha = 0.55;
+      ctx.fillText("leads", pad, h * 0.6);
+      ctx.globalAlpha = 1;
+
+      // Sparkline across the bottom: the fixed PATH, cut off at `drawn`.
+      const top = h * 0.66;
+      const bottom = h - pad;
+      const at = ([x, y]: number[]) => [pad + (w - 2 * pad) * x, bottom - (bottom - top) * y];
+      const pts = PATH.filter(([x]) => x < drawn).map(at);
+      const n = PATH.findIndex(([x]) => x >= drawn);
+      if (n > 0) {
+        // Interpolate the tip between the last whole point and the next one.
+        const [x0, y0] = PATH[n - 1];
+        const [x1, y1] = PATH[n];
+        pts.push(at([drawn, y0 + ((y1 - y0) * (drawn - x0)) / (x1 - x0)]));
+      } else pts.push(at(PATH[0])); // nothing landed yet: just the start dot
+      const last = pts[pts.length - 1];
+
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.lineTo(last[0], bottom);
+      ctx.lineTo(pad, bottom);
+      ctx.closePath();
+      ctx.fillStyle = p.amber;
+      ctx.globalAlpha = 0.15;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.strokeStyle = p.amber;
+      ctx.lineWidth = h * 0.018;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(last[0], last[1], h * 0.03, 0, Math.PI * 2);
+      ctx.fillStyle = p.amber;
+      ctx.fill();
     },
     [p],
   );
-  const face = useCanvasTexture(1024, 1024, draw);
+  const screen = useCanvasTexture(TEX.w, TEX.h, draw);
 
   useFrame((state) => {
     const t = story.time(state.clock.elapsedTime);
@@ -77,34 +106,26 @@ export default function PipelineGauge() {
     }
 
     const leads = Math.round(story.count(t));
-    const drawn = Math.round(clamp01(leads / INTRO_LEADS) * 120) / 120;
-    if (leads === view.current.leads && drawn === view.current.drawn) return;
-    view.current = { leads, drawn };
-    face.paint();
-
-    // A 3D amber pearl rides the tip of the arc.
-    if (tip.current) {
-      const angle = ARC.from + ARC.sweep * drawn;
-      const r = ARC.radius * 2 * FACE_RADIUS;
-      tip.current.visible = drawn > 0;
-      tip.current.position.set(r * Math.cos(angle), -r * Math.sin(angle), DIAL.depth / 2 + 0.04);
-    }
+    if (leads === view.current.leads) return;
+    view.current = { leads, drawn: clamp01(leads / INTRO_LEADS) };
+    screen.paint();
   });
 
   return (
     <group ref={group} position={GAUGE_POSITION} rotation-y={FACING_YAW} visible={false}>
-      <mesh geometry={puck} rotation-x={Math.PI / 2} material={materials().ceramic} castShadow>
-        <Outlines thickness={INK_PX} color={p.ink} />
-      </mesh>
-      <mesh position-z={DIAL.depth / 2 + 0.002}>
-        <circleGeometry args={[FACE_RADIUS, 96]} />
-        <meshBasicMaterial map={face.texture} transparent toneMapped={false} />
-      </mesh>
-      <mesh ref={tip} material={materials().pearl} visible={false}>
-        <sphereGeometry args={[0.055, 24, 18]} />
-      </mesh>
+      {/* Hinged at its bottom edge so the tether nub stays put. */}
+      <group position-y={-DIAL.radius} rotation-x={TILT}>
+        <RoundedBox args={[W, H, D]} radius={0.1} smoothness={4} position-y={H / 2} material={m.ceramic} castShadow>
+          <Outlines thickness={INK_PX} color={p.ink} />
+        </RoundedBox>
+        <RoundedBox args={[W - BEZEL * 1.4, H - BEZEL * 1.4, 0.02]} radius={0.05} smoothness={3} position={[0, H / 2, D / 2]} material={m.screen} />
+        <mesh position={[0, H / 2, D / 2 + 0.012]}>
+          <planeGeometry args={[W - 2 * BEZEL, H - 2 * BEZEL]} />
+          <meshBasicMaterial map={screen.texture} transparent toneMapped={false} />
+        </mesh>
+      </group>
       {/* Nub where the tether from the core attaches. */}
-      <mesh position-y={-DIAL.radius - 0.06} material={materials().ceramic} castShadow>
+      <mesh position-y={-DIAL.radius - 0.06} material={m.ceramic} castShadow>
         <cylinderGeometry args={[0.07, 0.09, 0.14, 24]} />
         <Outlines thickness={INK_PX} color={p.ink} />
       </mesh>
