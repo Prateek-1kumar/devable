@@ -29,9 +29,11 @@ type Props = {
   children: ReactNode;
   /** Content shown inside the pill once it has landed on screen 2. */
   landed?: ReactNode;
+  /** Content in the open space below the landed pill. */
+  below?: ReactNode;
 };
 
-export default function FallingPill({ children, landed }: Props) {
+export default function FallingPill({ children, landed, below }: Props) {
   const root = useRef<HTMLDivElement>(null);
 
   // Scroll progress over the first screen drives --fall (0 standing → 1 landed),
@@ -88,6 +90,14 @@ export default function FallingPill({ children, landed }: Props) {
             }}
           >
             {landed}
+          </div>
+        )}
+        {below && (
+          <div
+            className="absolute inset-x-0 bottom-0 flex items-center justify-center px-[6vw]"
+            style={{ top: "calc(50% + 13vw)" }} // from the pill's bottom edge to the screen's end
+          >
+            {below}
           </div>
         )}
       </section>

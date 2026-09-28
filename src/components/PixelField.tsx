@@ -29,10 +29,10 @@ type Cell = {
 
 // ── Tuning knobs ─────────────────────────────────────────────
 // Visibility
-const MAX_ALPHA = 0.8; // peak opacity of any shape (0–1)
+const MAX_ALPHA = 1; // peak opacity of any shape (0–1)
 
 // Center cluster
-const CLUSTER_RADIUS = 14; // in grid cells; area (≈ count) grows with the square
+const CLUSTER_RADIUS = 18; // in grid cells; area (≈ count) grows with the square
 const CLUSTER_DENSITY_EDGE = 0.35; // fill chance at the cluster's edge
 const CLUSTER_DENSITY_CENTER = 0.8; // fill chance at the cluster's center
 const CLUSTER_AREA = 0.4; // center wanders within the middle 40% of the area
@@ -49,9 +49,9 @@ const BLOCK_CHANCE = 0.4; // blocks; the rest are dots
 const LIGHT_CHANCE = 0.55; // off-white vs stone
 
 // Shape sizes in px
-const BLOCK_SIZE = 12;
-const DOT_SIZE = 6;
-const PLUS_SIZE = 10;
+const BLOCK_SIZE = 14;
+const DOT_SIZE = 7;
+const PLUS_SIZE = 12;
 const PLUS_STROKE = 2;
 
 // Cluster timeline in seconds
@@ -64,7 +64,7 @@ const CYCLE = 7; // when it re-forms elsewhere
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const ease = (v: number) => v * v * (3 - 2 * v);
 
-export default function PixelField({ gap = 26, className = "" }: Props) {
+export default function PixelField({ gap = 20, className = "" }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
