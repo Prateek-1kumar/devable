@@ -82,7 +82,7 @@ function Pins() {
   );
 }
 
-/** The D face: repaints only when a stripe changes. */
+/** The D faces, front and back: repaint only when a stripe changes. */
 function DFace() {
   const view = useRef(stripes(store.p).join());
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number) => drawMark(ctx, w, view.current.split(",")), []);
@@ -93,15 +93,21 @@ function DFace() {
     view.current = next;
     tex.paint();
   });
+  // Both faces carry the mark: the orbit sees the tower's back through Distance and Both.
+  const z = SLAB.depth / 2 + 0.02 + 0.004;
   return (
-    <mesh position={[0, SLAB.y, SLAB.depth / 2 + 0.02 + 0.004]}>
-      <planeGeometry args={[1.16, 1.16]} />
-      <meshBasicMaterial map={tex.texture} transparent toneMapped={false} fog={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
-    </mesh>
+    <>
+      {[1, -1].map((side) => (
+        <mesh key={side} position={[0, SLAB.y, side * z]} rotation-y={side < 0 ? Math.PI : 0}>
+          <planeGeometry args={[1.16, 1.16]} />
+          <meshBasicMaterial map={tex.texture} transparent toneMapped={false} fog={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+        </mesh>
+      ))}
+    </>
   );
 }
 
-/** The race clock: a seven-segment feel (ghost 8s under every glyph), repainted only when its text or ink changes. */
+/** The race clock: a seven-segment feel (a ghost 8 under each glyph), repainted only when its text or ink changes. */
 function Screen() {
   const view = useRef({ text: display(store.p), tint: displayTint(store.p) });
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -119,10 +125,13 @@ function Screen() {
     const advance = ctx.measureText("8").width + 8;
     let x = (w - (text.length * advance - 8)) / 2;
     for (const ch of text) {
-      ctx.globalAlpha = 0.07;
-      ctx.fillText("8", x, h / 2 + 6);
-      ctx.globalAlpha = 1;
-      if (ch !== " ") ctx.fillText(ch, x, h / 2 + 6);
+      // Ghost 8s sit under glyphs only: alone in a word gap they read as a stray "8".
+      if (ch !== " ") {
+        ctx.globalAlpha = 0.07;
+        ctx.fillText("8", x, h / 2 + 6);
+        ctx.globalAlpha = 1;
+        ctx.fillText(ch, x, h / 2 + 6);
+      }
       x += advance;
     }
     ctx.restore();

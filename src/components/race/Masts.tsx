@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard, Outlines, RoundedBox } from "@react-three/drei";
-import { CylinderGeometry, PlaneGeometry, type Group, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
+import { CircleGeometry, CylinderGeometry, type Group, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CHANNELS } from "../growth-engine/channels";
 import { drawBadge } from "../growth-engine/marks";
@@ -19,16 +19,15 @@ import { MAST_R, SECTIONS, ovalAt, type Section } from "./track";
 // floodlights come on.
 
 const POLE_H = 2.3;
-// Lamps, not a grid: large cells with hairline gaps, lit warm (a peak that stays amber-white, never clips to pure white).
-const CELL = { w: 0.078, h: 0.075, gap: 0.006 };
-const LAMP = { color: C.LIGHT_ON, peak: 0.9 };
+// Round lamps on a black bank, lit warm (a peak that stays amber-white, never clips to pure white).
+const LAMP = { color: C.LIGHT_ON, peak: 0.9, r: 0.042, pitch: [0.105, 0.095] as const };
 
-/** The bank's 2×5 floodlight cells as one geometry, on its front face. */
+/** The bank's 2×4 round floodlights as one geometry, on its front face. */
 function cellsGeometry() {
   const cells = [];
   for (let row = 0; row < 2; row++)
-    for (let col = 0; col < 5; col++)
-      cells.push(new PlaneGeometry(CELL.w, CELL.h).translate((col - 2) * (CELL.w + CELL.gap), (row - 0.5) * (CELL.h + CELL.gap), 0.031));
+    for (let col = 0; col < 4; col++)
+      cells.push(new CircleGeometry(LAMP.r, 24).translate((col - 1.5) * LAMP.pitch[0], (row - 0.5) * LAMP.pitch[1], 0.031));
   return mergeGeometries(cells);
 }
 

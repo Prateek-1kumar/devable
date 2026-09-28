@@ -12,10 +12,7 @@ export const C = {
   CERAMIC: "#fbfdf9",
   PORCELAIN: "#f7f3ea",
   APRON: "#f2f4f1",
-  CONCRETE_LOW: "#dde3ea",
-  CONCRETE_HIGH: "#f6f7f9",
-  TREAD: "#eef1f4",
-  SEAT_EMPTY: "#c3cbd4",
+  SEAT_EMPTY: "#f3f0ea",
   INK: "#0b0c0e",
   GLASS: "#0d1012",
   GOLD: "#d9b872",
@@ -77,7 +74,6 @@ function build() {
     concrete: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.55, clearcoat: 0.25, clearcoatRoughness: 0.35 }), 0.32),
     fascia: new MeshStandardMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.35, metalness: 0.2 }),
     seat: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.2 }), 0.28),
-    pilaster: new MeshStandardMaterial({ color: "#eef1f4", roughness: 0.5 }),
     runner: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1 }), 0.28),
     pearl: CHANNELS.map(
       ({ color }) =>

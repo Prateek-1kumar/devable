@@ -33,9 +33,9 @@ import {
 // Tier n pours in right behind the formation during lap n, each taller than the
 // last (×1.28), so the stadium itself compounds. Its cut end at the finish line
 // is glossy black poché, and that stepped outline is the growth curve (M0 → M12).
-// Solid concrete tiers (a cool gradient up the walls, section-tinted treads, a
-// colored fascia on every riser) carry two rows of seat shells each; the seats
-// fill in each section's channel color with every pass, YouTube's with the sprints.
+// Solid tiers in each section's channel fade (a colored fascia on every riser)
+// carry two rows of porcelain seat shells each; the seats fill in the section's
+// vivid channel color with every pass, YouTube's with the sprints.
 
 const STEPS = 240;
 const SEAT_GAP = 0.085;
@@ -44,25 +44,27 @@ const LIFT = 0.035;
 const TOP = TIER_TOP[TIERS - 1];
 const BLEND = 0.004; // treads blend between section tints across ±0.004 station
 
-// Section tints lean on the channel's light fade: its `panel` whisper is too close to white to read on a tread.
-const TINT = SECTIONS.map((s) => rgb(CHANNELS[s.channel].fade[0]));
+// Each section is poured in its channel's own fade (main's block bodies): the
+// risers run low → high up the whole stand, the treads are the same hue lifted
+// toward white so the seat shells read on them.
+const FADE = SECTIONS.map((s) => CHANNELS[s.channel].fade.map(rgb) as [RGB, RGB]);
 const SEAM = SECTIONS.map((s) => rgb(TONES[s.channel].seam));
-const [LOW, HIGH, TREAD] = [rgb(C.CONCRETE_LOW), rgb(C.CONCRETE_HIGH), rgb(C.TREAD)];
+const WHITE = rgb("#ffffff");
 
-/** A section's tint at station u, blended across the aisles. */
-function tintAt(u: number): RGB {
-  for (let s = 1; s < SECTIONS.length; s++) {
-    const d = u - SECTIONS[s].from;
-    if (Math.abs(d) < BLEND) return lerp3(TINT[s - 1], TINT[s], smoothstep((d + BLEND) / (2 * BLEND)));
-  }
-  return TINT[sectionOf(u)];
+/** Section s's paint at height k (0..1 up the stand). */
+function paintOf(s: number, k: number, face: Face): RGB {
+  const hue = lerp3(FADE[s][0], FADE[s][1], k);
+  return face === "top" ? lerp3(hue, WHITE, 0.5) : lerp3(hue, WHITE, 0.08);
 }
 
-/** Tier colors: concrete walls fading up the whole stand, treads leaning 35% toward their section's tint. */
-const tierPaint = (top: number) => (u: number, _v: number, y: number, face: Face): RGB => {
-  if (face === "top") return lerp3(TREAD, tintAt(u), 0.35);
-  const wallColor = lerp3(LOW, HIGH, y / TOP);
-  return face === "out" && y === top ? lerp3(wallColor, tintAt(u), 0.18) : wallColor;
+/** Tier colors at station u, blended across the aisles. */
+const tierPaint = (u: number, _v: number, y: number, face: Face): RGB => {
+  const k = smoothstep(Math.min(1, y / TOP));
+  for (let s = 1; s < SECTIONS.length; s++) {
+    const d = u - SECTIONS[s].from;
+    if (Math.abs(d) < BLEND) return lerp3(paintOf(s - 1, k, face), paintOf(s, k, face), smoothstep((d + BLEND) / (2 * BLEND)));
+  }
+  return paintOf(sectionOf(u), k, face);
 };
 
 type Seats = { count: number; u: Float32Array; section: Uint8Array; rank: Float32Array; x: Float32Array; z: Float32Array; yaw: Float32Array; y: number };
@@ -116,7 +118,7 @@ function Tier({ i }: { i: number }) {
   const inner = tierInner(i);
   const top = TIER_TOP[i];
   const geometry = useMemo(
-    () => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner, outer: inner + TIER_DEPTH, y1: top, box: true, color: tierPaint(top) }),
+    () => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner, outer: inner + TIER_DEPTH, y1: top, box: true, color: tierPaint }),
     [inner, top],
   );
   // The riser's colored fascia: the top 0.016 of the inner face, just proud of it.
@@ -247,7 +249,7 @@ function Tier({ i }: { i: number }) {
  * Each tier's are buried in the next tier once that one pours, so the rhythm is always on the outermost wall.
  */
 function Pilasters({ i }: { i: number }) {
-  const L = look();
+  const m = materials();
   const r = tierInner(i) + TIER_DEPTH;
   const top = TIER_TOP[i];
   const pilasters = useMemo(() => {
@@ -286,7 +288,7 @@ function Pilasters({ i }: { i: number }) {
     mesh.visible = n > 0;
   });
   return (
-    <instancedMesh ref={inst} args={[undefined, L.pilaster, pilasters.length]} frustumCulled={false} castShadow receiveShadow visible={false}>
+    <instancedMesh ref={inst} args={[undefined, m.porcelain, pilasters.length]} frustumCulled={false} castShadow receiveShadow visible={false}>
       <boxGeometry args={[0.035, top, 0.02]} />
     </instancedMesh>
   );
