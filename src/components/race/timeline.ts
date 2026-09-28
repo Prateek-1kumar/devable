@@ -2,10 +2,11 @@
 // the DOM layer imports this too). Nothing accumulates, so scrubbing backward
 // retraces exactly. All tuning knobs live here.
 
+import { CHANNELS as CH } from "../growth-engine/channels";
 import { CROSS, SECTIONS, frac } from "./track";
 
-export const SECTION_SVH = 520; // pinned section height (floor 460: shorten beats 1 and 5, never beat 4)
-export const DAMP = { p: 5, cam: 3.2 }; // scroll weight, camera operator lag
+export const SECTION_SVH = 1000; // pinned section height: 900vh of travel under Lenis
+export const DAMP = { cam: 6 }; // camera operator lag (Lenis already smooths the scroll)
 
 export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 export const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
@@ -19,6 +20,35 @@ export const damp = (current: number, target: number, lambda: number, dt: number
   current + (target - current) * (1 - Math.exp(-lambda * dt));
 const span = (p: number, [a, b]: readonly [number, number]) => clamp01((p - a) / (b - a));
 const pad2 = (n: number) => String(n).padStart(2, "0");
+
+// ── Pacing ──────────────────────────────────────────────────────────────────
+// Scroll progress s → story progress p, monotone piecewise-linear, so every
+// beat gets its own scroll distance while all story constants stay in p.
+export const WARP = [
+  [0, 0],
+  [0.06, 0.09],
+  [0.17, 0.19],
+  [0.25, 0.24],
+  [0.34, 0.335],
+  [0.48, 0.48],
+  [0.7, 0.72],
+  [0.84, 0.86],
+  [0.96, 0.97],
+  [1, 1],
+] as const;
+function interp(x: number, from: 0 | 1) {
+  const to = 1 - from;
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let i = 1;
+  while (WARP[i][from] < x) i++;
+  const [a, b] = [WARP[i - 1], WARP[i]];
+  return a[to] + ((b[to] - a[to]) * (x - a[from])) / (b[from] - a[from]);
+}
+/** Story progress at scroll progress s. */
+export const storyAt = (s: number) => interp(s, 0);
+/** Scroll progress at story progress p (the inverse). */
+export const scrollAt = (p: number) => interp(p, 1);
 
 // ── Beats ───────────────────────────────────────────────────────────────────
 export const BEATS = [
@@ -167,7 +197,7 @@ export function laneWindow(k: number, p: number): [number, number] {
 export const pour = (n: number, p: number) => (n === 0 ? 0.5 : clamp(lapOf(p) - (n - 1), 0, 0.5));
 /** Mast i rising, 0..1. */
 export const mastRise = (i: number, p: number) =>
-  i === 0 ? clamp01((p - T.ytRise[0]) / 0.02) : clamp01((lapOf(p) - SECTIONS[i].mast) / 0.12);
+  i === 0 ? clamp01((p - T.ytRise[0]) / 0.012) : clamp01((lapOf(p) - SECTIONS[i].mast) / 0.12);
 
 export const SEAT = { empty: 0, own: 1, amber: 2 } as const;
 /** A seat's fill: 0 empty, 1 its section's channel color, 2 amber. */
@@ -203,7 +233,37 @@ export function stripes(p: number) {
 /** The slot's mint flash as the baton docks (0..1). */
 export const slotFlash = (p: number) => (p < T.slotFlash[0] || p > T.slotFlash[1] ? 0 : p < 0.18 ? (p - 0.175) / 0.005 : 1 - (p - 0.18) / 0.01);
 
-const BATON_REST = [2.75, 0.605, 0.4];
+/** a → b by k, as hex (no three.js here: the DOM imports this file). */
+function mixHex(a: string, b: string, k: number) {
+  const [x, y] = [parseInt(a.slice(1), 16), parseInt(b.slice(1), 16)];
+  const ch = (sh: number) => Math.round(((x >> sh) & 255) * (1 - k) + ((y >> sh) & 255) * k);
+  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, "0")}`;
+}
+const AMBER_C = "#f5b301";
+const MINT = "#34d399";
+/** The LED ribbon board's top light line. */
+export function boardTint(p: number) {
+  if (p >= T.displayRoll[0]) return MINT;
+  if (p >= T.flying[0] && p < T.flying[1]) return AMBER_C;
+  if (p >= 0.48 && p < 0.687) return mixHex(CH[Math.floor(lapOf(p)) % 3].color, WHITE, 0.4);
+  if (p >= T.spike[0] && p < T.decay[1]) return AMBER_C;
+  if (p >= T.stripeOn(0) && p < T.go) {
+    let k = 0;
+    while (k < 3 && p >= T.stripeOn(k + 1)) k++;
+    return LIT[k];
+  }
+  return WHITE;
+}
+/** The race clock's ink: warm white, amber through the sprint, mint for the distance. */
+export const displayTint = (p: number) => (p >= 0.48 ? MINT : p >= T.go ? AMBER_C : "#fff6d6");
+/** The slot powering up as the baton sinks in (to 0.6), then the dock flash (0..1). */
+export const dockGlow = (p: number) =>
+  p < T.batonSink[0] ? 0 : p < T.slotFlash[0] ? 0.6 * span(p, [T.batonSink[0], T.slotFlash[0]]) : p < 0.18 ? 0.6 + (0.4 * (p - 0.175)) / 0.005 : slotFlash(p);
+/** The monolith's gold pins: they flare as the baton docks and again on the sign-off (0..1). */
+export const pinFlare = (p: number) =>
+  Math.max(dockGlow(p), p >= T.signoff(0) && p < T.signoffEnd + 0.01 ? Math.sin((Math.PI * (p - T.signoff(0))) / (T.signoffEnd + 0.01 - T.signoff(0))) : 0);
+
+const BATON_REST = [2.75, 0.62, 0.4]; // standing on the plinth's glass top
 // The hover sits just above the slot and below the navbar at K1 (the baton is 0.53 tall).
 const BATON_CTRL = [2.85, 3.25, 0.55];
 const BATON_HOVER = [3.3, 2.95, 1.1];
@@ -261,19 +321,19 @@ export const KEYS: Key[] = [
   { p: 0.2, leave: 0.245, t: [3.3, 1.7, 1.1], az: -46, el: 2, dist: 6.6, fov: 24, shift: 0.12, fog: [1.3, 3.0] },
   { p: 0.285, leave: 0.3, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 9.2, fov: 30, shift: 0.09, fog: [1.0, 1.8] },
   { p: 0.325, leave: 0.33, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 15.3, fov: 16, shift: 0.09, fog: [0.9, 1.5] },
-  { p: 0.375, t: [2.7, 1.45, 3.26], az: -14, el: 12, dist: 24, fov: 26, shift: 0.22, fog: [0.95, 1.6] },
-  { p: 0.43, leave: 0.47, t: [4.38, 1.12, 3.9], az: -20, el: 16, dist: 10.7, fov: 28, shift: 0.16, fog: [1.0, 1.9] },
-  { p: 0.56, t: [1.59, 0.35, -0.84], az: 60, el: 22, dist: 30, fov: 24, shift: 0.165, fog: [0.9, 1.7] },
-  { p: 0.63, t: [1.59, 0.35, -0.84], az: 150, el: 32, dist: 34.8, fov: 24, shift: 0.19, fog: [0.9, 1.7] },
-  { p: 0.69, t: [1.59, 0.3, -0.84], az: 250, el: 46, dist: 35.2, fov: 24, shift: 0.16, fog: [0.9, 1.7] },
-  { p: 0.745, leave: 0.78, t: [1.59, 0.2, -0.84], az: 352, el: 56, dist: 38.3, fov: 24, shift: 0.18, fog: [0.9, 1.8] },
-  { p: 0.84, t: [1.59, 0.4, -0.84], az: 338, el: 50, dist: 36.9, fov: 24, shift: 0.18, fog: [0.9, 1.8] },
+  { p: 0.375, t: [2.7, 1.75, 3.26], az: -14, el: 12, dist: 24, fov: 26, shift: 0.22, fog: [0.95, 1.6] },
+  { p: 0.43, leave: 0.47, t: [4.38, 1.4, 3.9], az: -20, el: 16, dist: 10.7, fov: 28, shift: 0.21, fog: [1.0, 1.9] },
+  { p: 0.56, t: [1.59, 1.0, -0.84], az: 60, el: 38, dist: 30, fov: 24, shift: 0.165, fog: [1.05, 2.1] },
+  { p: 0.63, t: [1.59, 0.35, -0.84], az: 150, el: 32, dist: 34.8, fov: 24, shift: 0.19, fog: [1.05, 2.1] },
+  { p: 0.69, t: [1.59, 0.3, -0.84], az: 250, el: 46, dist: 35.2, fov: 24, shift: 0.16, fog: [1.05, 2.1] },
+  { p: 0.745, leave: 0.78, t: [1.59, 0.2, -0.84], az: 352, el: 56, dist: 38.3, fov: 24, shift: 0.18, fog: [1.05, 2.2] },
+  { p: 0.84, t: [1.59, 0.4, -0.84], az: 338, el: 50, dist: 36.9, fov: 24, shift: 0.18, fog: [1.05, 2.2] },
   { p: 0.9, leave: 1, t: [3.4, 1.0, 2.4], az: 321, el: 14, dist: 19, fov: 22, shift: 0.12, fog: [0.95, 1.5] },
 ];
 /** Posters for the still frame (p = 1). */
 export const POSTER: Record<"phone" | "desktop", Key> = {
-  phone: { p: 1, t: [1.59, 0.4, -0.84], az: -36, el: 34, dist: 27, fov: 30, shift: 0, fog: [0.9, 1.8] },
-  desktop: { p: 1, t: [1.59, 0.45, -0.84], az: -36, el: 30, dist: 29, fov: 26, shift: 0, fog: [0.9, 1.8] },
+  phone: { p: 1, t: [1.59, 0.2, -0.84], az: -36, el: 40, dist: 22, fov: 30, shift: 0, fog: [1.05, 2.2] },
+  desktop: { p: 1, t: [1.59, 0.45, -0.84], az: -36, el: 30, dist: 29, fov: 26, shift: 0, fog: [1.05, 2.2] },
 };
 // The dolly zoom between K3 (leaves 0.30) and K3z (arrives 0.325): the blocks keep their size.
 const DOLLY = { from: 0.3, to: 0.325, at: [-2.4, 0.07, 2.72], half: 1.803 };

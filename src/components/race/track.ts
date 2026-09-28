@@ -87,7 +87,7 @@ export function lengthOfStation(u: number, R: number) {
 // ── The stands: five sections, running order from the finish ────────────────
 export type Section = { mark: "youtube" | "hackernews" | "google" | "chatgpt" | "reddit"; from: number; to: number; mast: number; channel: number; deep: string; key: string };
 export const SECTIONS: Section[] = [
-  { mark: "youtube", from: 0, to: 0.0837, mast: 0.0419, channel: 3, deep: "#b45309", key: "yt" },
+  { mark: "youtube", from: 0, to: 0.0837, mast: 0.065, channel: 3, deep: "#b45309", key: "yt" },
   { mark: "hackernews", from: 0.0837, to: 0.1674, mast: 0.1256, channel: 0, deep: "#4338ca", key: "hn" },
   { mark: "google", from: 0.1674, to: 0.2512, mast: 0.2093, channel: 1, deep: "#0369a1", key: "g" },
   { mark: "chatgpt", from: 0.2512, to: 0.3579, mast: 0.3046, channel: 1, deep: "#0369a1", key: "gpt" },
@@ -104,7 +104,10 @@ export const TIERS = 7;
 export const TIER_TOP = [0.08, 0.18, 0.31, 0.48, 0.7, 0.98, 1.34]; // steps ×1.28
 export const TIER_DEPTH = 0.278;
 export const tierInner = (i: number) => 3.64 + 0.28 * i;
-export const seatRow = (i: number) => 3.78 + 0.28 * i;
+/** The two seat rows on tier i's tread. */
+export const seatRows = (i: number) => [tierInner(i) + 0.085, tierInner(i) + 0.195];
+/** The back wall: tier 6's outer face. */
+export const BACK_R = tierInner(TIERS - 1) + TIER_DEPTH;
 
 // ── The timing monolith ─────────────────────────────────────────────────────
 export const MONOLITH = { x: 3.3, z: 1.1, yaw: -0.803 };

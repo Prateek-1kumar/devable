@@ -1,12 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useLenis } from "lenis/react";
+import type Lenis from "lenis";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import ChannelParagraph from "../ChannelParagraph";
 import WaveButton from "../WaveButton";
 import { CHANNELS } from "../growth-engine/channels";
 import { anchors, setProgress } from "./store";
-import { BEATS, DAMP, SECTION_SVH, beatAt, clamp01, damp, growth, mastRise, readout, sparkline, subAt } from "./timeline";
+import { BEATS, DAMP, SECTION_SVH, beatAt, clamp, clamp01, damp, easeInOutCubic, growth, mastRise, readout, scrollAt, sparkline, storyAt, subAt } from "./timeline";
 import { SECTIONS } from "./track";
 
 // "The Long Race": the hero as a pinned, scroll-scrubbed stadium model.
@@ -99,6 +101,10 @@ export default function RaceHero() {
   const figureEl = useRef<HTMLParagraphElement>(null);
   const spark = useRef<(SVGPathElement | null)[]>([]);
   const [active, setActive] = useState(true);
+  // The section's page offset and height (kept by a ResizeObserver), and the scroll handler the effect installs.
+  const box = useRef({ top: 0, height: 1, s: 0 });
+  const onScroll = useRef<((lenis: Lenis) => void) | null>(null);
+  const lenis = useLenis((l) => onScroll.current?.(l));
 
   const onReady = useCallback(() => {
     if (canvasBox.current) canvasBox.current.dataset.ready = "true";
@@ -113,7 +119,7 @@ export default function RaceHero() {
     return () => io.disconnect();
   }, []);
 
-  // Scroll → weighted progress p → camera progress (trailing like an operator).
+  // Lenis scroll → scroll progress s → story progress p (WARP) → camera progress (trailing like an operator).
   useEffect(() => {
     const el = root.current;
     if (!el) return;
@@ -121,6 +127,7 @@ export default function RaceHero() {
       // The still frame tells the whole story; the copy is always fully shown.
       setProgress(1, 1);
       el.style.setProperty("--p", "0");
+      el.style.setProperty("--s", "0");
       if (copy.current) copy.current.inert = false;
       return;
     }
@@ -134,11 +141,16 @@ export default function RaceHero() {
       el.setAttribute(name, value);
     };
     const flag = (name: string, on: boolean) => attr(`data-${name}`, on ? "1" : "0");
-    const writeDom = (p: number) => {
+    const writeDom = (p: number, s: number) => {
       const pStr = p.toFixed(4);
       if (last.p !== pStr) {
         last.p = pStr;
         el.style.setProperty("--p", pStr);
+      }
+      const sStr = s.toFixed(4);
+      if (last.s !== sStr) {
+        last.s = sStr;
+        el.style.setProperty("--s", sStr);
       }
       beat = beatAt(p, beat);
       attr("data-beat", String(beat));
@@ -171,63 +183,70 @@ export default function RaceHero() {
       });
     };
 
-    const target = () => {
-      const r = el.getBoundingClientRect();
-      return clamp01(-r.top / Math.max(1, r.height - innerHeight));
+    const measure = () => {
+      box.current.top = el.getBoundingClientRect().top + scrollY;
+      box.current.height = el.offsetHeight;
     };
+    measure();
+    const scrollOf = (y: number) => clamp01((y - box.current.top) / Math.max(1, box.current.height - innerHeight));
 
-    // Dev: ?p=0.42 freezes the whole hero at that progress (for framing screenshots).
+    // Dev: ?p=0.42 freezes the whole hero at that story progress (for framing screenshots).
     if (process.env.NODE_ENV !== "production") {
       const fixed = new URLSearchParams(location.search).get("p");
       if (fixed !== null && !Number.isNaN(Number(fixed))) {
         const p = clamp01(Number(fixed));
         setProgress(p, p);
-        writeDom(p);
+        writeDom(p, scrollAt(p));
         return;
       }
     }
 
-    let p = target();
+    // Lenis already smooths the scroll: p follows it directly, and only the camera lags a little, like an operator.
+    let s = scrollOf(scrollY);
+    let p = storyAt(s);
     let cam = p; // a restored scroll position doesn't whip
     let raf = 0;
     let lastT = 0;
     setProgress(p, cam);
-    writeDom(p);
+    writeDom(p, s);
     const tick = (now: number) => {
-      const dt = Math.min(Math.max(0, now - lastT) / 1000, 1 / 30); // first tick can predate kick()
+      const dt = Math.min(Math.max(0, now - lastT) / 1000, 1 / 30);
       lastT = now;
-      const t = target();
-      p = Math.abs(t - p) < 1e-5 ? t : damp(p, t, DAMP.p, dt);
-      cam = Math.abs(p - cam) < 1e-5 ? p : damp(cam, p, DAMP.cam, dt);
+      cam = damp(cam, p, DAMP.cam, dt);
+      raf = Math.abs(p - cam) > 1e-4 ? requestAnimationFrame(tick) : 0;
+      if (!raf) cam = p; // settle exactly; an idle page does no work
       setProgress(p, cam);
-      writeDom(p);
-      raf = Math.abs(t - p) > 1e-4 || Math.abs(p - cam) > 1e-4 ? requestAnimationFrame(tick) : 0;
-      if (!raf) {
-        // Settle exactly; an idle page does no work.
-        p = cam = t;
-        setProgress(t, t);
-        writeDom(t);
-      }
     };
-    const kick = () => {
-      if (raf) return;
+    const update = (y: number) => {
+      s = scrollOf(y);
+      p = storyAt(s);
+      box.current.s = s;
+      setProgress(p, cam);
+      writeDom(p, s);
+      if (raf || Math.abs(p - cam) <= 1e-4) return;
       lastT = performance.now();
       raf = requestAnimationFrame(tick);
     };
-    addEventListener("scroll", kick, { passive: true });
-    addEventListener("resize", kick);
+    onScroll.current = (l) => update(l.animatedScroll);
+    const ro = new ResizeObserver(() => {
+      measure();
+      update(scrollY);
+    });
+    ro.observe(el);
     return () => {
+      onScroll.current = null;
+      ro.disconnect();
       cancelAnimationFrame(raf);
-      removeEventListener("scroll", kick);
-      removeEventListener("resize", kick);
     };
   }, [still]);
 
   const jump = (to: number) => {
-    const el = root.current;
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + scrollY;
-    scrollTo({ top: top + to * (el.offsetHeight - innerHeight), behavior: "smooth" });
+    const { top, height, s } = box.current;
+    const target = scrollAt(to);
+    const y = top + target * (height - innerHeight);
+    const options = { duration: clamp(0.9 + 0.9 * Math.abs(target - s) * 4, 1, 2.2), easing: easeInOutCubic };
+    if (lenis) lenis.scrollTo(y, options);
+    else scrollTo({ top: y });
   };
 
   const anchor = (name: string) => (node: HTMLDivElement | null) => {
@@ -241,7 +260,7 @@ export default function RaceHero() {
       id="hero"
       data-beat="0"
       data-sub="0"
-      style={{ "--p": 0, "--race-h": `${SECTION_SVH}svh` } as CSSProperties}
+      style={{ "--p": 0, "--s": 0, "--race-h": `${SECTION_SVH}svh` } as CSSProperties}
       className="group/race relative lg:h-(--race-h) lg:motion-reduce:h-auto"
     >
       {/* The sticky frame is the only element that clips: no ancestor may, or sticky breaks. */}
@@ -285,7 +304,12 @@ export default function RaceHero() {
           <Callout name="DEVABLE" align="above" show="group-data-[devable=1]/race:opacity-100" nodeRef={anchor("devable")} />
         </div>
 
-        {/* Page fog: the model dissolves into white behind the copy column, so type always sits on paper. */}
+        {/* Page fog: the model dissolves into white behind the copy column, so type always sits on paper (lighter mid-race). */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=1]/race:opacity-100 group-data-[beat=2]/race:opacity-100 group-data-[beat=3]/race:opacity-100 group-data-[beat=4]/race:opacity-100 group-data-[beat=5]/race:opacity-100 lg:block lg:motion-reduce:hidden"
+          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.88) 30%, rgb(255 255 255 / 0.5) 40%, transparent 50%)" }}
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=0]/race:opacity-100 group-data-[beat=6]/race:opacity-100 lg:block lg:motion-reduce:hidden"
@@ -402,13 +426,13 @@ export default function RaceHero() {
                 onClick={() => jump(b.jump)}
                 aria-label={`Jump to ${b.label}`}
                 className={`absolute top-[-3px] cursor-pointer pt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground/40 transition-colors duration-300 hover:text-foreground/80 focus-visible:text-foreground focus-visible:outline-none ${RAIL_ACTIVE[i]}`}
-                style={{ left: `${b.start * 100}%` }}
+                style={{ left: `${scrollAt(b.start) * 100}%` }}
               >
                 <span aria-hidden="true" className="absolute top-0 left-0 h-[7px] w-px bg-foreground/30" />
                 {b.label}
               </button>
             ))}
-            <span aria-hidden="true" className="absolute -top-1 size-[9px] rounded-[2px] bg-[#0b0c0e]" style={{ left: "calc(var(--p) * 100% - 4.5px)" }} />
+            <span aria-hidden="true" className="absolute -top-1 size-[9px] rounded-[2px] bg-[#0b0c0e]" style={{ left: "calc(var(--s) * 100% - 4.5px)" }} />
           </nav>
         </div>
       </div>

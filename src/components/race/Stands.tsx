@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Outlines } from "@react-three/drei";
-import { Color, Object3D, type InstancedMesh, type Material, type Mesh } from "three";
+import { BoxGeometry, Color, Object3D, type InstancedMesh, type Mesh } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CHANNELS } from "../growth-engine/channels";
-import { materials } from "../growth-engine/palette";
+import { TONES, materials } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
+import { C, lerp3, look, rgb, type RGB } from "./look";
 import { store } from "./store";
-import { drawTo, sweep } from "./sweep";
-import { AMBER, SEAT, annotation, lapOf, pour, seatFill, waveAt } from "./timeline";
+import { drawTo, sweep, wall, type Face } from "./sweep";
+import { AMBER, SEAT, annotation, lapOf, pour, seatFill, smoothstep, waveAt } from "./timeline";
 import {
+  BACK_R,
   SECTIONS,
   START,
   STANDS_END,
@@ -18,7 +20,7 @@ import {
   frac,
   lengthOfStation,
   ovalAt,
-  seatRow,
+  seatRows,
   sectionOf,
   stationOfLength,
   tangentAt,
@@ -30,38 +32,60 @@ import {
 // The stands, poured by the laps: a "J" around bend 1 and down the back straight.
 // Tier n pours in right behind the formation during lap n, each taller than the
 // last (×1.28), so the stadium itself compounds. Its cut end at the finish line
-// is black poche, and that stepped outline is the growth curve (M0 → M12).
-// Seats fill in each section's channel color with every pass; YouTube's section
-// only spikes with the sprints.
+// is glossy black poché, and that stepped outline is the growth curve (M0 → M12).
+// Solid concrete tiers (a cool gradient up the walls, section-tinted treads, a
+// colored fascia on every riser) carry two rows of seat shells each; the seats
+// fill in each section's channel color with every pass, YouTube's with the sprints.
 
-const POCHE = "#16191d";
-const EDGE = "#8a94a0";
-const EMPTY = "#e6ebe6";
-const AMBER_C = "#f5b301";
 const STEPS = 240;
-const SEAT_GAP = 0.12;
+const SEAT_GAP = 0.085;
 const AISLE = 0.07;
 const LIFT = 0.035;
+const TOP = TIER_TOP[TIERS - 1];
+const BLEND = 0.004; // treads blend between section tints across ±0.004 station
+
+const PANEL = SECTIONS.map((s) => rgb(TONES[s.channel].panel));
+const SEAM = SECTIONS.map((s) => rgb(TONES[s.channel].seam));
+const [LOW, HIGH, TREAD] = [rgb(C.CONCRETE_LOW), rgb(C.CONCRETE_HIGH), rgb(C.TREAD)];
+
+/** A section's panel tint at station u, blended across the aisles. */
+function tintAt(u: number): RGB {
+  for (let s = 1; s < SECTIONS.length; s++) {
+    const d = u - SECTIONS[s].from;
+    if (Math.abs(d) < BLEND) return lerp3(PANEL[s - 1], PANEL[s], smoothstep((d + BLEND) / (2 * BLEND)));
+  }
+  return PANEL[sectionOf(u)];
+}
+
+/** Tier colors: concrete walls fading up the whole stand, treads leaning 14% toward their section's tint. */
+const tierPaint = (top: number) => (u: number, _v: number, y: number, face: Face): RGB => {
+  if (face === "top") return lerp3(TREAD, tintAt(u), 0.14);
+  const wallColor = lerp3(LOW, HIGH, y / TOP);
+  return face === "out" && y === top ? lerp3(wallColor, tintAt(u), 0.18) : wallColor;
+};
 
 type Seats = { count: number; u: Float32Array; section: Uint8Array; rank: Float32Array; x: Float32Array; z: Float32Array; yaw: Float32Array; y: number };
 
-/** Seats along tier i's row, by arc length, skipping the aisles at section boundaries (sorted by station). */
+/** Seats along tier i's two rows, by arc length, skipping the aisles at section boundaries (sorted by station). */
 function layoutSeats(i: number): Seats {
-  const R = seatRow(i);
-  const total = Math.PI * R + 5.6;
-  const n = Math.floor(total / SEAT_GAP);
-  const gap = total / n;
-  const aisles = SECTIONS.slice(1).map((s) => lengthOfStation(s.from, R));
-  const keep: { u: number; s: number; x: number; z: number; yaw: number }[] = [];
+  const keep: { u: number; s: number; x: number; z: number; yaw: number; rank: number }[] = [];
   const p: P3 = { x: 0, y: 0, z: 0 };
   const t: P3 = { x: 0, y: 0, z: 0 };
-  for (let j = 0; j < n; j++) {
-    const len = (j + 0.5) * gap;
-    if (aisles.some((a) => Math.abs(len - a) < AISLE)) continue;
-    const u = stationOfLength(len, R);
-    ovalAt(u, R, p);
-    keep.push({ u, s: sectionOf(u), x: p.x, z: p.z, yaw: yawAlong(tangentAt(u, t)) });
-  }
+  seatRows(i).forEach((R, row) => {
+    const total = Math.PI * R + 5.6;
+    const n = Math.floor(total / SEAT_GAP);
+    const gap = total / n;
+    const aisles = SECTIONS.slice(1).map((s) => lengthOfStation(s.from, R));
+    for (let j = 0; j < n; j++) {
+      const len = (j + 0.5) * gap;
+      if (aisles.some((a) => Math.abs(len - a) < AISLE)) continue;
+      const u = stationOfLength(len, R);
+      ovalAt(u, R, p);
+      const rank = frac(Math.sin(i * 91.7 + j * 12.9898 + (row ? 57.3 : 0)) * 43758.5453);
+      keep.push({ u, s: sectionOf(u), x: p.x, z: p.z, yaw: yawAlong(tangentAt(u, t)), rank });
+    }
+  });
+  keep.sort((a, b) => a.u - b.u);
   const count = keep.length;
   const out: Seats = {
     count,
@@ -71,12 +95,12 @@ function layoutSeats(i: number): Seats {
     x: new Float32Array(count),
     z: new Float32Array(count),
     yaw: new Float32Array(count),
-    y: TIER_TOP[i] + 0.015,
+    y: TIER_TOP[i] + 0.012,
   };
   keep.forEach((k, j) => {
     out.u[j] = k.u;
     out.section[j] = k.s;
-    out.rank[j] = frac(Math.sin(i * 91.7 + j * 12.9898) * 43758.5453);
+    out.rank[j] = k.rank;
     out.x[j] = k.x;
     out.z[j] = k.z;
     out.yaw[j] = k.yaw;
@@ -86,18 +110,33 @@ function layoutSeats(i: number): Seats {
 
 const SEAT_COLORS = SECTIONS.map((s) => new Color(CHANNELS[s.channel].color));
 
-function Tier({ i, material }: { i: number; material: Material }) {
+function Tier({ i }: { i: number }) {
+  const L = look();
   const inner = tierInner(i);
   const top = TIER_TOP[i];
-  const geometry = useMemo(() => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner, outer: inner + TIER_DEPTH, y1: top, box: true }), [inner, top]);
+  const geometry = useMemo(
+    () => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner, outer: inner + TIER_DEPTH, y1: top, box: true, color: tierPaint(top) }),
+    [inner, top],
+  );
+  // The riser's colored fascia: the top 0.016 of the inner face, just proud of it.
+  const fascia = useMemo(
+    () =>
+      wall({ from: 0, to: STANDS_END, steps: STEPS, r: inner - 0.0015, y0: top - 0.016, y1: top, facing: "in", color: (u) => SEAM[sectionOf(u)] }),
+    [inner, top],
+  );
+  const seatGeometry = useMemo(
+    () => mergeGeometries([new BoxGeometry(0.07, 0.012, 0.05).translate(0, 0.006, 0), new BoxGeometry(0.07, 0.04, 0.01).translate(0, 0.026, 0.025)]),
+    [],
+  );
   const seats = useMemo(() => layoutSeats(i), [i]);
   const body = useRef<Mesh>(null);
+  const band = useRef<Mesh>(null);
   const die = useRef<Mesh>(null);
   const cap = useRef<Mesh>(null);
   const seatMesh = useRef<InstancedMesh>(null);
   // Per-seat caches: the last color code written, and whether it was lifted by the wave.
   const cache = useRef<{ codes: Uint8Array; lifted: Uint8Array } | null>(null);
-  const scratch = useRef({ o: new Object3D(), c: new Color(), empty: new Color(EMPTY), amber: new Color(AMBER_C), p: { x: 0, y: 0, z: 0 } as P3, t: { x: 0, y: 0, z: 0 } as P3 });
+  const scratch = useRef({ o: new Object3D(), c: new Color(), empty: new Color(C.SEAT_EMPTY), amber: new Color(C.AMBER), p: { x: 0, y: 0, z: 0 } as P3, t: { x: 0, y: 0, z: 0 } as P3 });
 
   const place = useCallback(
     (mesh: InstancedMesh, j: number, lift: number) => {
@@ -131,6 +170,7 @@ function Tier({ i, material }: { i: number; material: Material }) {
       g.visible = shown;
       if (shown) {
         const end = drawTo(g.geometry, 0, poured / STANDS_END) * STANDS_END;
+        if (band.current) drawTo(band.current.geometry, 0, poured / STANDS_END);
         const d = die.current;
         if (d) {
           // The die rides the pour front, capping the open end.
@@ -142,6 +182,7 @@ function Tier({ i, material }: { i: number; material: Material }) {
         }
       }
     }
+    if (band.current) band.current.visible = shown;
     if (die.current) die.current.visible = shown;
     if (cap.current) cap.current.visible = shown;
 
@@ -151,6 +192,7 @@ function Tier({ i, material }: { i: number; material: Material }) {
     let n = 0;
     while (n < seats.count && seats.u[n] <= poured) n++;
     mesh.count = n;
+    mesh.visible = n > 0;
     if (n === 0) return;
 
     const lap = lapOf(p);
@@ -183,25 +225,75 @@ function Tier({ i, material }: { i: number; material: Material }) {
     if (moved) mesh.instanceMatrix.needsUpdate = true;
   });
 
-  const poche = <meshBasicMaterial color={POCHE} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />;
   return (
     <group>
-      <mesh ref={body} geometry={geometry} material={material} castShadow receiveShadow visible={i === 0}>
-        <Outlines angle={0} thickness={1} color={EDGE} />
-      </mesh>
+      <mesh ref={body} geometry={geometry} material={L.concrete} castShadow receiveShadow visible={i === 0} />
+      <mesh ref={band} geometry={fascia} material={L.fascia} receiveShadow visible={i === 0} />
       {/* The cut end at the finish line: together the caps draw the stepped growth curve. */}
-      <mesh ref={cap} position={[2.798, top / 2, inner + TIER_DEPTH / 2]} rotation-y={-Math.PI / 2} visible={i === 0}>
+      <mesh ref={cap} position={[2.798, top / 2, inner + TIER_DEPTH / 2]} rotation-y={-Math.PI / 2} material={L.poche} visible={i === 0}>
         <planeGeometry args={[TIER_DEPTH, top]} />
-        {poche}
       </mesh>
-      <mesh ref={die} visible={i === 0}>
+      <mesh ref={die} material={L.poche} visible={i === 0}>
         <planeGeometry args={[TIER_DEPTH, top]} />
-        {poche}
       </mesh>
-      <instancedMesh ref={seatMesh} args={[undefined, undefined, seats.count]} frustumCulled={false} castShadow>
-        <boxGeometry args={[0.05, 0.03, 0.045]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.6} />
+      <instancedMesh ref={seatMesh} args={[seatGeometry, L.seat, seats.count]} frustumCulled={false} castShadow receiveShadow />
+    </group>
+  );
+}
+
+/** The back wall's rhythm: pilasters every 0.42u, and a champagne cap rail, both following tier 6's pour. */
+function BackWall() {
+  const m = materials();
+  const L = look();
+  const pilasters = useMemo(() => {
+    const total = lengthOfStation(STANDS_END, BACK_R);
+    const n = Math.floor(total / 0.42);
+    const out: { u: number; x: number; z: number; yaw: number }[] = [];
+    const p: P3 = { x: 0, y: 0, z: 0 };
+    const t: P3 = { x: 0, y: 0, z: 0 };
+    for (let j = 0; j < n; j++) {
+      const u = stationOfLength((j + 0.5) * (total / n), BACK_R);
+      ovalAt(u, BACK_R + 0.01, p);
+      out.push({ u, x: p.x, z: p.z, yaw: yawAlong(tangentAt(u, t)) });
+    }
+    return out;
+  }, []);
+  const rail = useMemo(() => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner: BACK_R - 0.02, outer: BACK_R + 0.02, y0: TOP, y1: TOP + 0.02, box: true }), []);
+  const inst = useRef<InstancedMesh>(null);
+  const cap = useRef<Mesh>(null);
+  useLayoutEffect(() => {
+    const mesh = inst.current;
+    if (!mesh) return;
+    const o = new Object3D();
+    pilasters.forEach(({ x, z, yaw }, j) => {
+      o.position.set(x, 0.65, z);
+      o.rotation.set(0, yaw, 0);
+      o.updateMatrix();
+      mesh.setMatrixAt(j, o.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [pilasters]);
+  useFrame(() => {
+    const poured = pour(TIERS - 1, store.p);
+    const mesh = inst.current;
+    if (mesh) {
+      let n = 0;
+      while (n < pilasters.length && pilasters[n].u <= poured) n++;
+      mesh.count = n;
+      mesh.visible = n > 0;
+    }
+    const r = cap.current;
+    if (r) {
+      r.visible = poured > 0;
+      if (poured > 0) drawTo(r.geometry, 0, poured / STANDS_END);
+    }
+  });
+  return (
+    <group>
+      <instancedMesh ref={inst} args={[undefined, L.pilaster, pilasters.length]} frustumCulled={false} castShadow receiveShadow visible={false}>
+        <boxGeometry args={[0.035, 1.3, 0.02]} />
       </instancedMesh>
+      <mesh ref={cap} geometry={rail} material={m.champagne} castShadow visible={false} />
     </group>
   );
 }
@@ -307,19 +399,12 @@ function Annotation() {
 }
 
 export default function Stands() {
-  // The stands' own glaze: the shared ceramic, lifted a little so shaded risers read as white card, not grey.
-  const material = useMemo(() => {
-    const c = materials().ceramic.clone();
-    c.emissive.set("#ffffff");
-    c.emissiveIntensity = 0.2;
-    return c;
-  }, []);
-  useEffect(() => () => material.dispose(), [material]);
   return (
     <group>
       {TIER_TOP.map((_, i) => (
-        <Tier key={i} i={i} material={material} />
+        <Tier key={i} i={i} />
       ))}
+      <BackWall />
       <Annotation />
     </group>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { Vector3, type Fog, type PerspectiveCamera } from "three";
 import Masts from "./Masts";
 import Monolith from "./Monolith";
@@ -37,23 +37,28 @@ export default function RaceScene({ still, active, onReady }: Props) {
       <Wiring onReady={onReady} />
       <Rig still={still} />
 
-      {/* Soft studio fill, plus one low raking key from the left for stepped shadows. */}
-      <hemisphereLight args={["#ffffff", "#eceef2", 0.75]} />
+      {/* Studio light: a turf-bounced hemisphere, one low raking key from the left for stepped shadows, a cool fill for the risers. */}
+      <hemisphereLight args={["#ffffff", "#e3eee7", 0.72]} />
       <directionalLight
         castShadow
         position={[-10, 8, -1]}
-        intensity={1.3}
-        shadow-mapSize={[2048, 2048]}
-        shadow-radius={5}
+        intensity={1.25}
+        color="#fffaf2"
+        shadow-mapSize={[4096, 4096]}
+        shadow-radius={6}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       >
-        <orthographicCamera attach="shadow-camera" args={[-12, 12, 12, -12, 1, 45]} />
+        <orthographicCamera attach="shadow-camera" args={[-13, 13, 13, -13, 1, 50]} />
       </directionalLight>
-      <Environment resolution={128} frames={1}>
+      <directionalLight position={[7, 6, 8]} intensity={0.5} color="#eef4ff" />
+      <Environment resolution={256} frames={1}>
         <Lightformer form="rect" intensity={1.2} position={[-4, 5, 4]} scale={[8, 4, 1]} target={[0, 0, 0]} />
         <Lightformer form="rect" intensity={0.5} position={[5, 3, -3]} scale={[6, 3, 1]} target={[0, 0, 0]} />
         <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
+        {/* A crisp clearcoat line across the monolith and the board, and a warm bounce from behind. */}
+        <Lightformer form="rect" intensity={2} position={[0, 6, 6]} scale={[14, 0.5, 1]} target={[0, 0, 0]} />
+        <Lightformer form="rect" color="#ffe9c7" intensity={0.6} position={[-6, 2, -6]} scale={[6, 2, 1]} target={[0, 0, 0]} />
       </Environment>
 
       <TrackModel />
@@ -61,6 +66,7 @@ export default function RaceScene({ still, active, onReady }: Props) {
       <Masts />
       <Runners />
       <Monolith />
+      <ContactShadows position-y={0.052} scale={[20, 14]} far={1.4} blur={2.2} opacity={0.26} resolution={1024} color="#0b1a12" />
       {!still && <Callouts />}
     </Canvas>
   );

@@ -1,5 +1,5 @@
 // Tiny module store between the DOM scroll loop and the 3D scene (no React state,
-// no three.js). p is the weighted scroll progress, cam the camera's lagging copy.
+// no three.js). p is the story progress (the warped Lenis scroll), cam the camera's lagging copy.
 
 export const store = { p: 0, cam: 0 };
 const listeners = new Set<() => void>();

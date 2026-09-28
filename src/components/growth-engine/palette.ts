@@ -54,15 +54,14 @@ export function paintFade(mesh: Mesh, low: string, high: string, height: number,
  * Adds a soft self-glow in the vertex color itself (not white), so shaded faces
  * keep their hue instead of greying and light gradients stay vivid.
  */
-const INNER_GLOW = 0.28;
-function glowFromWithin<T extends MeshPhysicalMaterial>(material: T) {
+export function glowFromWithin<T extends MeshPhysicalMaterial>(material: T, strength = 0.28) {
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",
-      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vColor.rgb * ${INNER_GLOW.toFixed(2)};`,
+      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vColor.rgb * ${strength.toFixed(2)};`,
     );
   };
-  material.customProgramCacheKey = () => "glow-from-within";
+  material.customProgramCacheKey = () => "glow-from-within-" + strength;
   return material;
 }
 

@@ -1,32 +1,55 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Billboard, Outlines } from "@react-three/drei";
-import { CylinderGeometry, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { Billboard, Outlines, RoundedBox } from "@react-three/drei";
+import { CylinderGeometry, PlaneGeometry, type Group, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CHANNELS } from "../growth-engine/channels";
 import { drawBadge } from "../growth-engine/marks";
 import { TONES, materials } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
+import { C, look } from "./look";
 import { store } from "./store";
 import { clamp01, easeOutBack, easeOutCubic, mastRise } from "./timeline";
 import { MAST_R, SECTIONS, ovalAt, type Section } from "./track";
 
-// The platforms: a slim porcelain mast behind each stand section, headed by the
-// platform's round badge. Each rises as its channel's runner first reaches it,
-// and its ring lights in the channel's color.
+// The platforms: a floodlight mast behind each stand section, on a porcelain
+// footing with a champagne collar, a tapered aluminum pole banded in the
+// channel's color, and a head with a floodlight bank over the platform's badge.
+// Each rises as its channel's runner first reaches it; then the band and the
+// floodlights come on.
+
+const POLE_H = 2.3;
+const CELL = { w: 0.07, h: 0.06, gap: 0.015 };
+
+/** The bank's 2×5 floodlight cells as one geometry, on its front face. */
+function cellsGeometry() {
+  const cells = [];
+  for (let row = 0; row < 2; row++)
+    for (let col = 0; col < 5; col++)
+      cells.push(new PlaneGeometry(CELL.w, CELL.h).translate((col - 2) * (CELL.w + CELL.gap), (row - 0.5) * (CELL.h + CELL.gap), 0.031));
+  return mergeGeometries(cells);
+}
 
 function Mast({ i, section }: { i: number; section: Section }) {
   const m = materials();
+  const L = look();
   const ch = section.channel;
-  const pole = useRef<Mesh>(null);
+  const color = CHANNELS[ch].color;
+  const base = useRef<Group>(null);
+  const pole = useRef<Group>(null);
   const head = useRef<Group>(null);
   const ring = useRef<MeshBasicMaterial>(null);
+  const band = useRef<MeshStandardMaterial>(null);
+  const cells = useRef<MeshStandardMaterial>(null);
   const at = useMemo(() => ovalAt(section.mast, MAST_R, { x: 0, y: 0, z: 0 }), [section]);
-  const poleGeometry = useMemo(() => new CylinderGeometry(0.028, 0.034, 2.3, 12).translate(0, 1.15, 0), []);
+  const poleGeometry = useMemo(() => new CylinderGeometry(0.03, 0.045, POLE_H, 16).translate(0, POLE_H / 2, 0), []);
+  const cellGeometry = useMemo(() => cellsGeometry(), []);
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => drawBadge(ctx, w, h, section.mark), [section]);
   const face = useCanvasTexture(512, 512, draw);
 
   useFrame(() => {
     const rise = mastRise(i, store.p);
+    if (base.current) base.current.visible = rise > 0;
     const p = pole.current;
     if (p) {
       p.visible = rise > 0;
@@ -37,14 +60,38 @@ function Mast({ i, section }: { i: number; section: Section }) {
       h.visible = rise > 0.6;
       h.scale.setScalar(Math.max(1e-3, easeOutBack(clamp01((rise - 0.6) / 0.4))));
     }
-    if (ring.current) ring.current.opacity = clamp01((rise - 0.8) / 0.2);
+    const lit = clamp01((rise - 0.8) / 0.2);
+    if (ring.current) ring.current.opacity = lit;
+    if (band.current) band.current.emissiveIntensity = 0.5 * lit;
+    if (cells.current) cells.current.emissiveIntensity = 1.4 * lit;
   });
 
   return (
     <group position={[at.x, 0, at.z]}>
-      <mesh ref={pole} geometry={poleGeometry} material={m.porcelain} castShadow visible={false} />
+      <group ref={base} visible={false}>
+        <mesh position-y={0.03} material={m.porcelain} castShadow receiveShadow>
+          <cylinderGeometry args={[0.1, 0.1, 0.06, 32]} />
+        </mesh>
+        <mesh position-y={0.075} material={m.champagne} castShadow>
+          <cylinderGeometry args={[0.052, 0.052, 0.03, 24]} />
+        </mesh>
+      </group>
+      <group ref={pole} visible={false}>
+        <mesh geometry={poleGeometry} material={m.alu} castShadow />
+        <mesh position-y={1.4} castShadow>
+          <cylinderGeometry args={[0.047, 0.047, 0.03, 24]} />
+          <meshStandardMaterial ref={band} color={color} roughness={0.3} metalness={0.2} emissive={color} emissiveIntensity={0} />
+        </mesh>
+      </group>
       <Billboard position-y={2.55}>
         <group ref={head} visible={false}>
+          {/* The floodlight bank, above the badge. */}
+          <group position-y={0.33}>
+            <RoundedBox args={[0.46, 0.2, 0.06]} radius={0.02} smoothness={3} material={L.ink} castShadow />
+            <mesh geometry={cellGeometry}>
+              <meshStandardMaterial ref={cells} color={C.LIGHT_OFF} roughness={0.35} emissive={C.LIGHT_ON} emissiveIntensity={0} fog={false} />
+            </mesh>
+          </group>
           <mesh rotation-x={Math.PI / 2} material={m.panel} castShadow>
             <cylinderGeometry args={[0.22, 0.22, 0.05, 48]} />
             <Outlines thickness={1} color={TONES[ch].edge} />
@@ -55,7 +102,7 @@ function Mast({ i, section }: { i: number; section: Section }) {
           </mesh>
           <mesh>
             <ringGeometry args={[0.228, 0.258, 64]} />
-            <meshBasicMaterial ref={ring} color={CHANNELS[ch].color} transparent opacity={0} depthWrite={false} toneMapped={false} />
+            <meshBasicMaterial ref={ring} color={color} transparent opacity={0} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       </Billboard>
