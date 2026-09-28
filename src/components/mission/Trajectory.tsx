@@ -1,21 +1,19 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
-import { BufferAttribute, BufferGeometry, Color, LineCurve3, Quaternion, TubeGeometry, Vector3, type Group, type Mesh } from "three";
+import { BufferAttribute, BufferGeometry, Color, Quaternion, Vector3, type Group, type Mesh } from "three";
 import type { Line2 } from "three-stdlib";
 import { glowFromWithin } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
 import { clamp01, R0, seg, windowed } from "./timeline";
-import { BELL_Y, craftPosition, ghostImpactFrame, ghostPoint, polar } from "./world";
+import { craftPosition, ghostImpactFrame, ghostPoint, polar } from "./world";
 
-// The paths: the contrail off the pad, the dashed plan, the forest flown path,
+// The paths (the exhaust trail off the pad lives in the pad set): the dashed plan, the forest flown path,
 // the thickening colour tube of the compounding orbit, and the coral
 // suborbital "launch spike" ghost that falls back to the ground.
 
 const TRAIL_TOP = 1.4;
-const TRAIL_SEGS = 32;
-const TRAIL_RADIAL = 24;
 // The flown path in two pieces: everything up to the end of the first contact lap, and
 // the current lap, so the first can step aside while the correction dips below the plan.
 const FLOWN = { from: 0.125, to: 0.745, n: 1030 };
@@ -27,25 +25,6 @@ const AMBER = new Color("#fcb401");
 const CORAL = "#ec544b";
 /** Spiral tube radius along its length: thin where the orbit starts, thick where it has compounded. */
 const tubeR = (u: number) => 0.1 + 0.4 * u ** 1.6;
-
-function contrail() {
-  const g = new TubeGeometry(new LineCurve3(new Vector3(0, BELL_Y, 0), new Vector3(0, TRAIL_TOP, 0)), TRAIL_SEGS, 0.07, TRAIL_RADIAL, false);
-  // Taper: wide where it billows off the pad, thin where the vehicle climbs out of it.
-  const pos = g.attributes.position;
-  const colors = new Float32Array(pos.count * 4);
-  const [bottom, top, c] = [new Color("#ffffff"), new Color("#e8ecea"), new Color()];
-  for (let i = 0; i < pos.count; i++) {
-    const u = Math.floor(i / (TRAIL_RADIAL + 1)) / TRAIL_SEGS;
-    const k = 1 + 1.8 * (1 - u) ** 2;
-    pos.setX(i, pos.getX(i) * k);
-    pos.setZ(i, pos.getZ(i) * k);
-    c.lerpColors(bottom, top, u).toArray(colors, i * 4);
-    colors[i * 4 + 3] = 0.95 * (1 - u) ** 1.2;
-  }
-  g.setAttribute("color", new BufferAttribute(colors, 4));
-  g.computeVertexNormals();
-  return g;
-}
 
 const samples = (from: number, to: number, n: number) => Array.from({ length: n }, (_, i) => craftPosition(from + ((to - from) * i) / (n - 1)));
 
@@ -110,7 +89,6 @@ function reveal(line: Line2 | null, n: number) {
 
 export default function Trajectory() {
   const frame = useMission();
-  const trail = useRef<Mesh>(null);
   const plan = useRef<Line2>(null);
   const flown = useRef<Line2>(null);
   const lap = useRef<Line2>(null);
@@ -120,7 +98,6 @@ export default function Trajectory() {
   const cross = useRef<Line2>(null);
   const scorch = useRef<Group>(null);
 
-  const trailGeometry = useMemo(() => contrail(), []);
   const planPts = useMemo(
     () => [new Vector3(0, TRAIL_TOP, 0), ...samples(0.125, 0.4, 100), ...Array.from({ length: 361 }, (_, i) => polar(22 + i, R0))],
     [],
@@ -154,20 +131,6 @@ export default function Trajectory() {
       l.material.dashSize = 0.0031 * frame.dist;
       l.material.gapSize = 0.0023 * frame.dist;
     };
-
-    // Contrail: follows the bell up to its top, then thins away.
-    const tr = trail.current;
-    if (tr) {
-      tr.visible = p >= 0.125 && p < 0.34;
-      if (tr.visible) {
-        const s = frame.scale;
-        const bell = frame.craft.y - 2.01 * s; // bell exit, world y
-        const k = Math.round(TRAIL_SEGS * Math.min(1, Math.max(0, (bell - BELL_Y) / (TRAIL_TOP - BELL_Y))));
-        tr.geometry.setDrawRange(0, k * TRAIL_RADIAL * 6);
-        const widen = (1 + 0.6 * seg(p, 0.24, 0.34)) * (1 - 0.97 * seg(p, 0.27, 0.34));
-        tr.scale.set(widen, 1, widen);
-      }
-    }
 
     // Plan: the ascent, then the arc to orbit, then (after the pull-back) the whole ring.
     reveal(plan.current, p < 0.26 ? 0 : 101 * seg(p, 0.26, 0.3) + 48 * seg(p, 0.3, 0.4) + 312 * seg(p, 0.6, 0.66));
@@ -229,9 +192,6 @@ export default function Trajectory() {
 
   return (
     <group>
-      <mesh ref={trail} geometry={trailGeometry} visible={false}>
-        <meshStandardMaterial vertexColors transparent depthWrite={false} roughness={1} emissive="#ffffff" emissiveIntensity={0.35} />
-      </mesh>
       <Line ref={plan} points={planPts} color="#a9b3ad" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
       <Line ref={flown} points={flownPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
       <Line ref={lap} points={lapPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />

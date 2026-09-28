@@ -6,7 +6,7 @@ import {
   CUT_P,
   EARTH_ROWS,
   eio,
-  explodeModule,
+  fairingOpen,
   geo,
   lerp,
   MODULE_Y0,
@@ -14,11 +14,13 @@ import {
   R,
   radius,
   seg,
+  smooth,
   STATIONS,
   SUN_ORBIT,
   SUN_PAD,
   theta,
   turn,
+  VEHICLE_BASE,
   vehicleScale,
   type CameraKey,
 } from "./timeline";
@@ -32,10 +34,9 @@ const Y = new Vector3(0, 1, 0);
 const D2R = Math.PI / 180;
 
 export const C = new Vector3(0, -R, 0);
-export const PAD_TOP = 0.03;
-export const BELL_Y = 0.09;
-export const PSI = 22.5; // vehicle yaw on the pad: the D faces 7.5° left of the camera
-export const TOWER = new Vector3(-1.4, 0, -0.25);
+/** The launch mount's plinth top (pad units); the engine exit plane (VEHICLE_BASE) sits just above it. */
+export const PLINTH_H = 0.18;
+export const PSI = 22.5; // vehicle yaw on the pad: the livery column turns toward the camera
 
 
 // ── Geography ────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ export function polar(deg: number, r: number, out = new Vector3()) {
 
 /** The module (satellite) centre at p, no idle bob: pad units before CUT_P, orbit space from it on. */
 export function craftPosition(p: number, out = new Vector3()) {
-  if (p < 0.125) return out.set(0, MODULE_Y0 + 0.16 * explodeModule(p), 0);
+  if (p < 0.125) return out.set(0, MODULE_Y0, 0);
   if (p < CUT_P) {
     const r = padRise(p);
     return out.set(r.x, MODULE_Y0 + r.y, 0);
@@ -94,12 +95,24 @@ export function craftTangent(p: number, out = new Vector3()) {
 
 export const yaw = (deg: number, out = new Quaternion()) => out.setFromAxisAngle(Y, deg * D2R);
 
+const Zaxis = new Vector3(0, 0, 1);
+/**
+ * The pad-space pitch at the cut, so the craft's attitude relative to its local vertical is the same on both
+ * sides of CUT_P: the orbit-space ascent flies nose-along-tangent, which leans this far from the radial there.
+ */
+const PAD_PITCH_CUT = (() => {
+  const t = craftTangent(CUT_P + 1e-4, new Vector3());
+  const r = craftPosition(CUT_P + 1e-4, new Vector3()).sub(C);
+  return Math.atan2(t.x, t.y) - Math.atan2(r.x, r.y);
+})();
+
 const qa = new Quaternion();
 const qb = new Quaternion();
 const tan = new Vector3();
-/** Craft attitude: nose along the flight path through ascent, then upright with the X turned to the camera. */
+/** Craft attitude: upright on the pad, pitching downrange over .20–.27, nose along the flight path to .415, then upright with the X turned to the camera. */
 export function craftQuaternion(p: number, out = new Quaternion()): Quaternion {
   if (p < 0.13) return yaw(PSI, out);
+  if (p < CUT_P) return out.setFromAxisAngle(Zaxis, -PAD_PITCH_CUT * eio(seg(p, 0.2, CUT_P))).multiply(yaw(PSI, qa));
   if (p < 0.415) return out.setFromUnitVectors(Y, craftTangent(p, tan)).multiply(yaw(PSI, qa));
   if (p < 0.47) {
     craftQuaternion(0.41499, qb);
@@ -109,28 +122,60 @@ export function craftQuaternion(p: number, out = new Quaternion()): Quaternion {
   return yaw(lerp(-55, 14, eio(seg(p, 0.56, 0.66))), out);
 }
 
+// ── Staging (orbit space, vehicle at 0.18) ────────────────────────────────
+// Every pose is the stack's craft-point pose, so the parts keep their stacked local coordinates.
 export const SEP = 0.355;
-const sepPos = new Vector3();
-const sepTan = new Vector3();
-const sepQuat = new Quaternion();
-const down = new Vector3();
-const tumble = new Quaternion();
+const BOOSTER_C = new Vector3(0, 1.43 - (MODULE_Y0 - VEHICLE_BASE), 0); // the booster's middle (1.43 above the engine exit), craft-local pad units
 const X = new Vector3(1, 0, 0);
-/** The launch stage: rides with the craft until MECO, then falls back and tumbles. Returns false once gone. */
+const sepQ = new Quaternion();
+const pitchQ = new Quaternion();
+const ax = new Vector3();
+const down = new Vector3();
+const cA = new Vector3();
+const cB = new Vector3();
+/**
+ * The first stage (engines, tank, interstage): stacked until MECO; the interstage gap opens over .355–.358,
+ * then it falls behind and toward the Earth, pitching 0 → 35° about its own middle. Returns false once gone (.44).
+ */
 export function boosterPose(p: number, pos: Vector3, quat: Quaternion) {
+  craftPosition(p, pos);
   if (p < SEP) {
-    craftPosition(p, pos);
     craftQuaternion(p, quat);
     return true;
   }
-  const d = (p - SEP) / 0.1;
-  craftPosition(SEP, sepPos);
-  craftTangent(SEP, sepTan);
-  down.subVectors(C, sepPos).normalize();
-  pos.copy(sepPos).addScaledVector(sepTan, -2.5 * d).addScaledVector(down, 8 * d * d);
-  craftQuaternion(SEP, sepQuat);
-  quat.copy(sepQuat).multiply(tumble.setFromAxisAngle(X, 55 * D2R * d));
+  const s = vehicleScale(p);
+  craftQuaternion(SEP, sepQ);
+  ax.copy(Y).applyQuaternion(sepQ);
+  down.subVectors(C, pos).normalize();
+  const q = seg(p, 0.358, 0.44);
+  const back = 0.25 * seg(p, SEP, 0.358) + 7 * q * q;
+  quat.copy(sepQ).multiply(pitchQ.setFromAxisAngle(X, 35 * D2R * smooth(q)));
+  // Rotate about the booster's middle, not the craft point above it.
+  cA.copy(BOOSTER_C).multiplyScalar(s).applyQuaternion(sepQ);
+  cB.copy(BOOSTER_C).multiplyScalar(s).applyQuaternion(quat);
+  pos.add(cA).sub(cB).addScaledVector(ax, -back * s).addScaledVector(down, 2.5 * q * q * s);
   return p < 0.44;
+}
+
+/** The second stage and payload adapter: stacked until payload separation at .41, then drifting back along its axis. Gone at .46. */
+export function stage2Pose(p: number, pos: Vector3, quat: Quaternion) {
+  craftPosition(p, pos);
+  craftQuaternion(Math.min(p, 0.41), quat);
+  if (p < 0.41) return true;
+  ax.copy(Y).applyQuaternion(quat);
+  const back = 0.15 * seg(p, 0.41, 0.415) + 1.6 * seg(p, 0.415, 0.46) ** 2;
+  pos.addScaledVector(ax, -back * vehicleScale(p));
+  return p < 0.46;
+}
+
+/**
+ * One fairing half relative to its hinge on the base ring: the clamshell at integration, the opening at .385,
+ * then the detached half drifting out and back while it tumbles. Degrees and pad units; gone at .43.
+ */
+export function fairingPose(p: number) {
+  if (p < 0.2) return { open: fairingOpen(p), out: 0, back: 0, visible: true };
+  const q = seg(p, 0.392, 0.43);
+  return { open: 25 * seg(p, 0.385, 0.392) ** 2 + 40 * q, out: 1.4 * q * q + 0.1 * q, back: 1.0 * q * q, visible: p < 0.43 };
 }
 
 // ── The suborbital ghost ─────────────────────────────────────────────────

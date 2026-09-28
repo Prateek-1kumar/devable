@@ -1,4 +1,4 @@
-import { CanvasTexture, Color, MeshPhysicalMaterial, MeshStandardMaterial, SRGBColorSpace } from "three";
+import { CanvasTexture, MeshPhysicalMaterial, MeshStandardMaterial, SRGBColorSpace } from "three";
 import { mulberry32 } from "./world";
 
 // The mission's own materials, on top of the shared studio set in palette.ts
@@ -54,31 +54,9 @@ function build() {
       emissive: "#e2b95a",
       emissiveIntensity: 0.22,
     }),
-    towerSteel: new MeshPhysicalMaterial({ color: "#0f3d2b", roughness: 0.5, metalness: 0.25, clearcoat: 0.3 }),
-    livery: new MeshPhysicalMaterial({ color: "#179a55", roughness: 0.35, clearcoat: 0.5 }),
     lens: new MeshPhysicalMaterial({ color: "#0d2a2f", roughness: 0.05, clearcoat: 1 }),
   };
 }
 
 let shared: ReturnType<typeof build> | null = null;
 export const missionMaterials = () => (shared ??= build());
-
-// ── Flame colour ramp ────────────────────────────────────────────────────
-const FLAME_STOPS: [number, string][] = [
-  [0, "#fffdf5"],
-  [0.12, "#fff0c2"],
-  [0.35, "#ffc65c"],
-  [0.62, "#ff8a3d"],
-  [0.85, "#ff6a3d"],
-  [1, "#ffb48a"],
-];
-const STOPS = FLAME_STOPS.map(([t, c]) => [t, new Color(c)] as const);
-/** Writes the plume colour at t (0 nozzle → 1 tail) into `out` and returns its alpha (solid to 0.7, then fading out). */
-export function flameRamp(t: number, out: Color) {
-  const u = Math.min(1, Math.max(0, t));
-  let j = 0;
-  while (j < STOPS.length - 2 && u > STOPS[j + 1][0]) j++;
-  const [[t0, c0], [t1, c1]] = [STOPS[j], STOPS[j + 1]];
-  out.lerpColors(c0, c1, (u - t0) / (t1 - t0));
-  return u < 0.7 ? 1 : 1 - (u - 0.7) / 0.3;
-}

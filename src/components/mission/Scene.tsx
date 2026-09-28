@@ -12,7 +12,6 @@ import {
   CAMERA_KEYS,
   CUT_P,
   eio,
-  explodeCapsule,
   LABEL_IDS,
   labelOpacity,
   lerp,
@@ -25,7 +24,7 @@ import {
 } from "./timeline";
 import Trajectory from "./Trajectory";
 import Vehicle from "./Vehicle";
-import { C, cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar, sunDir } from "./world";
+import { C, cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, polar, sunDir } from "./world";
 
 export type Progress = { shown: number };
 
@@ -52,7 +51,11 @@ export default function Scene({ still, active, progress, labels, padShadows = fa
       gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping, toneMappingExposure: 1 }}
       frameloop={still ? "demand" : active ? "always" : "never"}
       camera={{ fov: 22, near: 0.05, far: 2000, position: [6.95, 3.31, 12.03] }}
-      onCreated={() => onReady?.()}
+      onCreated={(state) => {
+        // Dev-only perf hook for the screenshot runs: draw calls and triangles of the last frame.
+        if (process.env.NODE_ENV !== "production") (window as unknown as { __missionGl?: unknown }).__missionGl = state.gl;
+        onReady?.();
+      }}
     >
       <Mission still={still} progress={progress} labels={labels} padShadows={padShadows} />
     </Canvas>
@@ -81,7 +84,7 @@ function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" |
             frames 0 stops its per-frame shadow pass once the pad is off screen. */}
         {!still && (
           <group visible={padShadows}>
-            <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.5} far={3.5} opacity={0.35} resolution={1024} color="#1a1c1f" frames={padShadows ? Infinity : 0} />
+            <ContactShadows position={[0, 0.003, 0]} scale={6} blur={2.5} far={3.5} opacity={0.35} resolution={1024} color="#1a1c1f" frames={padShadows ? Infinity : 0} />
           </group>
         )}
         <LaunchSite />
@@ -260,8 +263,8 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
       let y = 0;
       let left = false;
       if (visible) {
-        if (id === "payload") local(0.19, 0.26 + 0.34 * explodeCapsule(p), 0);
-        else if (id === "devable") local(0.25, 0, 0);
+        if (id === "payload") local(0.1, 0.06, 0.08); // the satellite in the open fairing
+        else if (id === "devable") local(0.15, -1.9, 0.03); // the launcher's first stage
         else if (id === "channels") v.copy(frame.tips[1]);
         else if (id in ARRAY_LABELS) v.copy(frame.tips[ARRAY_LABELS[id] ?? 0]);
         else v.copy(fixed[id as keyof typeof fixed]);
