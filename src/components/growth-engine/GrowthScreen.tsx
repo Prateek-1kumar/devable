@@ -1,45 +1,47 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
-import { CatmullRomCurve3, Color, CurvePath, LineCurve3, Object3D, TubeGeometry, Vector3, type InstancedMesh } from "three";
+import { Line, RoundedBox } from "@react-three/drei";
+import { Color, CubicBezierCurve3, CurvePath, LineCurve3, Object3D, TubeGeometry, Vector3, type Group, type InstancedMesh, type MeshBasicMaterial } from "three";
+import type { Line2 } from "three-stdlib";
 import { CHANNELS } from "./channels";
-import { FACING_YAW, LAYER, onScreen } from "./layout";
+import { CHIP } from "./EngineCore";
+import { FACING_YAW, STACK_TOP, onScreen } from "./layout";
 import { materials, palette } from "./palette";
-import { clamp01, easeOutCubic, useStory } from "./story";
+import { clamp01, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-// Where the story ends: the output. A slim graphite display on an aluminum
-// stand behind the stack's right side, mirroring the terminal on the left
-// (your tool goes in, growth comes out). An output cable leaves the stack's
-// back-right side, runs the floor to the stand and climbs into the screen.
-// The screen shows pipeline growth: a hockey-stick area chart in the four block
-// colors that draws on once the last slab lands, with the figure counting up;
-// then leads travel the cable into it and the chart's tip flares as they arrive.
+// Where the story ends: the chip's own display. Once the top block lands, the
+// Devable chip reaches out a glossy black arm (its own material) from its back
+// edge, growing along its path: back over the top block, a sweep right and up
+// into a neck, where the growth screen then rises from its hinge. Chip and
+// screen read as one object. Once the chip powers up, emerald energy streams
+// along the arm into the screen and its chart draws on: pipeline growth as a
+// hockey stick in the four block colors, the figure counting up. Later, leads
+// ride the arm into it and the chart's tip flares.
 
-const STAND = onScreen(3.6, 0, -2.6); // floor point of the stand, right of and behind the stack
-const POLE = 0.95; // screen bottom height
-const PANEL = { w: 2.3, h: 1.4, d: 0.07 };
+const PANEL = { w: 2.1, h: 1.25, d: 0.07 };
 const TILT = -0.08; // leans back slightly
 const TEX = { w: 1024, h: Math.round((1024 * (PANEL.h - 0.08)) / (PANEL.w - 0.08)) };
 const GROWTH = 312; // % shown once the chart has drawn
-const CABLE_R = 0.05;
 const MAX_PEARLS = 48;
+const ENERGY = "#34d399";
+const INK = "#0b0c0e"; // the chip's black
 // The block colors in stack order (periwinkle → sky → mint → apricot).
 const STOPS = CHANNELS.map(({ fade }) => fade[0]);
 
-// The output cable: out of the back of the base, along the floor, into the stand, up the pole.
-const FROM = new Vector3(STAND.x - 0.2, CABLE_R, -LAYER.baseWidth / 2);
-const CABLE = new CatmullRomCurve3([
-  FROM,
-  FROM.clone().add(new Vector3(0, 0, -0.5)),
-  new Vector3(STAND.x - 0.05, CABLE_R, (FROM.z + STAND.z) / 2),
-  new Vector3(STAND.x, CABLE_R, STAND.z + 0.45),
-  new Vector3(STAND.x, CABLE_R, STAND.z + 0.12),
-]);
-const RISER = new LineCurve3(new Vector3(STAND.x, CABLE_R, STAND.z + 0.12), new Vector3(STAND.x, POLE, STAND.z + 0.12));
-const FEED = new CurvePath<Vector3>();
-FEED.add(CABLE);
-FEED.add(RISER);
+// ── The arm: out of the chip's back edge, back over the block, a sweep, then up the neck ──
+const ARM_R = 0.075;
+const Y0 = STACK_TOP + 0.005 + CHIP.h / 2; // the chip's mid-height
+const ROOT = new Vector3(0.31, Y0, -CHIP.w / 2 + 0.05); // starts inside the package
+const BACK = new Vector3(0.31, Y0, -1.75);
+const BEND = new Vector3(0.9, Y0 + 0.28, -2.9);
+const NECK = new Vector3(0.9, Y0 + 0.55, -2.9); // top of the neck: the screen's hinge
+const ARM = new CurvePath<Vector3>();
+ARM.add(new LineCurve3(ROOT, BACK));
+ARM.add(new CubicBezierCurve3(BACK, BACK.clone().setZ(-2.5), BEND.clone().setY(Y0), BEND));
+ARM.add(new LineCurve3(BEND, NECK));
+// The energy line rides the arm's camera-facing, upper side.
+const FACE = onScreen(0, 0, 1).multiplyScalar(ARM_R * 0.85).add(new Vector3(0, ARM_R * 0.45, 0));
 
 // The chart's shape: a true hockey stick with a few small, fixed wobbles so it reads as real data.
 const growth = (x: number) => {
@@ -51,9 +53,13 @@ export default function GrowthScreen() {
   const story = useStory();
   const p = palette();
   const m = materials();
-  const cable = useMemo(() => new TubeGeometry(CABLE, 90, CABLE_R, 12, false), []);
-  useEffect(() => () => cable.dispose(), [cable]);
+  const arm = useMemo(() => new TubeGeometry(ARM, 140, ARM_R, 20, false), []);
+  useEffect(() => () => arm.dispose(), [arm]);
+  const energyPoints = useMemo(() => ARM.getSpacedPoints(160).map((pt) => pt.add(FACE)), []);
   const view = useRef({ r: -1, flare: -1 });
+  const flow = useRef<Line2>(null);
+  const led = useRef<MeshBasicMaterial>(null);
+  const display = useRef<Group>(null);
   const pearls = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const tints = useMemo(() => CHANNELS.map(({ color }) => new Color(color)), []);
@@ -158,13 +164,31 @@ export default function GrowthScreen() {
     const t = story.time(state.clock.elapsedTime);
     const r = easeOutCubic(story.growthIn(t));
 
-    // Leads travel the cable up into the screen; the tip flares as they arrive.
+    // After the chip lands, its arm grows out along its path, then the screen rises onto the neck.
+    const grown = easeOutCubic(story.armIn(t));
+    arm.setDrawRange(0, Math.floor(((arm.index?.count ?? 0) * grown) / 6) * 6);
+    const up = story.screenIn(t);
+    if (display.current) {
+      display.current.visible = up > 0;
+      display.current.scale.setScalar(Math.max(1e-4, easeOutBack(up)));
+    }
+
+    // Energy streams along the arm once the chip is powered.
+    const power = story.powerIn(t);
+    const surge = story.core(t);
+    if (flow.current) {
+      flow.current.material.opacity = power * (0.65 + surge * 0.35);
+      flow.current.material.dashOffset = -t * (0.45 + surge * 1.4);
+    }
+    if (led.current) led.current.opacity = 0.2 + power * 0.8;
+
+    // Leads ride the arm into the screen; the tip flares as they arrive.
     let flare = 0;
     let i = 0;
     const mesh = pearls.current;
     story.leads(t, (token, q) => {
       if (!mesh || i >= MAX_PEARLS) return;
-      FEED.getPointAt(q, dummy.position);
+      ARM.getPointAt(q, dummy.position).add(FACE);
       dummy.scale.setScalar(Math.min(1, q / 0.04, (1 - q) / 0.04));
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
@@ -189,34 +213,35 @@ export default function GrowthScreen() {
 
   return (
     <group>
-      {/* Output cable, floor to pole. */}
-      <mesh geometry={cable} material={m.stone} castShadow receiveShadow />
+      {/* The chip's arm, in the chip's own glossy black. */}
+      <mesh geometry={arm} castShadow>
+        <meshPhysicalMaterial color={INK} roughness={0.3} clearcoat={1} clearcoatRoughness={0.06} />
+      </mesh>
+      <Line ref={flow} points={energyPoints} color={ENERGY} lineWidth={2.4} dashed dashSize={0.09} gapSize={0.08} transparent opacity={0} />
       <instancedMesh ref={pearls} args={[undefined, undefined, MAX_PEARLS]} frustumCulled={false}>
-        <sphereGeometry args={[CABLE_R * 1.25, 16, 12]} />
+        <sphereGeometry args={[0.042, 16, 12]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
 
-      <group position={[STAND.x, 0, STAND.z]}>
-        {/* Stand: a round foot and a slim pole, brushed aluminum. */}
-        <mesh position-y={0.015} material={m.alu} castShadow receiveShadow>
-          <cylinderGeometry args={[0.34, 0.36, 0.03, 48]} />
+      {/* The hinge at the top of the neck, and the screen it holds, facing the camera. */}
+      <group ref={display} position={NECK} rotation-y={FACING_YAW} visible={false}>
+        <RoundedBox args={[0.3, 0.12, 0.2]} radius={0.04} smoothness={3} castShadow>
+          <meshPhysicalMaterial color={INK} roughness={0.3} clearcoat={1} clearcoatRoughness={0.06} />
+        </RoundedBox>
+        {/* Power light on the hinge. */}
+        <mesh position={[0, 0, 0.101]}>
+          <circleGeometry args={[0.022, 20]} />
+          <meshBasicMaterial ref={led} color={ENERGY} transparent opacity={0.2} toneMapped={false} />
         </mesh>
-        <mesh position={[0, POLE / 2, 0.12]} material={m.alu} castShadow>
-          <cylinderGeometry args={[0.035, 0.035, POLE, 16]} />
-        </mesh>
-
-        {/* The display, facing the camera and leaning back a touch. */}
-        <group position={[0, POLE, 0.12]} rotation-y={FACING_YAW}>
-          <group rotation-x={TILT}>
-            <RoundedBox args={[PANEL.w + 0.04, PANEL.h + 0.04, PANEL.d - 0.02]} radius={0.02} smoothness={3} position-y={PANEL.h / 2} material={m.alu} castShadow />
-            <RoundedBox args={[PANEL.w, PANEL.h, PANEL.d]} radius={0.03} smoothness={3} position={[0, PANEL.h / 2, 0.012]} castShadow>
-              <meshPhysicalMaterial color="#111317" roughness={0.3} clearcoat={1} clearcoatRoughness={0.06} />
-            </RoundedBox>
-            <mesh position={[0, PANEL.h / 2, 0.012 + PANEL.d / 2 + 0.002]}>
-              <planeGeometry args={[PANEL.w - 0.08, PANEL.h - 0.08]} />
-              <meshBasicMaterial map={screen.texture} toneMapped={false} />
-            </mesh>
-          </group>
+        <group position-y={0.06} rotation-x={TILT}>
+          <RoundedBox args={[PANEL.w + 0.04, PANEL.h + 0.04, PANEL.d - 0.02]} radius={0.02} smoothness={3} position-y={PANEL.h / 2} material={m.alu} castShadow />
+          <RoundedBox args={[PANEL.w, PANEL.h, PANEL.d]} radius={0.03} smoothness={3} position={[0, PANEL.h / 2, 0.012]} castShadow>
+            <meshPhysicalMaterial color="#111317" roughness={0.3} clearcoat={1} clearcoatRoughness={0.06} />
+          </RoundedBox>
+          <mesh position={[0, PANEL.h / 2, 0.012 + PANEL.d / 2 + 0.002]}>
+            <planeGeometry args={[PANEL.w - 0.08, PANEL.h - 0.08]} />
+            <meshBasicMaterial map={screen.texture} toneMapped={false} />
+          </mesh>
         </group>
       </group>
     </group>

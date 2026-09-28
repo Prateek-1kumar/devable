@@ -87,7 +87,8 @@ export default function StackLayer({ index, children }: Props) {
 
     const arrive = story.layerIn(index, t);
     g.visible = arrive > 0;
-    lift.current = settle(lift.current, raised ? LIFT : 0, 10);
+    // The top block carries the chip wired to the growth screen, so it stays put.
+    lift.current = settle(lift.current, raised && index < CHANNELS.length - 1 ? LIFT : 0, 10);
     g.position.y = layerY(index) + (1 - easeOutBack(arrive)) * DROP + lift.current;
     g.scale.setScalar(0.85 + 0.15 * easeOutCubic(arrive));
 

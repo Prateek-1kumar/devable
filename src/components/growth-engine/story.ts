@@ -14,8 +14,13 @@ export const damp = (current: number, target: number, lambda: number, dt: number
 
 // Intro, in seconds from mount. Plays once.
 export const INTRO = { terminalAt: 0.2, terminalFor: 0.8, layersAt: 1.2, layerFor: 0.6, layerStagger: 0.35, signalAt: 2.8 };
-// The growth screen's chart draws on once the last slab has landed.
-const GROWTH = { at: INTRO.layersAt + 3 * INTRO.layerStagger + INTRO.layerFor, for: 1.6 };
+// When the intro's signal reaches the chip on top, it powers up; its energy runs
+// the bus to the growth screen, whose chart then draws on.
+const POWER = { for: 0.6 };
+// Once the top block (with the chip) has landed, the chip's arm grows out, then the screen rises onto it.
+const ARM = { at: INTRO.layersAt + 3 * INTRO.layerStagger + INTRO.layerFor + 0.05, for: 0.7 };
+const SCREEN = { at: ARM.at + ARM.for, for: 0.5 };
+const GROWTH = { after: 0.45, for: 1.6 }; // after the chip powers up
 
 // Phases of every signal run, in seconds from the run's start.
 export const CABLE_FOR = 0.7; // bead travels the cable
@@ -27,11 +32,11 @@ const ROUTE_FOR = 0.9; // a pulse runs a channel's floor traces out to its desti
 const LAND_GLOW_FOR = 1.4; // a destination tile's glow as the pulse arrives
 const CORE_FOR = 1.2;
 const RIPPLE_FOR = 1.1;
-// Growth: after a platform lights, its channel's leads run the output cable from
-// the stack into the growth screen as a train of pearls.
+// Growth: after a platform lights, its channel's leads run the chip's bus into
+// the growth screen as a train of pearls.
 const HOLD = 0.25; // beat on the platform before the leads go
 const LEAD_SPACING = 0.075; // seconds between pearls in a single-file line
-const TAIL_FOR = 1.6; // stack → the growth screen
+const TAIL_FOR = 1.6; // chip → the growth screen
 
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
@@ -113,11 +118,23 @@ export class Story {
   ripple(t: number) {
     return this.first((r) => progress(t - r.at - CORE_AT, RIPPLE_FOR));
   }
-  /** The growth screen's chart drawing on (0..1). */
-  growthIn(t: number) {
-    return clamp01((t - GROWTH.at) / GROWTH.for);
+  /** The chip's arm growing out after the top block lands (0..1). */
+  armIn(t: number) {
+    return clamp01((t - ARM.at) / ARM.for);
   }
-  /** Calls back for every lead pearl on the output cable, with its channel and 0..1 progress. */
+  /** The growth screen rising onto the arm's neck (0..1). */
+  screenIn(t: number) {
+    return clamp01((t - SCREEN.at) / SCREEN.for);
+  }
+  /** The chip on top powering up once the intro's signal reaches it (0..1, stays on). */
+  powerIn(t: number) {
+    return clamp01((t - INTRO.signalAt - CORE_AT) / POWER.for);
+  }
+  /** The growth screen's chart drawing on, after the chip's energy reaches it (0..1). */
+  growthIn(t: number) {
+    return clamp01((t - INTRO.signalAt - CORE_AT - GROWTH.after) / GROWTH.for);
+  }
+  /** Calls back for every lead pearl on the chip's bus, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
     for (const run of this.runs)
       for (const dot of run.dots) {
