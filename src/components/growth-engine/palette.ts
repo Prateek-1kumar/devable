@@ -1,7 +1,6 @@
 import { MeshPhysicalMaterial, MeshStandardMaterial } from "three";
 
 // Scene colors come from the page tokens so the 3D matches the UI.
-// Amber and ink are local accents, like ArcButton's sweep colors.
 // Client-only: read on first use inside the (ssr: false) scene.
 
 function read() {
@@ -12,8 +11,8 @@ function read() {
     stone: token("--pixel-stone"),
     teal: token("--accent"),
     coral: token("--coral"),
-    amber: "#fcb401",
-    ink: "#031819",
+    amber: token("--amber"),
+    ink: token("--forest"),
     bodyFont: getComputedStyle(document.body).fontFamily,
     headingFont: token("--font-geist-sans"),
   };

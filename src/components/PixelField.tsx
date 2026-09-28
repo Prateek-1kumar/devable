@@ -6,8 +6,8 @@ import { useEffect, useRef } from "react";
 // dissolves and re-forms around the center, and a hidden layer of the same
 // shapes is uncovered softly around the cursor.
 // Fills its nearest positioned parent (give it `relative`) and listens to
-// the pointer there. Colors come from the --pixel-light, --pixel-stone
-// and --accent tokens.
+// the pointer there. Colors come from the --pixel-light, --pixel-stone,
+// --pixel-mist and --accent tokens.
 
 type Props = {
   /** Grid spacing in px. */
@@ -46,7 +46,8 @@ const CURSOR_FOLLOW = 0.5; // 0–1, higher follows faster
 const ACCENT_CHANCE = 0.035; // green pluses
 const PLUS_CHANCE = 0.2; // all pluses, incl. green
 const BLOCK_CHANCE = 0.4; // blocks; the rest are dots
-const LIGHT_CHANCE = 0.55; // off-white vs stone
+const LIGHT_CHANCE = 0.55; // off-white vs the tinted tones
+const MIST_CHANCE = 0.4; // of the tinted tones: faint teal vs stone
 
 // Shape sizes in px
 const BLOCK_SIZE = 14;
@@ -77,6 +78,7 @@ export default function PixelField({ gap = 20, className = "" }: Props) {
     const token = (name: string) => css.getPropertyValue(name).trim();
     const light = token("--pixel-light");
     const stone = token("--pixel-stone");
+    const mist = token("--pixel-mist");
     const accent = token("--accent");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -117,7 +119,7 @@ export default function PixelField({ gap = 20, className = "" }: Props) {
             x,
             y,
             kind: isAccent || r < PLUS_CHANCE ? "plus" : r < PLUS_CHANCE + BLOCK_CHANCE ? "block" : "dot",
-            color: isAccent ? accent : Math.random() < LIGHT_CHANCE ? light : stone,
+            color: isAccent ? accent : Math.random() < LIGHT_CHANCE ? light : Math.random() < MIST_CHANCE ? mist : stone,
             hidden: Math.random() < HIDDEN_DENSITY,
             inCluster: false,
             inDelay: 0,

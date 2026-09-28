@@ -2,19 +2,19 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 // Pill CTA: accent at rest. On hover/focus pill-shaped layers slide in
-// from the left (coral, then amber by default, then near-black), so their rounded
+// from the left (amber, then lime by default, then forest), so their rounded
 // leading edges read as arcs, and the black one settles as the fill.
 // On leave only the black layer slides back out; the colors reset hidden
 // beneath it. Timings and colors match the reference recording.
 // Colors are intentionally local to this component.
-const SWEEP = ["#ec544b", "#fcb401"]; // coral, amber
-const INK = "#031819"; // final fill
+const SWEEP = ["var(--amber)", "var(--lime)"];
+const INK = "var(--forest)"; // final fill
 // Literal classes so Tailwind sees them: sweep layers step 50ms apart, ink follows one step later.
 const DELAYS = ["group-hover:delay-0", "group-hover:delay-50", "group-hover:delay-100", "group-hover:delay-150", "group-hover:delay-200", "group-hover:delay-250"];
 
 // Resting look per tone; both end on the ink fill, so text turns white on hover.
 const TONES = {
-  accent: "bg-accent text-white [--edge:color-mix(in_oklab,var(--accent),black_28%)]",
+  accent: "bg-accent text-foreground [--edge:color-mix(in_oklab,var(--accent),black_28%)] transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
   coral: "bg-coral text-foreground transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
   amber: "bg-amber text-foreground [--edge:color-mix(in_oklab,var(--amber),black_22%)] transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
 };
