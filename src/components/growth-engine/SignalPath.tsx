@@ -100,6 +100,8 @@ export default function SignalPath() {
           visible={false}
         >
           <sphereGeometry args={[0.085, 24, 18]} />
+          {/* The white signal needs an ink edge to read on the pale cable. */}
+          <Outlines thickness={1} color={p.ink} />
         </mesh>
       ))}
     </group>

@@ -35,6 +35,8 @@ const SPARK_FOR = 0.7;
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
 export const INTRO_LEADS = 1240;
+// How the intro's leads split across channels 01 → 04 (sums to 1).
+const INTRO_SPLIT = [0.31, 0.27, 0.23, 0.19];
 const PULSE_LEADS: [number, number] = [6, 38];
 const DOTS = { intro: 7, pulse: 5 }; // pearls per token
 
@@ -45,15 +47,16 @@ const decay = (dt: number, span: number) => (dt >= 0 && dt < span ? (1 - dt / sp
 const progress = (dt: number, span: number) => (dt >= 0 && dt < span ? dt / span : -1);
 
 type Dot = { token: number; slot: number; delay: number };
-type Run = { at: number; tokens: number[]; leads: number; dots: Dot[]; end: number };
+/** `leads[slot]` is what the token in that slot brings in. */
+type Run = { at: number; tokens: number[]; leads: number[]; dots: Dot[]; end: number };
 
 export class Story {
   private runs: Run[] = [];
-  private settled = 0; // leads from finished runs
+  private settled = [0, 0, 0, 0]; // leads from finished runs, per channel
   private nextPulse: number;
 
   constructor(readonly still: boolean) {
-    const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], INTRO_LEADS, DOTS.intro);
+    const intro = makeRun(INTRO.signalAt, [0, 1, 2, 3], INTRO_SPLIT.map((share) => Math.round(share * INTRO_LEADS)), DOTS.intro);
     this.runs.push(intro);
     this.nextPulse = intro.end + between(PULSE_GAP);
   }
@@ -74,11 +77,11 @@ export class Story {
   update(t: number) {
     if (this.still) return;
     if (t >= this.nextPulse) {
-      const run = makeRun(t, [Math.floor(Math.random() * 4)], Math.round(between(PULSE_LEADS)), DOTS.pulse);
+      const run = makeRun(t, [Math.floor(Math.random() * 4)], [Math.round(between(PULSE_LEADS))], DOTS.pulse);
       this.runs.push(run);
       this.nextPulse = run.end + between(PULSE_GAP);
     }
-    for (const run of this.runs) if (t > run.end) this.settled += run.leads;
+    for (const run of this.runs) if (t > run.end) run.tokens.forEach((token, slot) => (this.settled[token] += run.leads[slot]));
     this.runs = this.runs.filter((run) => t <= run.end);
   }
 
@@ -136,15 +139,17 @@ export class Story {
       return t >= from && t < run.end ? ((t - from) / SPARK_FOR) % 1 : -1;
     });
   }
-  /** Leads shown on the gauge: rises as dots arrive. */
-  count(t: number) {
-    let n = this.settled;
-    for (const run of this.runs) {
-      let arrived = 0;
-      for (const dot of run.dots) arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
-      n += (run.leads * arrived) / run.dots.length;
-    }
-    return n;
+  /** Leads shown on the gauge, per channel: each rises as that channel's dots arrive. */
+  countBy(t: number, out: number[]) {
+    out.splice(0, out.length, ...this.settled);
+    for (const run of this.runs)
+      run.tokens.forEach((token, slot) => {
+        const dots = run.dots.filter((dot) => dot.slot === slot);
+        let arrived = 0;
+        for (const dot of dots) arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
+        out[token] += (run.leads[slot] * arrived) / dots.length;
+      });
+    return out;
   }
 
   private peak(f: (run: Run) => number) {
@@ -165,7 +170,7 @@ const tokenAt = (run: Run, slot: number) => run.at + TOKEN_AT + slot * TOKEN_STA
 const leadProgress = (run: Run, dot: Dot, t: number) =>
   (t - tokenAt(run, dot.slot) - FLIGHT - dot.delay) / LEAD_FLIGHT;
 
-function makeRun(at: number, tokens: number[], leads: number, dotsPerToken: number): Run {
+function makeRun(at: number, tokens: number[], leads: number[], dotsPerToken: number): Run {
   const dots = tokens.flatMap((token, slot) =>
     Array.from({ length: dotsPerToken }, (_, i) => ({ token, slot, delay: i * LEAD_SPACING })),
   );

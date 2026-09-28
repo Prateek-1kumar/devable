@@ -1,4 +1,8 @@
 // The four channels, bottom (foundation) to top.
+// Colors tell the "dawn rise" story, deep to radiant: indigo → azure → emerald → sun.
+// Your devtool's signal leaves as white light and each channel turns it into its
+// own color: its layer, its token, its lead pearls and its band on the monitor.
+// `light` is the tint for glyphs and lights on dark panels; `ink` is for text on the body.
 export const CHANNELS = [
   {
     n: "01",
@@ -6,6 +10,9 @@ export const CHANNELS = [
     name: "Technical Content",
     glyph: "code",
     line: "Docs, tutorials and deep dives developers actually bookmark.",
+    color: "#4f46e5",
+    light: "#a5b4fc",
+    ink: "#ffffff",
   },
   {
     n: "02",
@@ -13,6 +20,9 @@ export const CHANNELS = [
     name: "SEO + AI Search",
     glyph: "search",
     line: "Found on Google, and cited by ChatGPT, Perplexity and Claude.",
+    color: "#0ea5e9",
+    light: "#7dd3fc",
+    ink: "#16191d",
   },
   {
     n: "03",
@@ -20,6 +30,9 @@ export const CHANNELS = [
     name: "Reddit",
     glyph: "reddit",
     line: "Real conversations in the communities your users already live in.",
+    color: "#10b981",
+    light: "#6ee7b7",
+    ink: "#16191d",
   },
   {
     n: "04",
@@ -27,6 +40,9 @@ export const CHANNELS = [
     name: "Creator Distribution",
     glyph: "play",
     line: "Creators your audience follows, showing your tool in action.",
+    color: "#f5b301",
+    light: "#fcd34d",
+    ink: "#16191d",
   },
 ] as const;
 

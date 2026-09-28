@@ -1,15 +1,18 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Object3D, Vector3, type InstancedMesh } from "three";
+import { Color, Object3D, Vector3, type InstancedMesh } from "three";
+import { CHANNELS } from "./channels";
 import { GAUGE_POSITION, LEAD_BOW, TOKEN_DEST } from "./layout";
 import { materials } from "./palette";
 import { clamp01, useStory } from "./story";
 
 const MAX_PEARLS = 64;
 
+const TINTS = CHANNELS.map(({ color }) => new Color(color));
+
 /**
- * Glassy amber pearls that travel in tidy single-file lines from each burst
- * token into the pipeline gauge. One draw call for all of them.
+ * Glassy pearls in their channel's color that travel in tidy single-file lines
+ * from each burst token into the pipeline gauge. One draw call for all of them.
  */
 export default function LeadStream() {
   const story = useStory();
@@ -34,14 +37,16 @@ export default function LeadStream() {
       dummy.position.lerpVectors(a, b, p);
       dummy.scale.setScalar(Math.min(1, clamp01(p / 0.08), clamp01((1 - p) / 0.08)));
       dummy.updateMatrix();
+      m.setColorAt(i, TINTS[token]);
       m.setMatrixAt(i++, dummy.matrix);
     });
     m.count = i;
     m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
   });
 
   return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, MAX_PEARLS]} material={materials().pearl} frustumCulled={false}>
+    <instancedMesh ref={mesh} args={[undefined, undefined, MAX_PEARLS]} material={materials().lead} frustumCulled={false}>
       <sphereGeometry args={[0.04, 20, 14]} />
     </instancedMesh>
   );

@@ -35,7 +35,7 @@ export default function DevtoolTerminal() {
       ctx.textBaseline = "middle";
       ctx.fillText(text, x, h / 2);
       if (cursor) {
-        ctx.fillStyle = p.amber;
+        ctx.fillStyle = p.signal;
         ctx.fillRect(x + ctx.measureText(text).width + h * 0.04, h * 0.36, h * 0.1, h * 0.28);
       }
     },
@@ -99,7 +99,7 @@ export default function DevtoolTerminal() {
 
         <mesh position={[W / 2 - 0.16, H + 0.01, D / 2 - 0.14]}>
           <sphereGeometry args={[0.045, 16, 12]} />
-          <meshStandardMaterial ref={led} color={p.amber} emissive={p.amber} emissiveIntensity={0.4} roughness={0.3} />
+          <meshStandardMaterial ref={led} color={p.ink} emissive={p.signal} emissiveIntensity={0.4} roughness={0.3} />
         </mesh>
       </group>
     </group>

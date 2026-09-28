@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Outlines, RoundedBox } from "@react-three/drei";
 import type { Group } from "three";
+import { CHANNELS } from "./channels";
 import { FACING_YAW, GAUGE_DIAL as DIAL, GAUGE_POSITION } from "./layout";
 import { INK_PX, materials, palette } from "./palette";
 import { INTRO_LEADS, clamp01, easeOutBack, useStory } from "./story";
@@ -22,17 +23,18 @@ const PATH = [
   [0.5, 0.45], [0.6, 0.4], [0.7, 0.62], [0.8, 0.58], [0.9, 0.8], [1, 0.95],
 ];
 
-/** PIPELINE readout: lead count plus a sparkline that climbs as pearls land. */
+/** PIPELINE readout: lead count plus a stacked, channel-colored area that climbs as pearls land. */
 export default function PipelineGauge() {
   const story = useStory();
   const p = palette();
   const m = materials();
   const group = useRef<Group>(null);
-  const view = useRef({ leads: 0, drawn: 0 });
+  const view = useRef({ leads: 0, drawn: 0, by: [0, 0, 0, 0] });
+  const counts = useRef([0, 0, 0, 0]);
 
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      const { leads, drawn } = view.current;
+      const { leads, drawn, by } = view.current;
       const pad = w * 0.06;
       ctx.textBaseline = "alphabetic";
 
@@ -42,7 +44,7 @@ export default function PipelineGauge() {
       ctx.globalAlpha = 0.55;
       ctx.fillText("PIPELINE", pad, pad + h * 0.07);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = p.amber;
+      ctx.fillStyle = p.live;
       ctx.beginPath();
       ctx.arc(w - pad - h * 0.025, pad + h * 0.045, h * 0.025, 0, Math.PI * 2);
       ctx.fill();
@@ -57,40 +59,49 @@ export default function PipelineGauge() {
       ctx.fillText("leads", pad, h * 0.6);
       ctx.globalAlpha = 1;
 
-      // Sparkline across the bottom: the fixed PATH, cut off at `drawn`.
-      const top = h * 0.66;
-      const bottom = h - pad;
-      const at = ([x, y]: number[]) => [pad + (w - 2 * pad) * x, bottom - (bottom - top) * y];
-      const pts = PATH.filter(([x]) => x < drawn).map(at);
+      // The fixed PATH (0..1 in both axes), cut off at `drawn` with an interpolated tip.
+      const line = PATH.filter(([x]) => x < drawn);
       const n = PATH.findIndex(([x]) => x >= drawn);
       if (n > 0) {
-        // Interpolate the tip between the last whole point and the next one.
         const [x0, y0] = PATH[n - 1];
         const [x1, y1] = PATH[n];
-        pts.push(at([drawn, y0 + ((y1 - y0) * (drawn - x0)) / (x1 - x0)]));
-      } else pts.push(at(PATH[0])); // nothing landed yet: just the start dot
-      const last = pts[pts.length - 1];
+        line.push([drawn, y0 + ((y1 - y0) * (drawn - x0)) / (x1 - x0)]);
+      } else line.push(PATH[0]); // nothing landed yet: just the start dot
+      const top = h * 0.66;
+      const bottom = h - pad;
+      const X = (x: number) => pad + (w - 2 * pad) * x;
+      const Y = (y: number) => bottom - (bottom - top) * y;
 
-      ctx.beginPath();
-      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      ctx.lineTo(last[0], bottom);
-      ctx.lineTo(pad, bottom);
-      ctx.closePath();
-      ctx.fillStyle = p.amber;
-      ctx.globalAlpha = 0.15;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      // Stacked area: one band per channel, 01 at the bottom like the stack,
+      // each as thick as that channel's share of the leads so far.
+      if (leads > 0 && line.length > 1) {
+        let below = 0;
+        CHANNELS.forEach((channel, k) => {
+          const above = below + by[k] / leads;
+          ctx.beginPath();
+          line.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y * above)) : ctx.moveTo(X(x), Y(y * above))));
+          for (let i = line.length - 1; i >= 0; i--) ctx.lineTo(X(line[i][0]), Y(line[i][1] * below));
+          ctx.closePath();
+          ctx.fillStyle = channel.color;
+          ctx.globalAlpha = 0.92;
+          ctx.fill();
+          below = above;
+        });
+        ctx.globalAlpha = 1;
+      }
 
+      // White edge along the total, and the tip.
       ctx.beginPath();
-      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      ctx.strokeStyle = p.amber;
-      ctx.lineWidth = h * 0.018;
+      line.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+      ctx.strokeStyle = p.signal;
+      ctx.lineWidth = h * 0.012;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.stroke();
+      const [tx, ty] = line[line.length - 1];
       ctx.beginPath();
-      ctx.arc(last[0], last[1], h * 0.03, 0, Math.PI * 2);
-      ctx.fillStyle = p.amber;
+      ctx.arc(X(tx), Y(ty), h * 0.026, 0, Math.PI * 2);
+      ctx.fillStyle = p.signal;
       ctx.fill();
     },
     [p],
@@ -105,9 +116,10 @@ export default function PipelineGauge() {
       group.current.scale.setScalar(Math.max(1e-4, easeOutBack(appear)));
     }
 
-    const leads = Math.round(story.count(t));
+    const by = story.countBy(t, counts.current);
+    const leads = Math.round(by.reduce((a, b) => a + b, 0));
     if (leads === view.current.leads) return;
-    view.current = { leads, drawn: clamp01(leads / INTRO_LEADS) };
+    view.current = { leads, drawn: clamp01(leads / INTRO_LEADS), by: [...by] };
     screen.paint();
   });
 

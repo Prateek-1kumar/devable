@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Outlines } from "@react-three/drei";
 import { Object3D, type InstancedMesh, type Mesh } from "three";
 import { TETHER } from "./layout";
 import { materials, palette } from "./palette";
@@ -9,7 +10,7 @@ const SPACING = 0.13;
 
 /**
  * The curved core → PIPELINE link: soft round ink dots along a gentle arc,
- * with an amber pearl spark running up it while leads are landing.
+ * with a white pearl spark running up it while leads are landing.
  */
 export default function Tether() {
   const story = useStory();
@@ -52,6 +53,7 @@ export default function Tether() {
       </instancedMesh>
       <mesh ref={spark} material={materials().pearl} visible={false}>
         <sphereGeometry args={[0.06, 20, 14]} />
+        <Outlines thickness={1} color={p.ink} />
       </mesh>
     </>
   );

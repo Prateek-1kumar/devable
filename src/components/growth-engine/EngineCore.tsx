@@ -17,7 +17,7 @@ export default function EngineCore() {
 
   useFrame((state) => {
     const t = story.time(state.clock.elapsedTime);
-    // ponytail: amber stays a faint warmth at rest; it only blooms on a signal.
+    // ponytail: a faint glow at rest; it only blooms on a signal.
     if (pill.current) pill.current.emissiveIntensity = 0.1 + story.core(t) * 1.2;
     const r = story.ripple(t);
     if (ring.current && ripple.current) {
@@ -31,7 +31,7 @@ export default function EngineCore() {
     <group>
       <RoundedBox args={[1.1, 0.05, 1.1]} radius={0.02} smoothness={3} position={[0, 0.02, 0]} material={m.screen} receiveShadow />
       <RoundedBox args={[0.72, 0.16, 0.72]} radius={0.07} smoothness={4} position={[0, 0.1, 0]} castShadow>
-        <meshPhysicalMaterial ref={pill} color={p.cream} emissive={p.amber} emissiveIntensity={0} roughness={0.25} clearcoat={1} />
+        <meshPhysicalMaterial ref={pill} color={p.cream} emissive={p.signal} emissiveIntensity={0} roughness={0.25} clearcoat={1} />
         <Outlines thickness={INK_PX} color={p.ink} />
       </RoundedBox>
       {/* Socket the tether rises from. */}
@@ -40,7 +40,7 @@ export default function EngineCore() {
       </mesh>
       <mesh ref={ring} rotation-x={-Math.PI / 2} position={[0, 0.03, 0]} visible={false}>
         <ringGeometry args={[0.55, 0.58, 64]} />
-        <meshBasicMaterial ref={ripple} color={p.amber} transparent opacity={0} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={ripple} color={p.signal} transparent opacity={0} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   );
