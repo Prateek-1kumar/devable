@@ -16,7 +16,9 @@ import { useCanvasTexture } from "./useCanvasTexture";
 // Routes are nested so none cross: the front one runs furthest before turning.
 // Each ends on a white puck carrying the platform's real logo. When the signal
 // lights a layer, a pulse runs its routes, the junctions blink as it passes and
-// the puck lifts with a ring of the channel's color on arrival.
+// the puck lifts with a ring of the channel's color on arrival. Then the leads
+// come home: a short train of pearls runs the route back into the stack, on
+// its way to the core and up the arc (see PipelineArc).
 
 type XZ = [number, number];
 type Route = { k: number; mark: Mark; path: XZ[] };
@@ -25,6 +27,8 @@ const FLOOR = 0.01;
 const PORT_X = LAYER.baseWidth / 2 + 0.02;
 const TURN = 0.22; // corner radius
 const PUCK = { r: 0.26, h: 0.09 };
+const TRAIN = [1, 0.8, 0.62]; // returning lead pearls, head first (scale)
+const TRAIN_GAP = 0.05; // along the route (0..1) between pearls
 const ROUTES: Route[] = [
   { k: 0, mark: "hackernews", path: [[PORT_X, -0.2], [3.68, -0.2]] },
   { k: 1, mark: "chatgpt", path: [[PORT_X, -0.6], [2.96, -0.6], [2.96, -1.95]] },
@@ -125,6 +129,7 @@ function RouteLine({ route }: { route: Route }) {
   const points = useMemo(() => curve.getSpacedPoints(96), [curve]);
   const line = useRef<Line2>(null);
   const pulse = useRef<Mesh>(null);
+  const train = useRef<(Mesh | null)[]>([]);
   const nodes = useRef<(MeshBasicMaterial | null)[]>([]);
   const group = useRef<Group>(null);
   const [rest, lit] = useMemo(() => [new Color("#ffffff"), new Color(channel.color)], [channel]);
@@ -139,10 +144,20 @@ function RouteLine({ route }: { route: Route }) {
       pulse.current.visible = r >= 0;
       if (r >= 0) curve.getPointAt(r, pulse.current.position);
     }
-    // Junction nodes blink as the pulse passes them.
+    // The way home: pearls run from the puck back to the port.
+    const back = story.returning(route.k, t);
+    TRAIN.forEach((_, j) => {
+      const pearl = train.current[j];
+      if (!pearl) return;
+      const u = 1 - (back - j * TRAIN_GAP);
+      pearl.visible = back >= 0 && u >= 0 && u <= 1;
+      if (pearl.visible) curve.getPointAt(u, pearl.position);
+    });
+    // Junction nodes blink as a pulse or the returning leads pass them.
     corners.forEach((u, i) => {
       const node = nodes.current[i];
-      if (node) node.color.lerpColors(rest, lit, r >= 0 ? Math.max(0, 1 - Math.abs(r - u) / 0.12) : 0);
+      const near = (x: number) => (x >= 0 ? Math.max(0, 1 - Math.abs(x - u) / 0.12) : 0);
+      if (node) node.color.lerpColors(rest, lit, Math.max(near(r), near(back >= 0 ? 1 - back : -1)));
     });
   });
 
@@ -166,6 +181,19 @@ function RouteLine({ route }: { route: Route }) {
         <sphereGeometry args={[0.045, 16, 12]} />
         <meshBasicMaterial color={channel.color} toneMapped={false} />
       </mesh>
+      {TRAIN.map((size, j) => (
+        <mesh
+          key={j}
+          ref={(el) => {
+            train.current[j] = el;
+          }}
+          visible={false}
+          scale={size}
+        >
+          <sphereGeometry args={[0.038, 16, 12]} />
+          <meshBasicMaterial color={channel.color} toneMapped={false} />
+        </mesh>
+      ))}
     </group>
   );
 }

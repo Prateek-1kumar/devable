@@ -22,8 +22,6 @@ function read() {
 
 // Soft satin: mostly matte with a light clearcoat, so shapes read by form, not gloss.
 const GLOSS = { roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.3 };
-// The flying tokens: a touch shinier, like soft vinyl toys.
-const VINYL = { roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.15 };
 // A little self-glow keeps pastels and whites luminous on the shaded faces instead of greying.
 const LIFT = { emissive: "#ffffff", emissiveIntensity: 0.12 };
 
@@ -94,20 +92,10 @@ function build() {
     panelTint: GLASS_TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
     /** Trim bands under each block, in a light tint of the channel. */
     trimTint: GLASS_TONES.map(({ trim }) => new MeshStandardMaterial({ color: trim, metalness: 0.3, roughness: 0.35, emissive: "#ffffff", emissiveIntensity: 0.08 })),
-    /** Puffy token bodies, one pastel per channel. */
-    vinyl: CHANNELS.map(({ pastel }) => new MeshPhysicalMaterial({ color: pastel, ...VINYL, ...LIFT })),
-    /** White vinyl for token details (arrows, play discs, search fields). */
-    vinylWhite: new MeshPhysicalMaterial({ color: "#ffffff", ...VINYL, emissive: "#ffffff", emissiveIntensity: 0.2 }),
-    /** Deep channel shades for small token accents (play triangle, sparkle core). */
-    deep: CHANNELS.map(({ deep }) => new MeshPhysicalMaterial({ color: deep, ...VINYL })),
-    /** Magnifier lens: faintly frosted glass. */
-    lens: new MeshPhysicalMaterial({ color: "#ffffff", transparent: true, opacity: 0.35, roughness: 0.1, clearcoat: 1, depthWrite: false }),
     /** White label panels on the slab fronts. */
     panel: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.18 }),
-    /** Brushed aluminum trim between slabs: light, so the seams stay crisp without weight. */
+    /** Brushed aluminum: the signal rail and cable collars. */
     alu: new MeshStandardMaterial({ color: "#e4e7eb", metalness: 0.45, roughness: 0.35 }),
-    /** Anodized graphite rail: the one dark vertical accent. */
-    metal: new MeshStandardMaterial({ color: p.ink, metalness: 0.55, roughness: 0.32 }),
     /**
      * The devices (terminal, monitor): warm glossy porcelain.
      * A small self-glow lifts the shaded faces so white reads as white, not grey.
@@ -136,8 +124,6 @@ function build() {
       emissive: p.signal,
       emissiveIntensity: 0.6,
     }),
-    /** Lead pearls: white base so per-instance channel colors show true. */
-    lead: new MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04 }),
   };
 }
 

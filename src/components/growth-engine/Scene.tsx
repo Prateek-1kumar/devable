@@ -1,21 +1,18 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Grid, Lightformer } from "@react-three/drei";
+import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { Vector3, type Group } from "three";
 import { CHANNELS } from "./channels";
 import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
-import LeadStream from "./LeadStream";
-import Motes from "./Motes";
 import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
+import PipelineArc from "./PipelineArc";
 import PipelineGauge from "./PipelineGauge";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
 import { FocusContext, HoverContext, Story, StoryContext } from "./story";
-import Tether from "./Tether";
-import ChannelTokens from "./Tokens";
 import { useCursorTilt } from "./useCursorTilt";
 
 type Props = {
@@ -75,7 +72,7 @@ export default function Scene({ still, active, onHover, onAnchor, focus = null }
 
 /**
  * Aims the camera and shifts the frame so the engine sits right of center,
- * leaving the left side of the canvas for tokens drifting behind the headline.
+ * leaving the left side of the canvas clear behind the headline.
  */
 function CameraRig({ shift }: { shift: number }) {
   const camera = useThree((s) => s.camera);
@@ -105,20 +102,6 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
         <group ref={tilt} position={PIVOT}>
           {onAnchor && <AnchorReporter onAnchor={onAnchor} />}
           <Breathing still={still}>
-            {/* Technical floor grid, fading out from the engine. */}
-            <Grid
-              position={[0, 0.002, 0]}
-              args={[24, 24]}
-              cellSize={0.4}
-              cellThickness={0.6}
-              cellColor="#e1e5e8"
-              sectionSize={1.6}
-              sectionThickness={1}
-              sectionColor="#cbd2d7"
-              fadeFrom={0}
-              fadeDistance={8}
-              fadeStrength={1.6}
-            />
             <DevtoolTerminal />
             <SignalPath />
             <Destinations />
@@ -127,10 +110,7 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
                 {i === CHANNELS.length - 1 && <EngineCore />}
               </StackLayer>
             ))}
-            <ChannelTokens />
-            <LeadStream />
-            <Motes />
-            <Tether />
+            <PipelineArc />
             <PipelineGauge />
           </Breathing>
         </group>

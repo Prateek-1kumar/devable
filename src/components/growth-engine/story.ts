@@ -26,13 +26,13 @@ const ROUTE_FOR = 0.9; // a pulse runs a channel's floor traces out to its desti
 const LAND_GLOW_FOR = 1.4; // a destination tile's glow as the pulse arrives
 const CORE_FOR = 1.2;
 const RIPPLE_FOR = 1.1;
-const TOKEN_AT = 2.4;
-const TOKEN_STAGGER = 0.15;
-export const FLIGHT = 1.3;
-export const BURST = 0.25;
+// The way back: after a platform lights, its channel's leads run the route home,
+// rise through the stack to the core and fly the arc into the pipeline monitor.
+const HOLD = 0.25; // beat on the platform before the leads head back
+const RETURN_FOR = 0.9; // leads run the route back to the stack
+const INTO_CORE = 0.35; // hidden climb from the port to the core
 const LEAD_SPACING = 0.075; // seconds between pearls in a single-file line
-const LEAD_FLIGHT = 1.1;
-const SPARK_FOR = 0.7;
+const LEAD_FLIGHT = 1.3; // core → monitor along the arc
 
 // Idle pulses after the intro.
 const PULSE_GAP: [number, number] = [8, 20];
@@ -107,6 +107,10 @@ export class Story {
   route(i: number, t: number) {
     return this.first((r) => progress(t - r.at - litAt(i), ROUTE_FOR));
   }
+  /** Leads' progress (0..1) running layer i's routes back home, or -1. Only channels that brought leads this run. */
+  returning(i: number, t: number) {
+    return this.first((r) => (r.tokens.includes(i) ? progress(t - r.at - litAt(i) - ROUTE_FOR - HOLD, RETURN_FOR) : -1));
+  }
   /** Glow (1 → 0) on layer i's destination tiles once its pulse lands. */
   landed(i: number, t: number) {
     return this.peak((r) => decay(t - r.at - litAt(i) - ROUTE_FOR, LAND_GLOW_FOR));
@@ -124,30 +128,13 @@ export class Story {
   gaugeIn(t: number) {
     return clamp01((t - INTRO.signalAt - CORE_AT) / 0.6);
   }
-  /** Seconds since token k left its layer, or null when it isn't flying. */
-  tokenAge(k: number, t: number) {
-    for (const run of this.runs) {
-      const slot = run.tokens.indexOf(k);
-      if (slot < 0) continue;
-      const age = t - tokenAt(run, slot);
-      if (age >= 0 && age < FLIGHT + BURST) return age;
-    }
-    return null;
-  }
-  /** Calls back for every lead pearl in flight, with its token and 0..1 progress. */
+  /** Calls back for every lead pearl on the arc, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
     for (const run of this.runs)
       for (const dot of run.dots) {
         const p = leadProgress(run, dot, t);
         if (p > 0 && p < 1) each(dot.token, p);
       }
-  }
-  /** Spark phase (0..1, repeating) on the core→gauge tether while leads are landing, or -1. */
-  spark(t: number) {
-    return this.first((run) => {
-      const from = tokenAt(run, 0) + FLIGHT + LEAD_FLIGHT;
-      return t >= from && t < run.end ? ((t - from) / SPARK_FOR) % 1 : -1;
-    });
   }
   private counted = { t: NaN, by: [0, 0, 0, 0] };
   /** Leads landed so far, per channel: each rises as that channel's dots arrive. Computed once per frame. */
@@ -184,15 +171,16 @@ export class Story {
   }
 }
 
-const tokenAt = (run: Run, slot: number) => run.at + TOKEN_AT + slot * TOKEN_STAGGER;
-const leadProgress = (run: Run, dot: Dot, t: number) =>
-  (t - tokenAt(run, dot.slot) - FLIGHT - dot.delay) / LEAD_FLIGHT;
+/** When a slot's leads leave the core for the arc: after its route out, the beat, the route back and the climb. */
+const arcAt = (run: Pick<Run, "at" | "tokens">, slot: number) => run.at + litAt(run.tokens[slot]) + ROUTE_FOR + HOLD + RETURN_FOR + INTO_CORE;
+const leadProgress = (run: Run, dot: Dot, t: number) => (t - arcAt(run, dot.slot) - dot.delay) / LEAD_FLIGHT;
 
 function makeRun(at: number, tokens: number[], leads: number[], dotsPerToken: number): Run {
   const dots = tokens.flatMap((token, slot) =>
     Array.from({ length: dotsPerToken }, (_, i) => ({ token, slot, delay: i * LEAD_SPACING })),
   );
-  const end = tokenAt({ at } as Run, tokens.length - 1) + FLIGHT + (dotsPerToken - 1) * LEAD_SPACING + LEAD_FLIGHT;
+  const last = Math.max(...tokens.map((_, slot) => arcAt({ at, tokens }, slot)));
+  const end = last + (dotsPerToken - 1) * LEAD_SPACING + LEAD_FLIGHT;
   return { at, tokens, leads, dots, end };
 }
 

@@ -22,8 +22,6 @@ const TOWARD = new Vector3(VIEW_DIR.x, 0, VIEW_DIR.z).normalize();
 export const onScreen = (a: number, b: number, c = 0) =>
   new Vector3().addScaledVector(RIGHT, a).addScaledVector(TOWARD, c).setY(b);
 
-/** Where each channel's token drifts to, by layer index (01 → 04). */
-export const TOKEN_DEST = [onScreen(-4.4, 3.4), onScreen(-2.6, 4.9), onScreen(3.3, 3.5), onScreen(4.1, 1.3)];
 export const GAUGE_POSITION = onScreen(2.1, 5.1);
 
 export const TERMINAL = { position: onScreen(-3.4, 0, 1.6), yaw: FACING_YAW - 0.25, size: [1.7, 0.42, 1.1] as const };
@@ -48,9 +46,6 @@ export const CABLE = new CatmullRomCurve3([
   ground(PORTS.stack.at.clone().addScaledVector(FRONT, 0.45)),
   PORTS.stack.at.clone(),
 ]);
-
-/** Control-point offset for each token's single-file pearl line to the gauge. */
-export const LEAD_BOW = [onScreen(0.6, 1.2), onScreen(0.4, 0.9), onScreen(-0.3, 0.8), onScreen(-0.6, 1.4)];
 
 // Tether from the core's socket up to the nub under the PIPELINE dial.
 export const GAUGE_DIAL = { radius: 0.95, depth: 0.3, fillet: 0.1 };
