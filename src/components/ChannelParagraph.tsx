@@ -1,9 +1,10 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { CHANNELS } from "./growth-engine/channels";
 import { channelFocus } from "./growth-engine/channelFocus";
 
-/** A channel name in the sentence: hovering or focusing it lifts and lights its 3D layer. */
+/** A channel name in the sentence: hovering or focusing it lifts and lights its 3D layer, underlined in its color. */
 function Channel({ index, children }: { index: number; children: ReactNode }) {
   return (
     <span
@@ -12,7 +13,8 @@ function Channel({ index, children }: { index: number; children: ReactNode }) {
       onPointerLeave={() => channelFocus.set(null)}
       onFocus={() => channelFocus.set(index)}
       onBlur={() => channelFocus.set(null)}
-      className="cursor-default rounded-sm text-foreground/80 underline decoration-transparent decoration-[1.5px] underline-offset-[5px] transition-colors hover:text-foreground hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      style={{ "--channel": CHANNELS[index].color } as CSSProperties}
+      className="cursor-default rounded-sm text-foreground/80 underline decoration-transparent decoration-2 underline-offset-[5px] transition-colors hover:text-foreground hover:decoration-(--channel) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--channel)"
     >
       {children}
     </span>

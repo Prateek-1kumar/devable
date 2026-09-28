@@ -7,12 +7,12 @@ import { INK_PX, materials, palette } from "./palette";
 import { INTRO, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-const PROMPT = "$ your-devtool";
+const PROMPT = "$ npx your-devtool";
 const TYPE_EVERY = 0.06; // seconds per character
 const SCREEN_TILT = 0.5; // radians the display leans toward the viewer
 const [W, H, D] = TERMINAL.size;
 
-/** The `$ your-devtool` block: where the signal starts. Hover it to retype the prompt. */
+/** The terminal where the signal starts: types its command, then reports a live status. Hover it to retype. */
 export default function DevtoolTerminal() {
   const story = useStory();
   const p = palette();
@@ -21,22 +21,37 @@ export default function DevtoolTerminal() {
   const clock = useRef(0);
   const typedFrom = useRef(INTRO.terminalAt + INTRO.terminalFor);
   const flickerUntil = useRef(0);
-  const view = useRef({ chars: -1, cursor: false });
+  const view = useRef({ chars: -1, cursor: false, status: "", sending: false });
 
   const led = useRef<MeshStandardMaterial>(null);
 
   const drawScreen = useCallback(
     (ctx: CanvasRenderingContext2D, _w: number, h: number) => {
-      const { chars, cursor } = view.current;
+      const { chars, cursor, status, sending } = view.current;
       const text = PROMPT.slice(0, Math.max(0, chars));
-      const x = h * 0.28;
-      ctx.font = `500 ${h * 0.26}px ${p.bodyFont}`;
+      const x = h * 0.2;
+      const line = h * 0.4;
+      ctx.font = `500 ${h * 0.2}px ${p.bodyFont}`;
       ctx.fillStyle = p.cream;
       ctx.textBaseline = "middle";
-      ctx.fillText(text, x, h / 2);
-      if (cursor) {
+      ctx.fillText(text, x, line);
+      if (cursor && !status) {
         ctx.fillStyle = p.signal;
-        ctx.fillRect(x + ctx.measureText(text).width + h * 0.04, h * 0.36, h * 0.1, h * 0.28);
+        ctx.fillRect(x + ctx.measureText(text).width + h * 0.03, line - h * 0.11, h * 0.08, h * 0.22);
+      }
+      // Status line: a dot (green while a signal is leaving) and what the tool is doing.
+      if (status) {
+        const y = h * 0.72;
+        ctx.fillStyle = sending ? p.live : p.cream;
+        ctx.globalAlpha = sending ? 1 : 0.6;
+        ctx.beginPath();
+        ctx.arc(x + h * 0.04, y, h * 0.035, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = `500 ${h * 0.14}px ${p.bodyFont}`;
+        ctx.fillStyle = p.cream;
+        ctx.globalAlpha = 0.7;
+        ctx.fillText(status, x + h * 0.14, y + 2);
+        ctx.globalAlpha = 1;
       }
     },
     [p],
@@ -56,13 +71,18 @@ export default function DevtoolTerminal() {
 
     const chars = Math.min(PROMPT.length, Math.floor((t - typedFrom.current) / TYPE_EVERY));
     const cursor = story.still || Math.floor(t * 2) % 2 === 0;
-    if (chars !== view.current.chars || cursor !== view.current.cursor) {
-      view.current = { chars, cursor };
+    const sending = story.signal(t);
+    // After the command finishes typing: a short boot log, then live status.
+    const since = t - typedFrom.current - PROMPT.length * TYPE_EVERY;
+    const status =
+      sending >= 0 ? "signal sent" : since > 0.9 ? (t > INTRO.signalAt ? "listening for demand" : "4 channels live") : since > 0.3 ? "docs indexed" : "";
+    const v = view.current;
+    if (chars !== v.chars || cursor !== v.cursor || status !== v.status) {
+      view.current = { chars, cursor, status, sending: sending >= 0 };
       screen.paint();
     }
 
     // Power light: steady, brighter as a signal leaves, flickers on hover.
-    const sending = story.signal(t);
     const flicker = t < flickerUntil.current ? (Math.sin(t * 60) > 0 ? 1.4 : 0.2) : 0;
     if (led.current) led.current.emissiveIntensity = 0.4 + (sending >= 0 && sending < 0.2 ? 1 : 0) + flicker;
   });

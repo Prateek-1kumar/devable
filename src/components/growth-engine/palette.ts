@@ -1,4 +1,4 @@
-import { MeshPhysicalMaterial, MeshStandardMaterial } from "three";
+import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from "three";
 import { CHANNELS } from "./channels";
 
 // A neutral stage (porcelain, graphite, soft white) so the four channel colors
@@ -11,7 +11,8 @@ function read() {
   return {
     cream: token("--ceramic"),
     stone: "#dcdfe3", // soft neutral grey: the cable, unlit lights
-    ink: "#16191d", // graphite: outlines, rail, trim, panels
+    ink: "#16191d", // graphite: device outlines, screens
+    slate: "#8a94a0", // soft edge for light neutral parts (rail)
     signal: "#ffffff", // your devtool's signal is white light until a channel colors it
     live: "#34d399", // the monitor's live dot
     bodyFont: getComputedStyle(document.body).fontFamily,
@@ -19,13 +20,30 @@ function read() {
   };
 }
 
-// Glossy glaze: a soft base with a sharp clearcoat that catches the studio lights.
-const GLOSS = { roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.18 };
-// Vinyl-toy gloss for the flying tokens: smoother and shinier than the slabs.
-const VINYL = { roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 };
+// Soft satin: mostly matte with a light clearcoat, so shapes read by form, not gloss.
+const GLOSS = { roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.3 };
+// The flying tokens: a touch shinier, like soft vinyl toys.
+const VINYL = { roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.15 };
+// A little self-glow keeps pastels and whites luminous on the shaded faces instead of greying.
+const LIFT = { emissive: "#ffffff", emissiveIntensity: 0.12 };
 
-/** Ink outline width in pixels, on silhouettes and main seams. */
-export const INK_PX = 1.5;
+/** Ink outline width in pixels: thin, technical-illustration lines. */
+export const INK_PX = 1;
+
+/** `a` moved toward `b` by `k` (0..1), as a hex string. */
+export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
+
+/**
+ * Glass-block tones per channel: the core fades from `low` (bottom) to `high` (top),
+ * `edge` outlines it and its panel and trim, so borders blend with the color.
+ */
+export const GLASS_TONES = CHANNELS.map(({ color, pastel, deep }) => ({
+  low: mix(color, "#ffffff", 0.35),
+  high: mix(pastel, "#ffffff", 0.2),
+  edge: mix(deep, color, 0.25),
+  panel: mix(pastel, "#ffffff", 0.7),
+  trim: mix(pastel, "#ffffff", 0.35),
+}));
 
 let colors: ReturnType<typeof read> | null = null;
 export const palette = () => (colors ??= read());
@@ -35,13 +53,58 @@ function build() {
   return {
     /** Glazed ceramic: the cream bodies. */
     ceramic: new MeshPhysicalMaterial({ color: p.cream, ...GLOSS }),
-    /** One glaze per stack layer, in its channel's color. */
-    glaze: CHANNELS.map(({ color }) => new MeshPhysicalMaterial({ color, ...GLOSS })),
-    /** Puffy token bodies, one per channel. */
-    vinyl: CHANNELS.map(({ color }) => new MeshPhysicalMaterial({ color, ...VINYL })),
+    /** Glass-block cores: white, tinted per vertex with the channel's fade. */
+    frost: new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.3, ...LIFT }),
+    /**
+     * Frosted glass shells around the cores, one pastel tint per channel: translucent,
+     * glossy edges and a soft white rim. No outline: through glass an outline's
+     * backing hull shows as a dark fill.
+     */
+    shell: CHANNELS.map(
+      ({ pastel }) =>
+        new MeshPhysicalMaterial({
+          color: mix(pastel, "#ffffff", 0.5),
+          transparent: true,
+          opacity: 0.4,
+          roughness: 0.22,
+          clearcoat: 1,
+          clearcoatRoughness: 0.1,
+          sheen: 1,
+          sheenColor: "#ffffff",
+          sheenRoughness: 0.4,
+          depthWrite: false,
+        }),
+    ),
+    /** Label panels, a whisper of their channel's tint. */
+    panelTint: GLASS_TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
+    /** Trim bands under each block, in a light tint of the channel. */
+    trimTint: GLASS_TONES.map(({ trim }) => new MeshStandardMaterial({ color: trim, metalness: 0.3, roughness: 0.35, emissive: "#ffffff", emissiveIntensity: 0.08 })),
+    /** Puffy token bodies, one pastel per channel. */
+    vinyl: CHANNELS.map(({ pastel }) => new MeshPhysicalMaterial({ color: pastel, ...VINYL, ...LIFT })),
     /** White vinyl for token details (arrows, play discs, search fields). */
-    vinylWhite: new MeshPhysicalMaterial({ color: "#ffffff", emissive: "#ffffff", emissiveIntensity: 0.15, ...VINYL }),
-    /** Anodized graphite trim and rail: crisp dark seams between the glazed slabs. */
+    vinylWhite: new MeshPhysicalMaterial({ color: "#ffffff", ...VINYL, emissive: "#ffffff", emissiveIntensity: 0.2 }),
+    /** Deep channel shades for small token accents (play triangle, sparkle core). */
+    deep: CHANNELS.map(({ deep }) => new MeshPhysicalMaterial({ color: deep, ...VINYL })),
+    /** Magnifier lens: faintly frosted glass. */
+    lens: new MeshPhysicalMaterial({ color: "#ffffff", transparent: true, opacity: 0.35, roughness: 0.1, clearcoat: 1, depthWrite: false }),
+    /** Clear frosted glass: the compartments on the stack top (no outline, same reason as `shell`). */
+    frosted: new MeshPhysicalMaterial({
+      color: "#ffffff",
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.2,
+      clearcoat: 1,
+      clearcoatRoughness: 0.1,
+      sheen: 1,
+      sheenColor: "#ffffff",
+      sheenRoughness: 0.4,
+      depthWrite: false,
+    }),
+    /** White label panels on the slab fronts. */
+    panel: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.18 }),
+    /** Brushed aluminum trim between slabs: light, so the seams stay crisp without weight. */
+    alu: new MeshStandardMaterial({ color: "#e4e7eb", metalness: 0.45, roughness: 0.35 }),
+    /** Anodized graphite rail: the one dark vertical accent. */
     metal: new MeshStandardMaterial({ color: p.ink, metalness: 0.55, roughness: 0.32 }),
     /**
      * The devices (terminal, monitor): warm glossy porcelain.

@@ -1,11 +1,13 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
+import { ContactShadows, Environment, Grid, Lightformer } from "@react-three/drei";
 import { Vector3, type Group } from "three";
 import { CHANNELS } from "./channels";
+import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
 import LeadStream from "./LeadStream";
+import Motes from "./Motes";
 import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
 import PipelineGauge from "./PipelineGauge";
@@ -66,7 +68,7 @@ export default function Scene({ still, active, onHover, onAnchor, focus = null }
       <FocusContext.Provider value={focus}>
         <Engine still={still} onHover={onHover} onAnchor={onAnchor} />
       </FocusContext.Provider>
-      <ContactShadows position={[0, 0.001, 0]} scale={14} blur={2.4} far={2.5} opacity={0.35} resolution={512} color={palette().ink} />
+      <ContactShadows position={[0, 0.001, 0]} scale={14} blur={3} far={2.5} opacity={0.22} resolution={512} color={palette().ink} />
     </Canvas>
   );
 }
@@ -103,8 +105,23 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
         <group ref={tilt} position={PIVOT}>
           {onAnchor && <AnchorReporter onAnchor={onAnchor} />}
           <Breathing still={still}>
+            {/* Technical floor grid, fading out from the engine. */}
+            <Grid
+              position={[0, 0.002, 0]}
+              args={[24, 24]}
+              cellSize={0.4}
+              cellThickness={0.6}
+              cellColor="#e1e5e8"
+              sectionSize={1.6}
+              sectionThickness={1}
+              sectionColor="#cbd2d7"
+              fadeFrom={0}
+              fadeDistance={8}
+              fadeStrength={1.6}
+            />
             <DevtoolTerminal />
             <SignalPath />
+            <Destinations />
             {CHANNELS.map((channel, i) => (
               <StackLayer key={channel.n} index={i}>
                 {i === CHANNELS.length - 1 && <EngineCore />}
@@ -112,6 +129,7 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
             ))}
             <ChannelTokens />
             <LeadStream />
+            <Motes />
             <Tether />
             <PipelineGauge />
           </Breathing>

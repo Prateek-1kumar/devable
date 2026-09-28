@@ -22,6 +22,8 @@ export const CLIMB_FOR = 0.7; // bead climbs the rail
 const CORE_AT = CABLE_FOR + CLIMB_FOR;
 const FLASH_FOR = 0.9;
 const SHEEN_FOR = 0.6;
+const ROUTE_FOR = 0.9; // a pulse runs a channel's floor traces out to its destinations
+const LAND_GLOW_FOR = 1.4; // a destination tile's glow as the pulse arrives
 const CORE_FOR = 1.2;
 const RIPPLE_FOR = 1.1;
 const TOKEN_AT = 2.4;
@@ -101,6 +103,14 @@ export class Story {
   sheen(i: number, t: number) {
     return this.first((r) => progress(t - r.at - litAt(i), SHEEN_FOR));
   }
+  /** Pulse progress (0..1) along layer i's floor traces, or -1. */
+  route(i: number, t: number) {
+    return this.first((r) => progress(t - r.at - litAt(i), ROUTE_FOR));
+  }
+  /** Glow (1 → 0) on layer i's destination tiles once its pulse lands. */
+  landed(i: number, t: number) {
+    return this.peak((r) => decay(t - r.at - litAt(i) - ROUTE_FOR, LAND_GLOW_FOR));
+  }
   /** Bead progress along cable + rail (0..1), or -1. */
   signal(t: number) {
     return this.first((r) => progress(t - r.at, CABLE_FOR + CLIMB_FOR));
@@ -139,17 +149,25 @@ export class Story {
       return t >= from && t < run.end ? ((t - from) / SPARK_FOR) % 1 : -1;
     });
   }
-  /** Leads shown on the gauge, per channel: each rises as that channel's dots arrive. */
-  countBy(t: number, out: number[]) {
-    out.splice(0, out.length, ...this.settled);
+  private counted = { t: NaN, by: [0, 0, 0, 0] };
+  /** Leads landed so far, per channel: each rises as that channel's dots arrive. Computed once per frame. */
+  countBy(t: number) {
+    const cache = this.counted;
+    if (cache.t === t) return cache.by;
+    cache.t = t;
+    cache.by = [...this.settled];
     for (const run of this.runs)
       run.tokens.forEach((token, slot) => {
-        const dots = run.dots.filter((dot) => dot.slot === slot);
         let arrived = 0;
-        for (const dot of dots) arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
-        out[token] += (run.leads[slot] * arrived) / dots.length;
+        let n = 0;
+        for (const dot of run.dots) {
+          if (dot.slot !== slot) continue;
+          arrived += easeInOut(clamp01(leadProgress(run, dot, t)));
+          n++;
+        }
+        cache.by[token] += (run.leads[slot] * arrived) / n;
       });
-    return out;
+    return cache.by;
   }
 
   private peak(f: (run: Run) => number) {

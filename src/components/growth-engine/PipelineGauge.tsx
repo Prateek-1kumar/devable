@@ -30,7 +30,6 @@ export default function PipelineGauge() {
   const m = materials();
   const group = useRef<Group>(null);
   const view = useRef({ leads: 0, drawn: 0, by: [0, 0, 0, 0] });
-  const counts = useRef([0, 0, 0, 0]);
 
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -58,6 +57,26 @@ export default function PipelineGauge() {
       ctx.globalAlpha = 0.55;
       ctx.fillText("leads", pad, h * 0.6);
       ctx.globalAlpha = 1;
+
+      // Legend: one row per channel, top row = top of the stack, with its live count.
+      const col = w * 0.56;
+      ctx.font = `500 ${h * 0.07}px ${p.bodyFont}`;
+      [...CHANNELS].reverse().forEach((channel, row) => {
+        const k = CHANNELS.length - 1 - row;
+        const y = h * (0.2 + row * 0.105);
+        ctx.fillStyle = channel.color;
+        ctx.beginPath();
+        ctx.arc(col, y - h * 0.018, h * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = p.cream;
+        ctx.globalAlpha = 0.7;
+        ctx.textAlign = "left";
+        ctx.fillText(channel.short, col + h * 0.05, y);
+        ctx.globalAlpha = 1;
+        ctx.textAlign = "right";
+        ctx.fillText(Math.round(by[k]).toLocaleString("en-US"), w - pad, y);
+        ctx.textAlign = "left";
+      });
 
       // The fixed PATH (0..1 in both axes), cut off at `drawn` with an interpolated tip.
       const line = PATH.filter(([x]) => x < drawn);
@@ -116,7 +135,7 @@ export default function PipelineGauge() {
       group.current.scale.setScalar(Math.max(1e-4, easeOutBack(appear)));
     }
 
-    const by = story.countBy(t, counts.current);
+    const by = story.countBy(t);
     const leads = Math.round(by.reduce((a, b) => a + b, 0));
     if (leads === view.current.leads) return;
     view.current = { leads, drawn: clamp01(leads / INTRO_LEADS), by: [...by] };

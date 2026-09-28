@@ -26,9 +26,9 @@ function Collar({ at, dir, show }: { at: Vector3; dir: Vector3; show: (t: number
     if (ref.current) ref.current.visible = show(story.time(state.clock.elapsedTime));
   });
   return (
-    <mesh ref={ref} position={at} quaternion={turn} material={materials().metal} castShadow visible={false}>
+    <mesh ref={ref} position={at} quaternion={turn} material={materials().alu} castShadow visible={false}>
       <cylinderGeometry args={[CABLE_RADIUS * 1.5, CABLE_RADIUS * 1.5, 0.14, 24]} />
-      <Outlines thickness={1} color={palette().ink} />
+      <Outlines thickness={1} color={palette().slate} />
     </mesh>
   );
 }
@@ -80,14 +80,14 @@ export default function SignalPath() {
       <mesh geometry={tube} material={m.stone} castShadow receiveShadow>
         {/* angle 0: the outline shares the tube's geometry, so it follows the draw-range reveal
             (the default builds a creased copy that would show the whole cable from frame one). */}
-        <Outlines thickness={INK_PX} color={p.ink} angle={0} />
+        <Outlines thickness={INK_PX} color={p.slate} angle={0} />
       </mesh>
       <Collar at={PORTS.terminal.at} dir={PORTS.terminal.dir} show={(t) => revealAt(t) > 0} />
       <Collar at={PORTS.stack.at} dir={PORTS.stack.dir} show={(t) => revealAt(t) >= 0.98} />
       <group ref={rail} position={[RAIL.x, 0, RAIL.z]} visible={false}>
-        <mesh position={[0, STACK_TOP / 2, 0]} material={m.metal} castShadow>
+        <mesh position={[0, STACK_TOP / 2, 0]} material={m.alu} castShadow>
           <cylinderGeometry args={[0.075, 0.075, STACK_TOP, 20]} />
-          <Outlines thickness={1} color={p.ink} />
+          <Outlines thickness={1} color={p.slate} />
         </mesh>
       </group>
       {TRAIN.map((_, i) => (

@@ -66,7 +66,8 @@ export default function HoverCard({ index, anchor }: { index: number | null; anc
       >
         {channel && (
           <>
-            <p className="text-[11px] tracking-[0.16em] text-foreground/50 uppercase">
+            <p className="flex items-center gap-1.5 text-[11px] tracking-[0.16em] text-foreground/50 uppercase">
+              <span className="size-2 rounded-full" style={{ backgroundColor: channel.color }} />
               {channel.n} · {channel.cap}
             </p>
             <p className="mt-0.5 font-heading text-base font-semibold">{channel.name}</p>
