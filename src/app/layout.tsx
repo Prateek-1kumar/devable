@@ -1,21 +1,14 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
-import { Fredoka, M_PLUS_Rounded_1c } from "next/font/google";
+import { Instrument_Sans } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 
-// Variable font with the width axis, so headings can be stretched wider.
-const fredoka = Fredoka({
-  variable: "--font-fredoka",
+// The site's one typeface: headings and body. Variable, with the width axis.
+const instrument = Instrument_Sans({
+  variable: "--font-instrument",
   subsets: ["latin"],
   axes: ["wdth"],
-});
-
-// Display face for the wordmark only.
-const display = M_PLUS_Rounded_1c({
-  variable: "--font-mplus",
-  subsets: ["latin"],
-  weight: "800",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fredoka.variable} ${GeistSans.variable} ${display.variable} h-full antialiased`}
+      className={`${instrument.variable} ${GeistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Navbar />

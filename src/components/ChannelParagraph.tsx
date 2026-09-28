@@ -12,7 +12,7 @@ function Channel({ index, children }: { index: number; children: ReactNode }) {
       onPointerLeave={() => channelFocus.set(null)}
       onFocus={() => channelFocus.set(index)}
       onBlur={() => channelFocus.set(null)}
-      className="cursor-default rounded-sm text-foreground underline decoration-foreground/25 decoration-dotted decoration-[1.5px] underline-offset-[5px] transition-colors hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="cursor-default rounded-sm text-foreground/80 underline decoration-transparent decoration-[1.5px] underline-offset-[5px] transition-colors hover:text-foreground hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {children}
     </span>
@@ -23,9 +23,9 @@ function Channel({ index, children }: { index: number; children: ReactNode }) {
 export default function ChannelParagraph({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
     <p className={className} style={style}>
-      <Channel index={0}>Technical content</Channel>, <Channel index={1}>organic search</Channel>,{" "}
-      <Channel index={1}>AI visibility</Channel>, <Channel index={2}>Reddit</Channel> and{" "}
-      <Channel index={3}>creator distribution</Channel>, run as one engine for AI-native dev tools.
+      We build visibility and pipeline through <Channel index={0}>technical content</Channel>,{" "}
+      <Channel index={1}>organic search</Channel>, <Channel index={1}>AI visibility</Channel>,{" "}
+      <Channel index={2}>Reddit</Channel>, and <Channel index={3}>creator distribution</Channel>.
     </p>
   );
 }

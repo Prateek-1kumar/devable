@@ -4,7 +4,7 @@ import { Outlines, RoundedBox } from "@react-three/drei";
 import { AdditiveBlending, Color, type Group, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
 import { CHANNELS, drawGlyph } from "./channels";
 import { LAYER, layerWidth, layerY } from "./layout";
-import { INK_PX, materials, palette } from "./palette";
+import { GLAZE, INK_PX, materials, palette } from "./palette";
 import { FocusContext, HoverContext, clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
@@ -19,7 +19,7 @@ type Props = {
   children?: ReactNode;
 };
 
-/** One slab of the growth stack: ceramic body, teal trim, dark label panel, three signal lights. */
+/** One slab of the growth stack: glazed body, forest trim, dark label panel, three signal lights. */
 export default function StackLayer({ index, children }: Props) {
   const story = useStory();
   const channel = CHANNELS[index];
@@ -44,7 +44,7 @@ export default function StackLayer({ index, children }: Props) {
 
   const drawPanel = useCallback(
     (ctx: CanvasRenderingContext2D, W: number, H: number) => {
-      drawGlyph(ctx, channel.glyph, H * 0.45, H / 2, H * 0.6, p.teal, p.bodyFont);
+      drawGlyph(ctx, channel.glyph, H * 0.45, H / 2, H * 0.6, p.lime, p.bodyFont);
       // As large as the panel allows; long names shrink just enough to fit.
       const x = H * 0.95;
       let size = H * 0.6;
@@ -66,13 +66,13 @@ export default function StackLayer({ index, children }: Props) {
   const drawCap = useCallback(
     (ctx: CanvasRenderingContext2D, _w: number, H: number) => {
       ctx.font = `500 ${H * 0.46}px ${p.bodyFont}`;
-      ctx.fillStyle = p.ink;
-      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = GLAZE[index].cap;
+      ctx.globalAlpha = 0.75;
       ctx.letterSpacing = `${H * 0.05}px`;
       ctx.textBaseline = "middle";
       ctx.fillText(`${channel.n} · ${channel.cap}`, H * 0.3, H / 2);
     },
-    [channel, p],
+    [channel, index, p],
   );
   const cap = useCanvasTexture(512, 96, drawCap);
 
@@ -117,7 +117,7 @@ export default function StackLayer({ index, children }: Props) {
         reportHover(null);
       }}
     >
-      <RoundedBox args={[w, h, w]} radius={LAYER.radius} smoothness={4} material={m.ceramic} castShadow receiveShadow>
+      <RoundedBox args={[w, h, w]} radius={LAYER.radius} smoothness={4} material={m.glaze[index]} castShadow receiveShadow>
         <Outlines thickness={INK_PX} color={p.ink} />
       </RoundedBox>
       <RoundedBox args={[w + 0.04, 0.1, w + 0.04]} radius={0.045} smoothness={3} position={[0, -h / 2 + 0.08, 0]} material={m.metal} castShadow />

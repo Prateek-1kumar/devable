@@ -78,17 +78,19 @@ export default function DevtoolTerminal() {
           flickerUntil.current = clock.current + 0.5;
         }}
       >
-        <RoundedBox args={[W, H, D]} radius={0.09} smoothness={4} position={[0, H / 2, 0]} material={m.ceramic} castShadow receiveShadow>
+        <RoundedBox args={[W, H, D]} radius={0.09} smoothness={4} position={[0, H / 2, 0]} material={m.porcelain} castShadow receiveShadow>
           <Outlines thickness={INK_PX} color={p.ink} />
         </RoundedBox>
-        <RoundedBox args={[W + 0.03, 0.08, D + 0.03]} radius={0.035} smoothness={3} position={[0, 0.06, 0]} material={m.metal} castShadow />
+        <RoundedBox args={[W + 0.03, 0.08, D + 0.03]} radius={0.035} smoothness={3} position={[0, 0.06, 0]} material={m.champagne} castShadow />
 
         {/* Display housing leans toward the viewer so the prompt reads clearly. */}
         <group position={[0, H + 0.04, -0.02]} rotation-x={SCREEN_TILT}>
-          <RoundedBox args={[W - 0.16, 0.1, D - 0.3]} radius={0.04} smoothness={3} material={m.ceramic} castShadow>
+          <RoundedBox args={[W - 0.16, 0.1, D - 0.3]} radius={0.04} smoothness={3} material={m.porcelain} castShadow>
             <Outlines thickness={INK_PX} color={p.ink} />
           </RoundedBox>
-          <RoundedBox args={[W - 0.3, 0.02, D - 0.44]} radius={0.01} smoothness={2} position={[0, 0.055, 0]} material={m.screen} />
+          {/* Champagne frame, then the glass inset in it. RoundedBox radius must stay under half the thinnest side, or the box swells over the screen. */}
+          <RoundedBox args={[W - 0.26, 0.016, D - 0.4]} radius={0.007} smoothness={2} position={[0, 0.052, 0]} material={m.champagne} />
+          <RoundedBox args={[W - 0.3, 0.02, D - 0.44]} radius={0.01} smoothness={2} position={[0, 0.055, 0]} material={m.glass} />
           <mesh rotation-x={-Math.PI / 2} position={[0, 0.067, 0]}>
             <planeGeometry args={[W - 0.34, (W - 0.34) * (448 / 1024)]} />
             <meshBasicMaterial map={screen.texture} transparent toneMapped={false} />
@@ -97,7 +99,7 @@ export default function DevtoolTerminal() {
 
         <mesh position={[W / 2 - 0.16, H + 0.01, D / 2 - 0.14]}>
           <sphereGeometry args={[0.045, 16, 12]} />
-          <meshStandardMaterial ref={led} color={p.teal} emissive={p.teal} emissiveIntensity={0.4} roughness={0.3} />
+          <meshStandardMaterial ref={led} color={p.amber} emissive={p.amber} emissiveIntensity={0.4} roughness={0.3} />
         </mesh>
       </group>
     </group>

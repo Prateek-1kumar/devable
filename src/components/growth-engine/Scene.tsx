@@ -43,8 +43,9 @@ export default function Scene({ still, active, onHover, onAnchor, focus = null }
     >
       <CameraRig shift={still ? 0 : 0.08} />
 
-      {/* Soft window light from the upper left plus a gentle fill: a light, warm grey ceramic. */}
-      <ambientLight intensity={0.6} />
+      {/* Soft window light from the upper left; the fill is white from above and mint from
+          below, so shaded faces keep their color instead of going grey. */}
+      <hemisphereLight args={["#ffffff", "#b7dcc2", 0.7]} />
       <directionalLight
         castShadow
         position={[-5, 11, 6]}

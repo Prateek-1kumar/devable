@@ -27,10 +27,8 @@
   --color-lime: var(--lime);
   --color-coral: var(--coral);
   --color-amber: var(--amber);
-  --font-sans: var(--font-fredoka);
-  --font-mono: var(--font-fredoka);
-  --font-heading: var(--font-geist-sans);
-  --font-display: var(--font-mplus);
+  --font-sans: var(--font-instrument);
+  --font-heading: var(--font-instrument);
 
   /* Highlight pill entrance: color slides in from the left, text ink follows. */
   --animate-pill-sweep: pill-sweep 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
@@ -63,7 +61,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Headings use Geist (Vercel); body text stays Fredoka. */
+/* Headings and body share Instrument Sans. */
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);

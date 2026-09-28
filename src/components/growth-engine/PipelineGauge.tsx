@@ -115,17 +115,19 @@ export default function PipelineGauge() {
     <group ref={group} position={GAUGE_POSITION} rotation-y={FACING_YAW} visible={false}>
       {/* Hinged at its bottom edge so the tether nub stays put. */}
       <group position-y={-DIAL.radius} rotation-x={TILT}>
-        <RoundedBox args={[W, H, D]} radius={0.1} smoothness={4} position-y={H / 2} material={m.ceramic} castShadow>
+        <RoundedBox args={[W, H, D]} radius={0.1} smoothness={4} position-y={H / 2} material={m.porcelain} castShadow>
           <Outlines thickness={INK_PX} color={p.ink} />
         </RoundedBox>
-        <RoundedBox args={[W - BEZEL * 1.4, H - BEZEL * 1.4, 0.02]} radius={0.05} smoothness={3} position={[0, H / 2, D / 2]} material={m.screen} />
-        <mesh position={[0, H / 2, D / 2 + 0.012]}>
+        {/* Champagne frame, then the glass inset in it. RoundedBox radius must stay under half the thinnest side, or the box swells over the screen. */}
+        <RoundedBox args={[W - BEZEL * 1.4 + 0.05, H - BEZEL * 1.4 + 0.05, 0.024]} radius={0.011} smoothness={3} position={[0, H / 2, D / 2]} material={m.champagne} />
+        <RoundedBox args={[W - BEZEL * 1.4, H - BEZEL * 1.4, 0.02]} radius={0.05} smoothness={3} position={[0, H / 2, D / 2 + 0.004]} material={m.glass} />
+        <mesh position={[0, H / 2, D / 2 + 0.016]}>
           <planeGeometry args={[W - 2 * BEZEL, H - 2 * BEZEL]} />
           <meshBasicMaterial map={screen.texture} transparent toneMapped={false} />
         </mesh>
       </group>
       {/* Nub where the tether from the core attaches. */}
-      <mesh position-y={-DIAL.radius - 0.06} material={m.ceramic} castShadow>
+      <mesh position-y={-DIAL.radius - 0.06} material={m.champagne} castShadow>
         <cylinderGeometry args={[0.07, 0.09, 0.14, 24]} />
         <Outlines thickness={INK_PX} color={p.ink} />
       </mesh>

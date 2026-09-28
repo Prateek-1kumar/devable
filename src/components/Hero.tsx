@@ -8,8 +8,7 @@ const rise = "animate-fade-up motion-reduce:animate-none";
 
 export default function Hero() {
   return (
-    // The top padding leaves room for the hero-size wordmark, which lives in the Navbar.
-    <section className="relative isolate grid min-h-svh gap-12 px-6 pt-56 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr] lg:pt-80">
+    <section className="relative isolate grid min-h-svh items-center gap-12 px-6 pt-32 pb-16 sm:px-12 lg:grid-cols-[3fr_2fr] lg:px-[8vw]">
       {/* A soft green bloom behind the engine with a lime core; fades out before the section's edges. */}
       <div
         aria-hidden="true"
@@ -20,27 +19,25 @@ export default function Hero() {
             "radial-gradient(ellipse 48% 52% at 70% 58%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 72%)",
         }}
       />
-      {/* One story block anchored to the bottom, with "GROWTH" pressed into its spine. */}
-      <div className={`relative z-10 grid max-w-2xl grid-cols-[auto_1fr] gap-x-6 self-end font-heading text-foreground sm:gap-x-8 ${rise}`} style={{ animationDelay: "0.2s" }}>
-        <span aria-hidden="true" className="rotate-180 text-[3.4rem] leading-[0.78] font-bold tracking-[-0.05em] uppercase select-none text-deboss [writing-mode:vertical-rl] sm:text-[4.6rem]">
-          Growth
-        </span>
-        <div>
-          <h1 className="text-3xl leading-[1.05] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
-            You ship the tool.
-            <br />
-            <span className="text-accent">We ship the demand.</span>
-          </h1>
-          <hr className="my-6 border-foreground/15" />
-          <ChannelParagraph className="max-w-md text-base leading-relaxed text-foreground/70 sm:text-lg" />
-          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
-            <ArcButton href="#contact" sweep={["var(--amber)", "var(--lime)", "var(--accent)"]}>
-              Speak with the team
-            </ArcButton>
-            <Link href="#case-studies" className="text-sm font-semibold tracking-[0.14em] uppercase underline-offset-[6px] hover:underline">
-              Case studies ↗
-            </Link>
-          </div>
+      {/* Light, precise type: the weight comes from size and tracking, not boldness. */}
+      <div className="relative z-10 max-w-[38rem] text-foreground">
+        <h1 className={`text-[clamp(2.6rem,4.6vw,4.4rem)] leading-[1.02] font-normal tracking-[-0.045em] ${rise}`} style={{ animationDelay: "0.1s" }}>
+          Growth Marketing for AI&#8209;Native DevTools and Platforms
+        </h1>
+        <ChannelParagraph
+          className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
+          style={{ animationDelay: "0.25s" }}
+        />
+        <div className={`mt-10 flex flex-wrap items-center gap-3 ${rise}`} style={{ animationDelay: "0.4s" }}>
+          <ArcButton href="#contact" sweep={["var(--amber)", "var(--lime)", "var(--accent)"]}>
+            Speak with the team
+          </ArcButton>
+          <Link
+            href="#case-studies"
+            className="rounded-full border border-foreground/15 bg-surface/70 px-5 py-2.5 font-medium tracking-wide shadow-[0_1px_2px_rgb(15_26_20/0.06)] transition-colors hover:border-foreground/30 hover:bg-surface"
+          >
+            View case studies
+          </Link>
         </div>
       </div>
       {/* Spans the right side and reaches in behind the text on large screens. */}
