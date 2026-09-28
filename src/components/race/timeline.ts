@@ -316,11 +316,11 @@ export const subAt = (beat: number, p: number) => (beat !== 2 ? 0 : p < T.set ? 
 // moves never cut through the stadium. Azimuth is unwrapped on purpose.
 type Key = { p: number; leave?: number; t: [number, number, number]; az: number; el: number; dist: number; fov: number; shift: number; fog: [number, number] };
 export const KEYS: Key[] = [
-  { p: 0, leave: 0.05, t: [2.8, 0.9, 2.6], az: -39, el: 12, dist: 15.9, fov: 22, shift: 0.18, fog: [0.95, 1.5] },
+  { p: 0, leave: 0.05, t: [2.8, 0.9, 2.6], az: -39, el: 12, dist: 15.9, fov: 22, shift: 0.18, fog: [1.1, 2.0] },
   { p: 0.13, leave: 0.155, t: [3.12, 1.6, 0.87], az: -52, el: 10, dist: 10, fov: 24, shift: 0.21, fog: [1.1, 2.2] },
   { p: 0.2, leave: 0.245, t: [3.3, 1.7, 1.1], az: -46, el: 2, dist: 6.6, fov: 24, shift: 0.12, fog: [1.3, 3.0] },
-  { p: 0.285, leave: 0.3, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 9.2, fov: 30, shift: 0.09, fog: [1.0, 1.8] },
-  { p: 0.325, leave: 0.33, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 15.3, fov: 16, shift: 0.09, fog: [0.9, 1.5] },
+  { p: 0.285, leave: 0.3, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 9.2, fov: 30, shift: 0.12, fog: [1.0, 1.8] },
+  { p: 0.325, leave: 0.33, t: [0.45, 0.62, 1.91], az: -100, el: 3, dist: 15.3, fov: 16, shift: 0.12, fog: [0.9, 1.5] },
   { p: 0.375, t: [2.7, 1.75, 3.26], az: -14, el: 12, dist: 24, fov: 26, shift: 0.22, fog: [0.95, 1.6] },
   { p: 0.43, leave: 0.47, t: [4.38, 1.4, 3.9], az: -20, el: 16, dist: 10.7, fov: 28, shift: 0.21, fog: [1.0, 1.9] },
   { p: 0.56, t: [1.59, 1.0, -0.84], az: 60, el: 38, dist: 30, fov: 24, shift: 0.165, fog: [1.05, 2.1] },
@@ -328,12 +328,12 @@ export const KEYS: Key[] = [
   { p: 0.69, t: [1.59, 0.3, -0.84], az: 250, el: 46, dist: 35.2, fov: 24, shift: 0.16, fog: [1.05, 2.1] },
   { p: 0.745, leave: 0.78, t: [1.59, 0.2, -0.84], az: 352, el: 56, dist: 38.3, fov: 24, shift: 0.18, fog: [1.05, 2.2] },
   { p: 0.84, t: [1.59, 0.4, -0.84], az: 338, el: 50, dist: 36.9, fov: 24, shift: 0.18, fog: [1.05, 2.2] },
-  { p: 0.9, leave: 1, t: [3.4, 1.0, 2.4], az: 321, el: 14, dist: 19, fov: 22, shift: 0.12, fog: [0.95, 1.5] },
+  { p: 0.9, leave: 1, t: [3.4, 1.0, 2.4], az: 321, el: 14, dist: 20.5, fov: 22, shift: 0.25, fog: [1.05, 2.0] },
 ];
 /** Posters for the still frame (p = 1). */
 export const POSTER: Record<"phone" | "desktop", Key> = {
-  phone: { p: 1, t: [1.59, 0.2, -0.84], az: -36, el: 40, dist: 22, fov: 30, shift: 0, fog: [1.05, 2.2] },
-  desktop: { p: 1, t: [1.59, 0.45, -0.84], az: -36, el: 30, dist: 29, fov: 26, shift: 0, fog: [1.05, 2.2] },
+  phone: { p: 1, t: [2.1, -2.6, -0.84], az: -36, el: 46, dist: 21.8, fov: 30, shift: 0, fog: [1.05, 2.2] },
+  desktop: { p: 1, t: [1.59, 0.45, -0.84], az: -36, el: 30, dist: 31, fov: 26, shift: 0, fog: [1.05, 2.2] },
 };
 // The dolly zoom between K3 (leaves 0.30) and K3z (arrives 0.325): the blocks keep their size.
 const DOLLY = { from: 0.3, to: 0.325, at: [-2.4, 0.07, 2.72], half: 1.803 };

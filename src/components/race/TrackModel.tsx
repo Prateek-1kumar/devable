@@ -35,9 +35,9 @@ function ovalShape(r: number, n = 256) {
   return s;
 }
 
-/** The site plinth: a stadium-shaped porcelain slab with an emerald seam at its foot. */
+/** The site plinth: a stadium-shaped porcelain slab with a thin emerald seam at its foot. */
 function Plinth() {
-  const R = 6.35;
+  const R = 6.1; // just outside the mast footings (5.95), so the slab frames the model instead of crowding it
   const [slab, seam] = useMemo(() => {
     // Total height 0.16 (0.10 + two 0.03 bevels), top at y −0.003.
     const g = new ExtrudeGeometry(ovalShape(R, 192), { depth: 0.1, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 4 });
@@ -45,7 +45,7 @@ function Plinth() {
     g.computeBoundingBox();
     g.translate(0, -0.003 - (g.boundingBox?.max.y ?? 0), 0);
     // The seam stands 0.015 proud of the slab's side (which sits at R + bevel).
-    const b = new ExtrudeGeometry(ovalShape(R + 0.045, 192), { depth: 0.035, bevelEnabled: false, curveSegments: 4 });
+    const b = new ExtrudeGeometry(ovalShape(R + 0.045, 192), { depth: 0.02, bevelEnabled: false, curveSegments: 4 });
     b.rotateX(-Math.PI / 2);
     b.translate(0, -0.163, 0);
     return [g, b];
@@ -78,7 +78,7 @@ function Turf() {
     g.setAttribute("color", new BufferAttribute(col, 3));
     return g;
   }, []);
-  const drawD = useCallback((ctx: CanvasRenderingContext2D, w: number) => drawMark(ctx, w, Array(4).fill("rgba(0,0,0,0.07)")), []);
+  const drawD = useCallback((ctx: CanvasRenderingContext2D, w: number) => drawMark(ctx, w, Array(4).fill("rgba(255,255,255,0.14)")) /* mown grass lightens */, []);
   const d = useCanvasTexture(1024, 1024, drawD);
   const chalk = useMemo(() => sweep({ from: 0, to: 1, steps: 512, inner: TRACK_IN - 0.081, outer: TRACK_IN - 0.069, y1: 0.0128 }), []);
   return (
@@ -264,7 +264,8 @@ function Lines() {
   );
 }
 
-// The LED ribbon board: five cells (badge + name) scrolling as a pure function of p.
+// The LED ribbon board: an aluminum body (so it never reads as a black outline round the oval) with a
+// black LED face of five cells (badge + name) scrolling as a pure function of p.
 const RIBBON: { mark: Mark; name: string }[] = [
   { mark: "hackernews", name: "HACKER NEWS" },
   { mark: "google", name: "GOOGLE" },
@@ -275,7 +276,7 @@ const RIBBON: { mark: Mark; name: string }[] = [
 const BOARD = { from: 0.004, to: STANDS_END, r: 3.5285, face: [0.02, 0.062] as const, led: [0.062, 0.07] as const };
 
 function Board() {
-  const L = look();
+  const m = materials();
   const body = useMemo(() => sweep({ from: BOARD.from, to: BOARD.to, steps: 240, inner: 3.53, outer: 3.58, y1: 0.07, box: true }), []);
   const face = useMemo(() => wall({ from: BOARD.from, to: BOARD.to, steps: 240, r: BOARD.r, y0: BOARD.face[0], y1: BOARD.face[1], facing: "in" }), []);
   const led = useMemo(() => wall({ from: BOARD.from, to: BOARD.to, steps: 240, r: BOARD.r, y0: BOARD.led[0], y1: BOARD.led[1], facing: "in" }), []);
@@ -320,7 +321,7 @@ function Board() {
   });
   return (
     <group>
-      <mesh geometry={body} material={L.ink} castShadow receiveShadow />
+      <mesh geometry={body} material={m.alu} castShadow receiveShadow />
       <mesh geometry={face}>
         <meshBasicMaterial ref={faceMat} map={ribbon.texture} toneMapped={false} fog={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
       </mesh>

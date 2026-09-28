@@ -19,7 +19,9 @@ import { MAST_R, SECTIONS, ovalAt, type Section } from "./track";
 // floodlights come on.
 
 const POLE_H = 2.3;
-const CELL = { w: 0.07, h: 0.06, gap: 0.015 };
+// Lamps, not a grid: large cells with hairline gaps, lit warm (a peak that stays amber-white, never clips to pure white).
+const CELL = { w: 0.078, h: 0.075, gap: 0.006 };
+const LAMP = { color: C.LIGHT_ON, peak: 0.9 };
 
 /** The bank's 2×5 floodlight cells as one geometry, on its front face. */
 function cellsGeometry() {
@@ -63,7 +65,7 @@ function Mast({ i, section }: { i: number; section: Section }) {
     const lit = clamp01((rise - 0.8) / 0.2);
     if (ring.current) ring.current.opacity = lit;
     if (band.current) band.current.emissiveIntensity = 0.5 * lit;
-    if (cells.current) cells.current.emissiveIntensity = 1.4 * lit;
+    if (cells.current) cells.current.emissiveIntensity = LAMP.peak * lit;
   });
 
   return (
@@ -77,32 +79,34 @@ function Mast({ i, section }: { i: number; section: Section }) {
         </mesh>
       </group>
       <group ref={pole} visible={false}>
-        <mesh geometry={poleGeometry} material={m.alu} castShadow />
-        <mesh position-y={1.4} castShadow>
+        {/* Poles and heads cast no shadow: under the low key they would streak far off the plinth onto the page. */}
+        <mesh geometry={poleGeometry} material={m.alu} />
+        <mesh position-y={1.4}>
           <cylinderGeometry args={[0.047, 0.047, 0.03, 24]} />
           <meshStandardMaterial ref={band} color={color} roughness={0.3} metalness={0.2} emissive={color} emissiveIntensity={0} />
         </mesh>
       </group>
       <Billboard position-y={2.55}>
         <group ref={head} visible={false}>
-          {/* The floodlight bank, above the badge. */}
-          <group position-y={0.33}>
-            <RoundedBox args={[0.46, 0.2, 0.06]} radius={0.02} smoothness={3} material={L.ink} castShadow />
+          {/* The floodlight bank, above the badge: a champagne-framed fixture, tilted down toward the track. */}
+          <group position-y={0.33} rotation-x={0.35}>
+            <RoundedBox args={[0.49, 0.23, 0.04]} radius={0.015} smoothness={3} position-z={-0.015} material={m.champagne} />
+            <RoundedBox args={[0.46, 0.2, 0.06]} radius={0.02} smoothness={3} material={L.ink} />
             <mesh geometry={cellGeometry}>
-              <meshStandardMaterial ref={cells} color={C.LIGHT_OFF} roughness={0.35} emissive={C.LIGHT_ON} emissiveIntensity={0} fog={false} />
+              <meshStandardMaterial ref={cells} color={C.LIGHT_OFF} roughness={0.35} emissive={LAMP.color} emissiveIntensity={0} fog={false} />
             </mesh>
           </group>
-          <mesh rotation-x={Math.PI / 2} material={m.panel} castShadow>
+          <mesh rotation-x={Math.PI / 2} material={L.puck}>
             <cylinderGeometry args={[0.22, 0.22, 0.05, 48]} />
             <Outlines thickness={1} color={TONES[ch].edge} />
           </mesh>
           <mesh position-z={0.026}>
             <circleGeometry args={[0.208, 64]} />
-            <meshBasicMaterial map={face.texture} toneMapped={false} />
+            <meshBasicMaterial map={face.texture} toneMapped={false} fog={false} />
           </mesh>
           <mesh>
             <ringGeometry args={[0.228, 0.258, 64]} />
-            <meshBasicMaterial ref={ring} color={color} transparent opacity={0} depthWrite={false} toneMapped={false} />
+            <meshBasicMaterial ref={ring} color={color} transparent opacity={0} depthWrite={false} toneMapped={false} fog={false} />
           </mesh>
         </group>
       </Billboard>

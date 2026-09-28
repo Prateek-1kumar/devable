@@ -195,22 +195,22 @@ function Plate() {
   const m = materials();
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     ctx.save();
-    ctx.font = `600 34px ${MONO}`;
-    ctx.letterSpacing = "7px";
+    ctx.font = `700 64px ${MONO}`;
+    ctx.letterSpacing = "12px";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = C.INK;
-    ctx.fillText("DEVABLE · TIMING", w / 2 + 3, h / 2 + 2);
+    ctx.fillText("DEVABLE", w / 2 + 6, h / 2 + 3);
     ctx.restore();
   }, []);
-  const label = useCanvasTexture(512, 100, draw);
+  const label = useCanvasTexture(512, 115, draw);
   return (
     <group position={[0, 0.55, 0.152]}>
       <mesh material={m.alu}>
-        <boxGeometry args={[0.36, 0.07, 0.004]} />
+        <boxGeometry args={[0.4, 0.09, 0.004]} />
       </mesh>
       <mesh position-z={0.0025}>
-        <planeGeometry args={[0.36, 0.07]} />
+        <planeGeometry args={[0.4, 0.09]} />
         <meshBasicMaterial map={label.texture} transparent toneMapped={false} depthWrite={false} />
       </mesh>
     </group>

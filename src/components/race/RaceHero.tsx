@@ -105,6 +105,10 @@ export default function RaceHero() {
   const box = useRef({ top: 0, height: 1, s: 0 });
   const onScroll = useRef<((lenis: Lenis) => void) | null>(null);
   const lenis = useLenis((l) => onScroll.current?.(l));
+  const lenisRef = useRef<Lenis | undefined>(undefined);
+  useEffect(() => {
+    lenisRef.current = lenis;
+  }, [lenis]);
 
   const onReady = useCallback(() => {
     if (canvasBox.current) canvasBox.current.dataset.ready = "true";
@@ -228,9 +232,21 @@ export default function RaceHero() {
       raf = requestAnimationFrame(tick);
     };
     onScroll.current = (l) => update(l.animatedScroll);
+    // The section is 1000svh, so a viewport resize (window, zoom, devtools) changes its height:
+    // hold the scroll progress s and move the page to it, rather than letting the story jump beats.
+    let first = true;
     const ro = new ResizeObserver(() => {
+      const keep = box.current.s;
       measure();
-      update(scrollY);
+      if (first) {
+        first = false;
+        update(scrollY);
+        return;
+      }
+      const y = box.current.top + keep * Math.max(0, box.current.height - innerHeight);
+      if (lenisRef.current) lenisRef.current.scrollTo(y, { immediate: true, force: true });
+      else scrollTo({ top: y });
+      update(y);
     });
     ro.observe(el);
     return () => {
@@ -307,13 +323,19 @@ export default function RaceHero() {
         {/* Page fog: the model dissolves into white behind the copy column, so type always sits on paper (lighter mid-race). */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=1]/race:opacity-100 group-data-[beat=2]/race:opacity-100 group-data-[beat=3]/race:opacity-100 group-data-[beat=4]/race:opacity-100 group-data-[beat=5]/race:opacity-100 lg:block lg:motion-reduce:hidden"
-          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.88) 30%, rgb(255 255 255 / 0.5) 40%, transparent 50%)" }}
+          className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=1]/race:opacity-100 group-data-[beat=3]/race:opacity-100 group-data-[beat=4]/race:opacity-100 group-data-[beat=5]/race:opacity-100 lg:block lg:motion-reduce:hidden"
+          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.9) 36%, rgb(255 255 255 / 0.55) 44%, transparent 52%)" }}
+        />
+        {/* The start's copy is narrower, and the monolith stands right beside it: a tighter scrim keeps the black glossy. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=2]/race:opacity-100 lg:block lg:motion-reduce:hidden"
+          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.9) 34%, rgb(255 255 255 / 0.5) 39%, transparent 44%)" }}
         />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-[5] hidden opacity-0 transition-opacity duration-700 group-data-[beat=0]/race:opacity-100 group-data-[beat=6]/race:opacity-100 lg:block lg:motion-reduce:hidden"
-          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.97) 0%, rgb(255 255 255 / 0.9) 30%, rgb(255 255 255 / 0.55) 43%, rgb(255 255 255 / 0) 56%)" }}
+          style={{ background: "linear-gradient(90deg, rgb(255 255 255 / 0.97) 0%, rgb(255 255 255 / 0.95) 40%, rgb(255 255 255 / 0.6) 48%, rgb(255 255 255 / 0) 58%)" }}
         />
 
         {/* Beat captions, stacked in one cell; data-beat on the section picks one. */}
@@ -381,6 +403,13 @@ export default function RaceHero() {
             </Caption>
           </div>
         </div>
+
+        {/* Paper under the HUD on every beat: its faint mono labels never sit on the model. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] hidden h-[150px] lg:block lg:motion-reduce:hidden"
+          style={{ background: "linear-gradient(0deg, rgb(255 255 255 / 0.95) 0, rgb(255 255 255 / 0.85) 105px, transparent 150px)" }}
+        />
 
         {/* HUD: race clock, sparkline, platforms, and the chapter rail. */}
         <div className="absolute inset-x-0 bottom-0 z-10 hidden px-[8vw] pb-9 lg:block lg:motion-reduce:hidden">

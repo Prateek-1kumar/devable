@@ -44,22 +44,23 @@ const LIFT = 0.035;
 const TOP = TIER_TOP[TIERS - 1];
 const BLEND = 0.004; // treads blend between section tints across ±0.004 station
 
-const PANEL = SECTIONS.map((s) => rgb(TONES[s.channel].panel));
+// Section tints lean on the channel's light fade: its `panel` whisper is too close to white to read on a tread.
+const TINT = SECTIONS.map((s) => rgb(CHANNELS[s.channel].fade[0]));
 const SEAM = SECTIONS.map((s) => rgb(TONES[s.channel].seam));
 const [LOW, HIGH, TREAD] = [rgb(C.CONCRETE_LOW), rgb(C.CONCRETE_HIGH), rgb(C.TREAD)];
 
-/** A section's panel tint at station u, blended across the aisles. */
+/** A section's tint at station u, blended across the aisles. */
 function tintAt(u: number): RGB {
   for (let s = 1; s < SECTIONS.length; s++) {
     const d = u - SECTIONS[s].from;
-    if (Math.abs(d) < BLEND) return lerp3(PANEL[s - 1], PANEL[s], smoothstep((d + BLEND) / (2 * BLEND)));
+    if (Math.abs(d) < BLEND) return lerp3(TINT[s - 1], TINT[s], smoothstep((d + BLEND) / (2 * BLEND)));
   }
-  return PANEL[sectionOf(u)];
+  return TINT[sectionOf(u)];
 }
 
-/** Tier colors: concrete walls fading up the whole stand, treads leaning 14% toward their section's tint. */
+/** Tier colors: concrete walls fading up the whole stand, treads leaning 35% toward their section's tint. */
 const tierPaint = (top: number) => (u: number, _v: number, y: number, face: Face): RGB => {
-  if (face === "top") return lerp3(TREAD, tintAt(u), 0.14);
+  if (face === "top") return lerp3(TREAD, tintAt(u), 0.35);
   const wallColor = lerp3(LOW, HIGH, y / TOP);
   return face === "out" && y === top ? lerp3(wallColor, tintAt(u), 0.18) : wallColor;
 };
@@ -125,7 +126,7 @@ function Tier({ i }: { i: number }) {
     [inner, top],
   );
   const seatGeometry = useMemo(
-    () => mergeGeometries([new BoxGeometry(0.07, 0.012, 0.05).translate(0, 0.006, 0), new BoxGeometry(0.07, 0.04, 0.01).translate(0, 0.026, 0.025)]),
+    () => mergeGeometries([new BoxGeometry(0.078, 0.012, 0.07).translate(0, 0.006, 0), new BoxGeometry(0.078, 0.05, 0.01).translate(0, 0.037, 0.035)]),
     [],
   );
   const seats = useMemo(() => layoutSeats(i), [i]);
@@ -241,61 +242,69 @@ function Tier({ i }: { i: number }) {
   );
 }
 
-/** The back wall's rhythm: pilasters every 0.42u, and a champagne cap rail, both following tier 6's pour. */
-function BackWall() {
-  const m = materials();
+/**
+ * The outer wall's rhythm: pilasters every 0.42u on tier i's outer face, as tall as the tier, following its pour.
+ * Each tier's are buried in the next tier once that one pours, so the rhythm is always on the outermost wall.
+ */
+function Pilasters({ i }: { i: number }) {
   const L = look();
+  const r = tierInner(i) + TIER_DEPTH;
+  const top = TIER_TOP[i];
   const pilasters = useMemo(() => {
-    const total = lengthOfStation(STANDS_END, BACK_R);
+    const total = lengthOfStation(STANDS_END, r);
     const n = Math.floor(total / 0.42);
     const out: { u: number; x: number; z: number; yaw: number }[] = [];
     const p: P3 = { x: 0, y: 0, z: 0 };
     const t: P3 = { x: 0, y: 0, z: 0 };
     for (let j = 0; j < n; j++) {
-      const u = stationOfLength((j + 0.5) * (total / n), BACK_R);
-      ovalAt(u, BACK_R + 0.01, p);
+      const u = stationOfLength((j + 0.5) * (total / n), r);
+      ovalAt(u, r + 0.01, p);
       out.push({ u, x: p.x, z: p.z, yaw: yawAlong(tangentAt(u, t)) });
     }
     return out;
-  }, []);
-  const rail = useMemo(() => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner: BACK_R - 0.02, outer: BACK_R + 0.02, y0: TOP, y1: TOP + 0.02, box: true }), []);
+  }, [r]);
   const inst = useRef<InstancedMesh>(null);
-  const cap = useRef<Mesh>(null);
   useLayoutEffect(() => {
     const mesh = inst.current;
     if (!mesh) return;
     const o = new Object3D();
     pilasters.forEach(({ x, z, yaw }, j) => {
-      o.position.set(x, 0.65, z);
+      o.position.set(x, top / 2, z);
       o.rotation.set(0, yaw, 0);
       o.updateMatrix();
       mesh.setMatrixAt(j, o.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
-  }, [pilasters]);
+  }, [pilasters, top]);
   useFrame(() => {
-    const poured = pour(TIERS - 1, store.p);
+    const poured = pour(i, store.p);
     const mesh = inst.current;
-    if (mesh) {
-      let n = 0;
-      while (n < pilasters.length && pilasters[n].u <= poured) n++;
-      mesh.count = n;
-      mesh.visible = n > 0;
-    }
-    const r = cap.current;
-    if (r) {
-      r.visible = poured > 0;
-      if (poured > 0) drawTo(r.geometry, 0, poured / STANDS_END);
-    }
+    if (!mesh) return;
+    let n = 0;
+    while (n < pilasters.length && pilasters[n].u <= poured) n++;
+    mesh.count = n;
+    mesh.visible = n > 0;
   });
   return (
-    <group>
-      <instancedMesh ref={inst} args={[undefined, L.pilaster, pilasters.length]} frustumCulled={false} castShadow receiveShadow visible={false}>
-        <boxGeometry args={[0.035, 1.3, 0.02]} />
-      </instancedMesh>
-      <mesh ref={cap} geometry={rail} material={m.champagne} castShadow visible={false} />
-    </group>
+    <instancedMesh ref={inst} args={[undefined, L.pilaster, pilasters.length]} frustumCulled={false} castShadow receiveShadow visible={false}>
+      <boxGeometry args={[0.035, top, 0.02]} />
+    </instancedMesh>
   );
+}
+
+/** The champagne cap rail along the back wall, following tier 6's pour. */
+function CapRail() {
+  const m = materials();
+  const rail = useMemo(() => sweep({ from: 0, to: STANDS_END, steps: STEPS, inner: BACK_R - 0.02, outer: BACK_R + 0.02, y0: TOP, y1: TOP + 0.02, box: true }), []);
+  const cap = useRef<Mesh>(null);
+  useFrame(() => {
+    const poured = pour(TIERS - 1, store.p);
+    const r = cap.current;
+    if (!r) return;
+    r.visible = poured > 0;
+    if (poured > 0) drawTo(r.geometry, 0, poured / STANDS_END);
+  });
+  return <mesh ref={cap} geometry={rail} material={m.champagne} castShadow visible={false} />;
 }
 
 // The section annotation on the cut face: a mint line over the step tops, M0 → M12.
@@ -402,9 +411,12 @@ export default function Stands() {
   return (
     <group>
       {TIER_TOP.map((_, i) => (
-        <Tier key={i} i={i} />
+        <group key={i}>
+          <Tier i={i} />
+          <Pilasters i={i} />
+        </group>
       ))}
-      <BackWall />
+      <CapRail />
       <Annotation />
     </group>
   );

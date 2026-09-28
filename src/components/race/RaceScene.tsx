@@ -44,7 +44,7 @@ export default function RaceScene({ still, active, onReady }: Props) {
         position={[-10, 8, -1]}
         intensity={1.25}
         color="#fffaf2"
-        shadow-mapSize={[4096, 4096]}
+        shadow-mapSize={still ? [2048, 2048] : [4096, 4096]}
         shadow-radius={6}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
@@ -66,7 +66,7 @@ export default function RaceScene({ still, active, onReady }: Props) {
       <Masts />
       <Runners />
       <Monolith />
-      <ContactShadows position-y={0.052} scale={[20, 14]} far={1.4} blur={2.2} opacity={0.26} resolution={1024} color="#0b1a12" />
+      <ContactShadows position-y={0.052} scale={[20, 14]} far={1.4} blur={2.2} opacity={0.26} resolution={1024} color="#0b1a12" frames={still ? 1 : Infinity} />
       {!still && <Callouts />}
     </Canvas>
   );

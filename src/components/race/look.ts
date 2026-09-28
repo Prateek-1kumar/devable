@@ -1,6 +1,6 @@
 import { CanvasTexture, Color, MeshPhysicalMaterial, MeshStandardMaterial, RepeatWrapping, SRGBColorSpace } from "three";
 import { CHANNELS } from "../growth-engine/channels";
-import { glowFromWithin } from "../growth-engine/palette";
+import { glowFromWithin, materials } from "../growth-engine/palette";
 
 // The race's own look: solid colored bodies with the main hero's materials
 // (porcelain, champagne, aluminum, gold, glossy black). Color comes from the
@@ -26,7 +26,7 @@ export const C = {
   FOREST: "#0c3b29",
   EMERALD: "#179a55",
   MINT: "#34d399",
-  LIGHT_ON: "#fff4d6",
+  LIGHT_ON: "#ffc96b",
   LIGHT_OFF: "#2a2f36",
   AMBER: "#f5b301",
 } as const;
@@ -87,6 +87,8 @@ function build() {
     plinth: new MeshPhysicalMaterial({ color: C.CERAMIC, roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.3, emissive: C.CERAMIC, emissiveIntensity: 0.32 }),
     seam: new MeshStandardMaterial({ color: C.EMERALD, roughness: 0.35, metalness: 0.2 }),
     cable: new MeshStandardMaterial({ color: C.INK, roughness: 0.45, fog: false }),
+    /** The mast badge puck: main's white panel, but fog-free so the far logos never wash out. */
+    puck: Object.assign(materials().panel.clone(), { fog: false }),
     mint: new MeshStandardMaterial({ color: C.MINT, roughness: 0.3, emissive: C.MINT, emissiveIntensity: 0.8 }),
   };
 }
