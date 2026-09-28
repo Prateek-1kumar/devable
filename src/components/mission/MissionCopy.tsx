@@ -44,9 +44,9 @@ function Mark({ mark, size }: { mark: keyof typeof MARKS; size: number }) {
   );
 }
 
-function Ctas({ inert }: { inert?: boolean }) {
+function Ctas() {
   return (
-    <div className="flex flex-wrap items-center gap-4" inert={inert}>
+    <div className="flex flex-wrap items-center gap-4">
       <WaveButton href="#contact">Speak with the team</WaveButton>
       <WaveButton href="#case-studies" tone="secondary">
         View case studies
@@ -73,19 +73,22 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
         <h1 id="hero-title" className={`text-[clamp(2.6rem,4.6vw,4.4rem)] leading-[1.02] font-normal tracking-[-0.045em] ${rise}`} style={{ animationDelay: "0.1s" }}>
           Growth Marketing for AI&#8209;Native DevTools and Platforms
         </h1>
-        <ChannelParagraph
-          className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
-          style={{ animationDelay: "0.25s" }}
-        />
-        <div className={`mt-10 ${rise}`} style={{ animationDelay: "0.4s" }}>
-          <Ctas inert={!intro} />
+        {/* Once the intro has faded, its channel words and buttons leave the tab order (the H1 stays readable). */}
+        <div inert={!intro}>
+          <ChannelParagraph
+            className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
+            style={{ animationDelay: "0.25s" }}
+          />
+          <div className={`mt-10 ${rise}`} style={{ animationDelay: "0.4s" }}>
+            <Ctas />
+          </div>
+          <p aria-hidden="true" className={`mt-8 hidden items-center gap-2.5 ${MONO} text-[11px] text-foreground/45 motion-safe:lg:flex ${rise}`} style={{ animationDelay: "0.55s" }}>
+            <svg viewBox="0 0 8 12" width="8" height="12" fill="none" stroke="currentColor" strokeWidth="1">
+              <path d="M4 0v11M0.5 7.5 4 11l3.5-3.5" />
+            </svg>
+            Scroll to begin countdown
+          </p>
         </div>
-        <p aria-hidden="true" className={`mt-8 hidden items-center gap-2.5 ${MONO} text-[11px] text-foreground/45 motion-safe:lg:flex ${rise}`} style={{ animationDelay: "0.55s" }}>
-          <svg viewBox="0 0 8 12" width="8" height="12" fill="none" stroke="currentColor" strokeWidth="1">
-            <path d="M4 0v11M0.5 7.5 4 11l3.5-3.5" />
-          </svg>
-          Scroll to begin countdown
-        </p>
       </motion.div>
 
       {pinned && (
@@ -113,7 +116,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
                       >
                         +{OUTCOME}%
                       </span>
-                      <span className={`${MONO} text-[12px] text-foreground/50`}>pipeline growth</span>
+                      <span className={`${MONO} text-[12px] text-foreground/50`}>pipeline growth · illustrative</span>
                     </p>
                     <div className="mt-9">
                       <Ctas />
@@ -185,7 +188,7 @@ export function StillExtras({ className = "" }: { className?: string }) {
       </ul>
       <p className="mt-6 flex items-baseline gap-3">
         <span className="text-3xl tracking-[-0.03em] tabular-nums">+{OUTCOME}%</span>
-        <span className={`${MONO} text-[11px] text-foreground/50`}>pipeline growth</span>
+        <span className={`${MONO} text-[11px] text-foreground/50`}>pipeline growth · illustrative</span>
       </p>
     </div>
   );

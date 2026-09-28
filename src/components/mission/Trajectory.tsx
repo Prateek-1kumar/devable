@@ -16,7 +16,10 @@ const INK = "#16191d";
 const TRAIL_TOP = 1.4;
 const TRAIL_SEGS = 32;
 const TRAIL_RADIAL = 24;
-const FLOWN = { from: 0.125, to: 0.85, n: 1200 };
+// The flown path in two pieces: everything up to the end of the first contact lap, and
+// the current lap, so the first can step aside while the correction dips below the plan.
+const FLOWN = { from: 0.125, to: 0.745, n: 1030 };
+const LAP = { from: 0.745, to: 0.85, n: 260 };
 const SPIRAL = { from: 0.85, to: 0.97, n: 400 };
 const GRADIENT = ["#4f46e5", "#0ea5e9", "#10b981", "#f5b301"].map((c) => new Color(c));
 
@@ -50,6 +53,7 @@ export default function Trajectory() {
   const trail = useRef<Mesh>(null);
   const plan = useRef<Line2>(null);
   const flown = useRef<Line2>(null);
+  const lap = useRef<Line2>(null);
   const spiral = useRef<Line2>(null);
   const ghost = useRef<Line2>(null);
   const cross = useRef<Line2>(null);
@@ -60,6 +64,7 @@ export default function Trajectory() {
     [],
   );
   const flownPts = useMemo(() => [new Vector3(0, TRAIL_TOP, 0), ...samples(FLOWN.from, FLOWN.to, FLOWN.n)], []);
+  const lapPts = useMemo(() => samples(LAP.from, LAP.to, LAP.n), []);
   const spiralPts = useMemo(() => samples(SPIRAL.from, SPIRAL.to, SPIRAL.n), []);
   const spiralColors = useMemo(
     () =>
@@ -79,7 +84,7 @@ export default function Trajectory() {
   }, []);
 
   useLayoutEffect(() => {
-    [plan, flown, spiral, ghost].forEach((l) => reveal(l.current, 0));
+    [plan, flown, lap, spiral, ghost].forEach((l) => reveal(l.current, 0));
     if (cross.current) cross.current.visible = false;
   }, []);
 
@@ -91,7 +96,7 @@ export default function Trajectory() {
       l.material.gapSize = 0.0023 * frame.dist;
     };
 
-    // Contrail: follows the bell up to its top, then dissipates from the ground up.
+    // Contrail: follows the bell up to its top, then thins away.
     const tr = trail.current;
     if (tr) {
       tr.visible = p >= 0.125 && p < 0.34;
@@ -99,10 +104,9 @@ export default function Trajectory() {
         const s = frame.scale;
         const bell = frame.craft.y - 2.01 * s; // bell exit, world y
         const k = Math.round(TRAIL_SEGS * Math.min(1, Math.max(0, (bell - BELL_Y) / (TRAIL_TOP - BELL_Y))));
-        const j = Math.round(TRAIL_SEGS * seg(p, 0.27, 0.34));
-        const per = TRAIL_RADIAL * 6;
-        tr.geometry.setDrawRange(j * per, Math.max(0, k - j) * per);
-        const widen = 1 + 0.6 * seg(p, 0.24, 0.34);
+        tr.geometry.setDrawRange(0, k * TRAIL_RADIAL * 6);
+        // It widens as it drifts, then thins away to a hairline (cutting it from the bottom left a floating open cup).
+        const widen = (1 + 0.6 * seg(p, 0.24, 0.34)) * (1 - 0.97 * seg(p, 0.27, 0.34));
         tr.scale.set(widen, 1, widen);
       }
     }
@@ -113,10 +117,18 @@ export default function Trajectory() {
 
     // Flown path: its head is the craft.
     reveal(flown.current, p <= FLOWN.from ? 0 : 1 + (FLOWN.n - 1) * seg(p, FLOWN.from, FLOWN.to));
+    reveal(lap.current, (LAP.n - 1) * seg(p, LAP.from, LAP.to));
     // During the close-up the trail behind the craft would cut across the copy: it recedes, then returns with the pull-back.
     const recede = 1 - windowed(p, 0.425, 0.45, 0.565, 0.6);
-    if (flown.current) flown.current.material.opacity = recede;
-    if (plan.current) plan.current.material.opacity = recede;
+    // Through the correction the earlier laps step aside, so the dashed plan is the reference the current lap dips under.
+    const earlier = recede * (1 - windowed(p, 0.75, 0.77, 0.85, 0.88));
+    const fadeTo = (l: Line2 | null, o: number) => {
+      if (!l) return;
+      l.material.opacity = o;
+      if (o < 0.001) l.visible = false; // fully faded lines still write depth: take them out of the pass
+    };
+    fadeTo(flown.current, earlier);
+    fadeTo(plan.current, recede);
     reveal(spiral.current, (SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
 
     // The launch spike: a suborbital arc that falls back, marked where it lands.
@@ -138,6 +150,7 @@ export default function Trajectory() {
       </mesh>
       <Line ref={plan} points={planPts} color="#b9bdba" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
       <Line ref={flown} points={flownPts} color="#4a4f4c" lineWidth={1.25} renderOrder={2} transparent />
+      <Line ref={lap} points={lapPts} color="#4a4f4c" lineWidth={1.25} renderOrder={2} transparent />
       <Line ref={spiral} points={spiralPts} vertexColors={spiralColors} lineWidth={2.4} renderOrder={3} />
       <Line ref={ghost} points={ghostPts} color={INK} lineWidth={1} dashed dashSize={0.05} gapSize={0.04} transparent opacity={0.35} />
       <Line ref={cross} points={crossPts} segments color={INK} lineWidth={1.25} transparent opacity={0} />

@@ -21,11 +21,14 @@ const LONG = ["TECHNICAL CONTENT", "SEO + AI SEARCH", "REDDIT", "CREATOR DISTRIB
 type Props = {
   className?: string;
   beat: number;
+  /** The scene has rendered: the projected labels fade in with it, never ahead of it. */
+  ready: boolean;
   bind: Bind;
-  onJump: (start: number) => void;
+  /** Scroll to a progress value. */
+  onJump: (at: number) => void;
 };
 
-export default function MissionHud({ className = "", beat, bind, onJump }: Props) {
+export default function MissionHud({ className = "", beat, ready, bind, onJump }: Props) {
   const focus = useSyncExternalStore(channelFocus.subscribe, channelFocus.get, () => null);
   const node = bind;
   const label = (id: LabelId) => bind(id);
@@ -33,7 +36,7 @@ export default function MissionHud({ className = "", beat, bind, onJump }: Props
   return (
     <div className={`pointer-events-none absolute inset-0 z-[5] ${className}`}>
       {/* Projected labels share the canvas box. */}
-      <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+      <div aria-hidden="true" className="absolute inset-0 overflow-hidden transition-opacity duration-700" style={{ opacity: ready ? 1 : 0 }}>
         <Leader nodeRef={label("payload")} kicker="PAYLOAD" text="Your devtool" />
         <Leader nodeRef={label("devable")} kicker="DEVABLE" text="Launch system and mission control" />
         <div ref={label("channels")} className="invisible absolute top-0 left-0 opacity-0 will-change-transform">
@@ -114,7 +117,7 @@ export default function MissionHud({ className = "", beat, bind, onJump }: Props
               type="button"
               aria-label={`Jump to ${b.name}`}
               aria-current={i === beat ? "step" : undefined}
-              onClick={() => onJump(b.start)}
+              onClick={() => onJump(b.land)}
               className={`absolute top-0 ${MONO} cursor-pointer text-[10px] leading-3 transition-colors hover:text-foreground/80 focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-forest ${
                 i === beat ? "text-foreground/80" : "text-foreground/35"
               }`}

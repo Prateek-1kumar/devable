@@ -82,11 +82,17 @@ function Mission({ still, progress, labels }: Omit<Props, "active" | "onReady">)
 /** Advances the shared frame before any part reads it. */
 function FramePass({ still, progress }: { still: boolean; progress: RefObject<Progress> }) {
   const frame = useMission();
+  const primed = useRef(false);
   useFrame((state) => {
     const p = still ? 1 : (progress.current?.shown ?? 0);
     frame.update(p, still ? 0 : state.clock.elapsedTime, still);
     // Shadows only matter on the pad; stop re-rendering the shadow map once it has faded.
+    // Render it once regardless (stills, mid-page reloads), or the pad samples an empty map and reads as shadowed.
     state.gl.shadowMap.autoUpdate = p < 0.27;
+    if (!primed.current) {
+      primed.current = true;
+      state.gl.shadowMap.needsUpdate = true;
+    }
   }, -3);
   return null;
 }
@@ -133,6 +139,9 @@ function CameraRig() {
 }
 
 const LEADERS = new Set<LabelId>(["payload", "devable", "channels"]);
+/** The caption column: it starts at 8vw and its titles are capped at 30rem (MissionCopy). */
+const COPY_LEFT = 0.08;
+const COPY_MAX = 480;
 const ARRAY_LABELS: Partial<Record<LabelId, number>> = { a0: 0, a1: 1, a2: 2, a3: 3 };
 
 /** Projects each label's anchor to the overlay and writes its transform and opacity (only when they change). */
@@ -140,19 +149,22 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
   const frame = useMission();
   const fixed = useMemo(
     () => ({
-      karman: polar(32, KARMAN),
+      karman: polar(18, KARMAN),
       spike: ghostPoint(0.5).add(new Vector3(0, 0.3, 0)),
-      meco: craftPosition(0.355),
+      meco: craftPosition(0.355).add(new Vector3(0, 0.8, 0)), // above the path, clear of the craft flying on past it
       orbit: polar(48, R0),
     }),
     [],
   );
-  const scratch = useMemo(() => ({ v: new Vector3(), craftNdc: new Vector3(), cache: new Map<LabelId, string>() }), []);
+  const scratch = useMemo(
+    () => ({ v: new Vector3(), craftNdc: new Vector3(), cache: new Map<LabelId, string>(), widths: new Map<LabelId, number>() }),
+    [],
+  );
 
   useFrame((state) => {
     const nodes = labels.current;
     if (!nodes) return;
-    const { v, cache, craftNdc } = scratch;
+    const { v, cache, craftNdc, widths } = scratch;
     const { width, height } = state.size;
     const p = frame.p;
     const local = (x: number, y: number, z: number) => v.set(x, y, z).multiplyScalar(frame.scale).applyQuaternion(frame.quat).add(frame.craft);
@@ -175,11 +187,21 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
         x = ((v.x + 1) / 2) * width;
         y = ((1 - v.y) / 2) * height;
         if (id in ARRAY_LABELS) {
-          // Labels sit outboard of their tip, so they never run back across the craft.
-          const cx = ((craftNdc.copy(frame.craft).project(state.camera).x + 1) / 2) * width;
-          left = x < cx;
+          // Labels sit outboard of their tip, so they never run back across the craft. A left-hand
+          // label that would reach into the copy column runs right instead, moved off its tip
+          // vertically away from the craft (above an upper tip, below a lower one).
+          craftNdc.copy(frame.craft).project(state.camera);
+          const cx = ((craftNdc.x + 1) / 2) * width;
+          const cy = ((1 - craftNdc.y) / 2) * height;
+          let w = widths.get(id);
+          if (!w) {
+            w = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0; // fixed text: measured once
+            if (w) widths.set(id, w);
+          }
+          const west = x < cx;
+          left = west && x - 10 - w > COPY_LEFT * width + COPY_MAX; // clears the caption column's widest line
           x += left ? -10 : 10;
-          y -= 10;
+          y += west && !left ? (y < cy ? -26 : 12) : -10;
         }
       }
       if (id in ARRAY_LABELS) {

@@ -23,7 +23,7 @@ import { drawMark } from "../growth-engine/EngineCore";
 import { glowFromWithin, materials, paintFade, palette, TONES } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
-import { explodeArray, explodeCapsule, explodeModule, hingeAngle, latched, seg } from "./timeline";
+import { explodeArray, explodeCapsule, explodeModule, hingeAngle, latchAt, latched, seg } from "./timeline";
 import { boosterPose } from "./world";
 
 // DVB-01. The Devable service module (black, the striped D) carries your
@@ -261,8 +261,8 @@ export default function Vehicle() {
       const ex = explodeArray(p, i);
       const focused = focus === i;
       lift.current[i] = still ? (focused ? 0.06 : 0) : damp(lift.current[i], focused ? 0.06 : 0, 10, dt);
-      const latchAt = 0.505 + 0.012 * i;
-      const target = (latched(p, i) ? 0.22 + 0.45 * (1 - seg(p, latchAt, latchAt + 0.012)) : 0) + (focused ? 0.3 : 0);
+      const at = latchAt(i);
+      const target = (latched(p, i) ? 0.22 + 0.45 * (1 - seg(p, at, at + 0.012)) : 0) + (focused ? 0.3 : 0);
       glow.current[i] = still ? target : damp(glow.current[i], target, 10, dt);
       if (h) {
         const a = (-45 + 90 * i) * D2R;
@@ -438,8 +438,10 @@ export default function Vehicle() {
 /** Each array's face: a cell grid, a channel-coloured border and its number. */
 function ArrayFace({ index }: { index: number }) {
   const face = useCanvasTexture(1024, 176, ARRAY_FACES[index]);
+  // Deployed, the text runs root-ward; arrays 02 and 03 point to screen right in every
+  // camera pose after the deploy, so theirs run the other way to stay upright.
   return (
-    <mesh position={[0, -0.465, 0.012 + PANEL.t / 2 + 0.002]} rotation-z={Math.PI / 2}>
+    <mesh position={[0, -0.465, 0.012 + PANEL.t / 2 + 0.002]} rotation-z={index === 1 || index === 2 ? -Math.PI / 2 : Math.PI / 2}>
       <planeGeometry args={[0.82, 0.14]} />
       <meshBasicMaterial map={face.texture} transparent depthWrite={false} toneMapped={false} />
     </mesh>

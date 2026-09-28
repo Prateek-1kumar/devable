@@ -23,14 +23,16 @@ export const KARMAN = 15.4; // ≙ 100 km
 export const MODULE_Y0 = 2.1; // module centre on the pad
 
 // ── Beats and captions ───────────────────────────────────────────────────
+// `land` is where the flight-plan buttons jump: inside the beat's caption window and
+// past the ±0.004 hysteresis, so the rail and the copy both switch to that beat.
 export const BEATS = [
-  { label: "INTEGRATION", name: "Integration", start: 0 },
-  { label: "LAUNCH", name: "Launch", start: 0.12 },
-  { label: "TRAJECTORY", name: "Trajectory", start: 0.26 },
-  { label: "DEPLOY", name: "Deploy", start: 0.4 },
-  { label: "DOWNLINK", name: "Downlink", start: 0.54 },
-  { label: "CORRECTION", name: "Correction", start: 0.745 },
-  { label: "ORBIT", name: "Sustained orbit", start: 0.85 },
+  { label: "INTEGRATION", name: "Integration", start: 0, land: 0 },
+  { label: "LAUNCH", name: "Launch", start: 0.12, land: 0.135 },
+  { label: "TRAJECTORY", name: "Trajectory", start: 0.26, land: 0.28 },
+  { label: "DEPLOY", name: "Deploy", start: 0.4, land: 0.455 },
+  { label: "DOWNLINK", name: "Downlink", start: 0.54, land: 0.63 },
+  { label: "CORRECTION", name: "Correction", start: 0.745, land: 0.77 },
+  { label: "ORBIT", name: "Sustained orbit", start: 0.85, land: 0.875 },
 ] as const;
 
 /** Caption windows; index 0 is the intro block (the H1). */
@@ -69,20 +71,28 @@ export const explodeModule = (p: number) => 1 - easeOutCubic(seg(p, 0.02, 0.05))
 export const explodeCapsule = (p: number) => 1 - easeOutBack(seg(p, 0.075, 0.1));
 /** Array i's radial pull-out (1 → 0). */
 export const explodeArray = (p: number, i: number) => 1 - easeOutBack(seg(p, 0.04 + 0.012 * i, 0.065 + 0.012 * i));
+/** When array i latches open (staggered so all four share the screen with the deploy caption). */
+export const latchAt = (i: number) => 0.505 + 0.008 * i;
 /** Array i's hinge angle in radians (0 stowed → π/2 deployed). */
-export const hingeAngle = (p: number, i: number) => (Math.PI / 2) * easeOutBack(seg(p, 0.475 + 0.012 * i, 0.505 + 0.012 * i));
-export const latched = (p: number, i: number) => p >= 0.505 + 0.012 * i;
+export const hingeAngle = (p: number, i: number) => (Math.PI / 2) * easeOutBack(seg(p, latchAt(i) - 0.03, latchAt(i)));
+export const latched = (p: number, i: number) => p >= latchAt(i);
 
 export const vehicleScale = (p: number) => (p < 0.56 ? 1 - 0.4 * eio(seg(p, 0.24, 0.36)) : 0.6 + 1.2 * eio(seg(p, 0.56, 0.64)));
 
-/** Height added to MODULE_Y0 during the vertical rise. */
-export const riseY = (p: number) => 2.2 * seg(p, 0.125, 0.26) ** 2.2;
+/** Height added to MODULE_Y0 during the vertical rise: a short climb, so the path reads as a gravity turn, not an "L". */
+export const riseY = (p: number) => 1.2 * seg(p, 0.125, 0.26) ** 3;
 
-/** The polar gravity turn: vertical start, tangential join at insertion. */
+/**
+ * The polar gravity turn from r 17.3 (where the rise ends): it pitches over gradually
+ * (≈7° / 15° / 31° / 53° at p 0.265 / 0.27 / 0.28 / 0.30) and joins the orbit tangentially.
+ * The exponents keep the speed continuous at p 0.26 (rise 1.2·3/0.135 = turn 2.3·1.6/0.14 ≈ 26.5/unit p).
+ */
 export const turn = (p: number) => {
   const u = seg(p, 0.26, 0.4);
-  return { theta: 22 * u ** 1.6, r: 18.3 + 1.3 * (1 - (1 - u) ** 2.2) };
+  return { theta: 22 * u ** 2, r: 17.3 + 2.3 * (1 - (1 - u) ** 1.6) };
 };
+/** dθ/dp at insertion, so the orbit's θ curve continues the turn without a kink. */
+const INSERTION_RATE = (22 * 2) / 0.14;
 
 // θ after insertion (unwrapped degrees, clockwise seen from +Z, 0 at the top).
 export const THETA_KEYS: readonly (readonly [number, number])[] = [
@@ -123,7 +133,7 @@ export function pchip(keys: readonly (readonly [number, number])[], s0: number, 
   );
 }
 
-export const theta = (p: number) => pchip(THETA_KEYS, 251, 0, p);
+export const theta = (p: number) => pchip(THETA_KEYS, INSERTION_RATE, 0, p);
 
 /** Orbit radius: parking orbit, the drift below plan, then the compounding spiral. */
 export function radius(p: number, th: number) {
@@ -254,8 +264,9 @@ export const CAMERA_KEYS: readonly CameraKey[] = [
   [0.8, [-9, -1, 0], 0, 72, 8, 40, 26, 0.2],
   [0.84, [-9, -1, 0], 0, 72, 8, 40, 26, 0.2],
   [0.885, [3, -13, 0], 0, 140, 16, 50, 26, 0.2],
-  [0.945, [1.5, -13, 0], 0, 108, 14, 52, 26, 0.29],
-  [1.0, [1.5, -13, 0], 0, 108, 14, 52, 26, 0.29],
+  // Final hold: pulled back far enough that the whole spiral clears the right edge and the telemetry strip.
+  [0.945, [1.5, -13, 0], 0, 122, 14, 52, 26, 0.26],
+  [1.0, [1.5, -13, 0], 0, 122, 14, 52, 26, 0.26],
 ];
 /** Phone still: a square canvas, planet centred low, craft top-right. */
 export const STILL_SQUARE: CameraKey = [1, [0, -9, 0], 0, 78, 14, 50, 28, 0];
@@ -267,14 +278,14 @@ export const LABEL_WINDOWS: Record<LabelId, readonly [number, number, number, nu
   payload: [-1, -0.5, 0.1, 0.115],
   devable: [-1, -0.5, 0.1, 0.115],
   channels: [-1, -0.5, 0.1, 0.115],
-  karman: [0.22, 0.27, 0.5, 0.54],
+  karman: [0.275, 0.29, 0.42, 0.44],
   spike: [0.33, 0.36, 0.54, 0.58],
   meco: [0.355, 0.365, 0.44, 0.46],
   orbit: [0.38, 0.4, 0.44, 0.46],
-  a0: [0.505, 0.515, 0.555, 0.57],
-  a1: [0.517, 0.527, 0.555, 0.57],
-  a2: [0.529, 0.539, 0.555, 0.57],
-  a3: [0.541, 0.551, 0.555, 0.57],
+  a0: [latchAt(0), latchAt(0) + 0.01, 0.555, 0.57],
+  a1: [latchAt(1), latchAt(1) + 0.01, 0.555, 0.57],
+  a2: [latchAt(2), latchAt(2) + 0.01, 0.555, 0.57],
+  a3: [latchAt(3), latchAt(3) + 0.01, 0.555, 0.57],
 };
 export const LABEL_IDS = Object.keys(LABEL_WINDOWS) as LabelId[];
 export const labelOpacity = (id: LabelId, p: number) => {

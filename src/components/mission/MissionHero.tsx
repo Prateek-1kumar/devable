@@ -16,7 +16,8 @@ import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pi
 // The 3D bundle loads after the page, so the headline paints instantly.
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 
-const STILL_QUERY = "(max-width: 1023px), (prefers-reduced-motion: reduce)";
+// Exactly the complement of Tailwind's `motion-safe:lg:` (lg is 64rem, which follows the browser font size).
+const STILL_QUERY = "(width < 64rem), (prefers-reduced-motion: reduce)";
 const subscribe = (onChange: () => void) => {
   const mq = window.matchMedia(STILL_QUERY);
   mq.addEventListener("change", onChange);
@@ -120,9 +121,9 @@ export default function MissionHero() {
     };
   }, [still, onScreen]);
 
-  const jump = useCallback((start: number) => {
+  const jump = useCallback((at: number) => {
     const { top, span: s } = span.current;
-    window.scrollTo({ top: top + start * s + 2, behavior: "smooth" });
+    window.scrollTo({ top: top + at * s, behavior: "smooth" });
   }, []);
   const onReady = useCallback(() => setReady(true), []);
   const bind = useCallback(
@@ -145,13 +146,13 @@ export default function MissionHero() {
         <MissionCopy caption={still ? 0 : caption} pinned={!still} bind={bind} />
         <div
           aria-hidden="true"
-          className="relative aspect-square w-full transition-opacity duration-700 lg:absolute lg:inset-0 lg:aspect-auto"
+          className="relative -mx-6 aspect-square w-[calc(100%+3rem)] transition-opacity duration-700 sm:-mx-12 sm:w-[calc(100%+6rem)] lg:absolute lg:inset-0 lg:mx-0 lg:aspect-auto lg:w-auto"
           style={{ opacity: ready ? 1 : 0 }}
         >
           <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} onReady={onReady} />
         </div>
         <StillExtras className="relative z-10 motion-safe:lg:hidden" />
-        {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} bind={bind} onJump={jump} />}
+        {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}
       </div>
     </section>
   );

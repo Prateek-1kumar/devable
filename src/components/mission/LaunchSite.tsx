@@ -4,12 +4,13 @@ import { Line, Outlines } from "@react-three/drei";
 import { Object3D, Vector3, type Group, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { materials, palette } from "../growth-engine/palette";
 import { useMission } from "./frame";
-import { eio, explodeModule, R, seg, smooth } from "./timeline";
+import { eio, R, seg, smooth } from "./timeline";
 import { mulberry32, TOWER } from "./world";
 
 // Pad 01: the pad and its hold-down clamps, the service tower with its
 // umbilical arm, and the ground cloud at ignition. Plus a small pool of
-// puffs shared by the pad vents, stage separation and the RCS burn.
+// puffs shared by stage separation and the RCS burn. (Pad vent puffs were cut:
+// at hero size they read as a stray ball beside the booster.)
 
 const D2R = Math.PI / 180;
 const CLOUD = 56;
@@ -118,7 +119,7 @@ export default function LaunchSite() {
       }
     }
 
-    // Puff pool: vents on the pad, separation at the interstage, RCS at the burn.
+    // Puff pool: separation at the interstage, RCS at the burn.
     const pl = pool.current;
     if (pl) {
       const { o, v, w } = scratch;
@@ -135,16 +136,6 @@ export default function LaunchSite() {
         o.updateMatrix();
         pl.setMatrixAt(n++, o.matrix);
       };
-      if (p < 0.12 && !frame.still) {
-        // A wisp of boil-off every 3.2 s from the stage's upper vent: small lobes that drift out and thin away.
-        const lift = -0.16 * explodeModule(p);
-        for (let j = 0; j < 4; j++) {
-          const a = ((t + 3.2 - j * 0.16) % 3.2) / 1.6;
-          if (a > 1) continue;
-          const size = (0.022 + 0.045 * Math.sqrt(a)) * Math.sin(Math.PI * Math.min(1, a * 1.15)) ** 0.6 * (1 - 0.15 * j);
-          put(w.set(0.2 + 0.2 * a + 0.025 * j, -0.62 + lift + 0.14 * a + 0.03 * j, 0.05 + 0.04 * a), size);
-        }
-      }
       if (p >= 0.355 && p < 0.37) {
         const a = seg(p, 0.355, 0.37);
         for (let j = 0; j < 4; j++) {
