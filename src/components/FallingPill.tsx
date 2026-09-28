@@ -3,17 +3,21 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import PixelField from "./PixelField";
 
-// A tall white pill stands behind the hero headline, then tips over to the
+// A tall grey pill stands behind the hero headline, then tips over to the
 // right as you scroll, pivoting on its bottom-right corner, and lands lying
-// flat and centered on the second screen with its rounded end facing right.
-//
+// flat on the second screen, a little above center, with its rounded end facing right.
+
+// How far above screen 2's center the pill lands. The fall's translate, the
+// landed content box and the space below all subtract it, so they stay aligned.
+const RAISE = "10vh";
+
 // Standing geometry (viewport units): left L, top T, width W, height H.
 // Rotating 90° clockwise about the bottom-right corner lays it across
 // [L+W, L+W+H] × [T+H−W, T+H]; the translate below then centers that on screen 2.
 const PILL = { left: "13vw", top: "8vh", width: "26vw", height: "150vh" };
 const LAND = {
   x: "calc(50vw - 13vw - 26vw - 75vh)", // center − (L + W) − H/2
-  y: "calc(150vh - 8vh - 150vh + 13vw)", // screen-2 center − (T + H) + W/2
+  y: `calc(150vh - 8vh - 150vh + 13vw - ${RAISE})`, // screen-2 center − (T + H) + W/2, raised
 };
 // Slightly uneven top radii give the hand-drawn, organic edge from the sketch.
 const RADIUS = "13vw 11vw 2.5vw 2.5vw / 15vw 12vw 2.5vw 2.5vw";
@@ -83,7 +87,7 @@ export default function FallingPill({ children, landed, below }: Props) {
             className="absolute flex items-center justify-center px-[6vw] text-center"
             style={{
               left: "calc(50vw - 75vh)",
-              top: "calc(50% - 13vw)",
+              top: `calc(50% - 13vw - ${RAISE})`,
               width: "150vh",
               height: "26vw",
               opacity: "clamp(0, calc((var(--fall) - 0.95) * 20), 1)", // only once the pill is flat
@@ -95,7 +99,7 @@ export default function FallingPill({ children, landed, below }: Props) {
         {below && (
           <div
             className="absolute inset-x-0 bottom-0 flex items-center justify-center px-[6vw]"
-            style={{ top: "calc(50% + 13vw)" }} // from the pill's bottom edge to the screen's end
+            style={{ top: `calc(50% + 13vw - ${RAISE})` }} // from the pill's bottom edge to the screen's end
           >
             {below}
           </div>

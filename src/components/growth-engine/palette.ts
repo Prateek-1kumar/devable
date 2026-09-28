@@ -7,7 +7,7 @@ function read() {
   const root = getComputedStyle(document.documentElement);
   const token = (name: string) => root.getPropertyValue(name).trim();
   return {
-    cream: token("--pixel-light"),
+    cream: token("--ceramic"),
     stone: token("--pixel-stone"),
     teal: token("--accent"),
     coral: token("--coral"),

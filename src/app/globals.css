@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  /* Green brand, light theme. 60 · 30 · 10: mint-chalk page, forest anchor,
+  /* Green brand, light theme. 60 · 30 · 10: pure white page, forest anchor,
      emerald brand. Lime and amber are sparks only: hover sweeps and the
      engine's signal (pulses, leads, live counters). */
-  --background: #f1f6ef; /* mint chalk */
-  --surface: #fbfdf9; /* a lighter step of the background */
+  --background: #ffffff;
+  --surface: #edf0ed; /* soft grey panels, e.g. the falling pill */
   --foreground: #0f1a14; /* green-black ink */
-  --pixel-light: #fbfdf9; /* also the 3D ceramic */
-  --pixel-stone: #d3dfd2; /* sage */
-  --pixel-mist: #bde3cb; /* mint, the pixel field's second tone */
+  --ceramic: #fbfdf9; /* 3D ceramic and on-screen text */
+  /* Pixel field on white: three steps of one green-grey family, light → deep,
+     so every shape reads; emerald pluses are the sparse accent on top. */
+  --pixel-light: #e6ece7;
+  --pixel-stone: #cfdad1; /* sage, also the 3D cable */
+  --pixel-mist: #b3dcc1; /* mint */
   --forest: #0c3b29; /* the 30%: dark panels, screens, outlines */
   --accent: #179a55; /* emerald, the brand */
   --lime: #c6ef5c;
