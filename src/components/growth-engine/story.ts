@@ -125,9 +125,6 @@ export class Story {
   ripple(t: number) {
     return this.first((r) => progress(t - r.at - CORE_AT, RIPPLE_FOR));
   }
-  gaugeIn(t: number) {
-    return clamp01((t - INTRO.signalAt - CORE_AT) / 0.6);
-  }
   /** Calls back for every lead pearl on the arc, with its channel and 0..1 progress. */
   leads(t: number, each: (token: number, p: number) => void) {
     for (const run of this.runs)

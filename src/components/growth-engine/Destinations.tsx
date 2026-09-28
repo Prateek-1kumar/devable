@@ -6,7 +6,7 @@ import type { Line2 } from "three-stdlib";
 import { CHANNELS } from "./channels";
 import { LAYER } from "./layout";
 import { MARK_STYLE, paintMark, type Mark } from "./marks";
-import { GLASS_TONES, INK_PX, materials } from "./palette";
+import { INK_PX, TONES, materials } from "./palette";
 import { easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
@@ -66,7 +66,7 @@ function Puck({ route }: { route: Route }) {
   const m = materials();
   const group = useRef<Group>(null);
   const ring = useRef<MeshBasicMaterial>(null);
-  const tone = GLASS_TONES[route.k];
+  const tone = TONES[route.k];
 
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
@@ -124,7 +124,7 @@ function Puck({ route }: { route: Route }) {
 function RouteLine({ route }: { route: Route }) {
   const story = useStory();
   const channel = CHANNELS[route.k];
-  const tone = GLASS_TONES[route.k];
+  const tone = TONES[route.k];
   const { curve, corners } = useMemo(() => build(route.path), [route]);
   const points = useMemo(() => curve.getSpacedPoints(96), [curve]);
   const line = useRef<Line2>(null);

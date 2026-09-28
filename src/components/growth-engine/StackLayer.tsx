@@ -4,17 +4,19 @@ import { RoundedBox } from "@react-three/drei";
 import { Color, type Group, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial } from "three";
 import { CHANNELS, drawGlyph } from "./channels";
 import { LAYER, layerWidth, layerY } from "./layout";
-import { GLASS_TONES, materials, paintFade, palette } from "./palette";
+import { TONES, materials, paintFade, palette } from "./palette";
 import { FocusContext, HoverContext, clamp01, damp, easeOutBack, easeOutCubic, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
 // radius stays under half the depth, or RoundedBox swells into a thick rounded slab.
-const PANEL = { w: 2.4, h: 0.36, d: 0.05, radius: 0.024 };
+const PANEL = { w: 2.4, h: 0.36, d: 0.05, radius: 0.012 };
 const LABEL = { w: 1.95, h: 0.26, px: [1200, 160] as const }; // text area left of the lights
 const LIFT = 0.12; // ≈ 10px
 const DROP = 1.4;
-// The colored core sits inside the glass shell, inset so a clear glass band shows around it.
-const INSET = { side: 0.07, y: 0.05 };
+// Crisp, near-square edges: just enough rounding to catch a clearcoat glint.
+const EDGE = 0.025;
+const SEAM = 0.06; // height of the colored band along each block's bottom edge
+const SWEEP = 0.35; // how much of the fade runs across the faces instead of up them
 
 type Props = {
   index: number;
@@ -23,7 +25,7 @@ type Props = {
 };
 
 /**
- * One block of the growth stack: a colored core cased in frosted glass, with a
+ * One block of the growth stack: a crisp body with a two-axis fade in its channel color, a
  * tinted label panel, trim and three signal lights.
  */
 export default function StackLayer({ index, children }: Props) {
@@ -31,10 +33,9 @@ export default function StackLayer({ index, children }: Props) {
   const channel = CHANNELS[index];
   const p = palette();
   const m = materials();
-  const tone = GLASS_TONES[index];
+  const tone = TONES[index];
   const w = layerWidth(index);
   const h = LAYER.height;
-  const core = { w: w - 2 * INSET.side, h: h - 2 * INSET.y };
 
   const [hovered, setHovered] = useState(false);
   const reportHover = useContext(HoverContext);
@@ -53,8 +54,8 @@ export default function StackLayer({ index, children }: Props) {
 
   // Runs after RoundedBox has built and centered its geometry (child effects run first).
   useLayoutEffect(() => {
-    if (body.current) paintFade(body.current, tone.low, tone.high, core.h);
-  }, [tone, core.h]);
+    if (body.current) paintFade(body.current, tone.low, tone.high, h, SWEEP);
+  }, [tone, h]);
 
   const drawPanel = useCallback(
     (ctx: CanvasRenderingContext2D, W: number, H: number) => {
@@ -118,10 +119,9 @@ export default function StackLayer({ index, children }: Props) {
         reportHover(null);
       }}
     >
-      {/* Colored core, then the frosted glass shell around it. No outlines: form reads from light alone. */}
-      <RoundedBox ref={body} args={[core.w, core.h, core.w]} radius={0.07} smoothness={4} material={m.frost} castShadow receiveShadow />
-      <RoundedBox args={[w, h, w]} radius={LAYER.radius} smoothness={5} material={m.shell[index]} />
-      <RoundedBox args={[w + 0.04, 0.1, w + 0.04]} radius={0.045} smoothness={3} position={[0, -h / 2 + 0.08, 0]} material={m.trimTint[index]} castShadow />
+      {/* Crisp body, then the thin colored seam along its bottom edge. No outlines: form reads from light. */}
+      <RoundedBox ref={body} args={[w, h, w]} radius={EDGE} smoothness={3} material={m.frost} castShadow receiveShadow />
+      <RoundedBox args={[w + 0.012, SEAM, w + 0.012]} radius={0.02} smoothness={2} position={[0, -h / 2 + SEAM / 2, 0]} material={m.seam[index]} castShadow />
 
       {/* Front: tinted label panel with glyph + name, three signal lights and a sheen sweep. */}
       <RoundedBox args={[PANEL.w, PANEL.h, PANEL.d]} radius={PANEL.radius} smoothness={4} position={[0, 0.02, front]} material={m.panelTint[index]} />

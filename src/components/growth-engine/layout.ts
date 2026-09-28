@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, QuadraticBezierCurve3, Vector3 } from "three";
+import { CatmullRomCurve3, Vector3 } from "three";
 
 // World-space layout for the growth engine. 1 unit ≈ 95px at a 900px-tall hero.
 
@@ -22,7 +22,6 @@ const TOWARD = new Vector3(VIEW_DIR.x, 0, VIEW_DIR.z).normalize();
 export const onScreen = (a: number, b: number, c = 0) =>
   new Vector3().addScaledVector(RIGHT, a).addScaledVector(TOWARD, c).setY(b);
 
-export const GAUGE_POSITION = onScreen(2.1, 5.1);
 
 export const TERMINAL = { position: onScreen(-3.4, 0, 1.6), yaw: FACING_YAW - 0.25, size: [1.7, 0.42, 1.1] as const };
 
@@ -47,15 +46,5 @@ export const CABLE = new CatmullRomCurve3([
   PORTS.stack.at.clone(),
 ]);
 
-// Tether from the core's socket up to the nub under the PIPELINE dial.
-export const GAUGE_DIAL = { radius: 0.95, depth: 0.3, fillet: 0.1 };
-export const TETHER_FROM = new Vector3(0, STACK_TOP + 0.3, 0);
-export const TETHER_TO = GAUGE_POSITION.clone().setY(GAUGE_POSITION.y - GAUGE_DIAL.radius - 0.12);
-
 /** The stack's right-hand edge, where the hover card pins itself. */
 export const STACK_RIGHT = { x: LAYER.baseWidth / 2, z: -LAYER.baseWidth / 2 };
-export const TETHER = new QuadraticBezierCurve3(
-  TETHER_FROM,
-  TETHER_FROM.clone().lerp(TETHER_TO, 0.5).add(onScreen(-0.7, 0.6)),
-  TETHER_TO,
-);

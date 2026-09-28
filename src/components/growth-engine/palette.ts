@@ -28,15 +28,24 @@ const LIFT = { emissive: "#ffffff", emissiveIntensity: 0.12 };
 /** Ink outline width in pixels: thin, technical-illustration lines. */
 export const INK_PX = 1;
 
-/** Paints a vertical fade onto a centered mesh's vertices: `low` at the bottom into `high` at the top (use a `vertexColors` material). */
-export function paintFade(mesh: Mesh, low: string, high: string, height: number) {
+/**
+ * Paints a fade onto a centered mesh's vertices (use a `vertexColors` material):
+ * `low` at the bottom into `high` at the top. `sweep` (0..1) blends in a diagonal
+ * across the front and right faces, so the fade also travels around the visible corner.
+ */
+export function paintFade(mesh: Mesh, low: string, high: string, height: number, sweep = 0) {
   const pos = mesh.geometry.attributes.position;
+  mesh.geometry.computeBoundingBox();
+  const width = mesh.geometry.boundingBox?.max.x ?? 1;
   const colors = new Float32Array(pos.count * 3);
   const from = new Color(low);
   const to = new Color(high);
   const c = new Color();
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
   for (let i = 0; i < pos.count; i++) {
-    const k = Math.min(1, Math.max(0, pos.getY(i) / height + 0.5)); // 0 at the bottom, 1 at the top
+    const rise = clamp(pos.getY(i) / height + 0.5); // 0 at the bottom, 1 at the top
+    const across = clamp((pos.getX(i) - pos.getZ(i)) / (4 * width) + 0.5); // front-left edge → back-right edge
+    const k = (1 - sweep) * rise + sweep * across;
     c.lerpColors(from, to, k * k * (3 - 2 * k));
     c.toArray(colors, i * 3);
   }
@@ -47,15 +56,16 @@ export function paintFade(mesh: Mesh, low: string, high: string, height: number)
 export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
 
 /**
- * Glass-block tones per channel: the core fades from `low` (bottom) to `high` (top),
- * `edge` outlines it and its panel and trim, so borders blend with the color.
+ * Block tones per channel: the body fades from `low` to `high`, `seam` is the thin
+ * band that separates it from the block below, `panel` its label plate and `edge`
+ * a deep tone for fine lines (the route pucks).
  */
-export const GLASS_TONES = CHANNELS.map(({ color, pastel, deep }) => ({
-  low: mix(color, "#ffffff", 0.35),
-  high: mix(pastel, "#ffffff", 0.2),
+export const TONES = CHANNELS.map(({ color, pastel, deep }) => ({
+  low: mix(color, "#ffffff", 0.3),
+  high: mix(pastel, "#ffffff", 0.25),
+  seam: mix(color, "#ffffff", 0.05),
+  panel: mix(pastel, "#ffffff", 0.75),
   edge: mix(deep, color, 0.25),
-  panel: mix(pastel, "#ffffff", 0.7),
-  trim: mix(pastel, "#ffffff", 0.35),
 }));
 
 let colors: ReturnType<typeof read> | null = null;
@@ -66,32 +76,12 @@ function build() {
   return {
     /** Glazed ceramic: the cream bodies. */
     ceramic: new MeshPhysicalMaterial({ color: p.cream, ...GLOSS }),
-    /** Glass-block cores: white, tinted per vertex with the channel's fade. */
-    frost: new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.3, ...LIFT }),
-    /**
-     * Frosted glass shells around the cores, one pastel tint per channel: translucent,
-     * glossy edges and a soft white rim. No outline: through glass an outline's
-     * backing hull shows as a dark fill.
-     */
-    shell: CHANNELS.map(
-      ({ pastel }) =>
-        new MeshPhysicalMaterial({
-          color: mix(pastel, "#ffffff", 0.5),
-          transparent: true,
-          opacity: 0.4,
-          roughness: 0.22,
-          clearcoat: 1,
-          clearcoatRoughness: 0.1,
-          sheen: 1,
-          sheenColor: "#ffffff",
-          sheenRoughness: 0.4,
-          depthWrite: false,
-        }),
-    ),
+    /** Block bodies: white, tinted per vertex with the channel's fade; a crisp clearcoat glints on the edges. */
+    frost: new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.12, ...LIFT }),
     /** Label panels, a whisper of their channel's tint. */
-    panelTint: GLASS_TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
-    /** Trim bands under each block, in a light tint of the channel. */
-    trimTint: GLASS_TONES.map(({ trim }) => new MeshStandardMaterial({ color: trim, metalness: 0.3, roughness: 0.35, emissive: "#ffffff", emissiveIntensity: 0.08 })),
+    panelTint: TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
+    /** The thin seam under each block, in the channel's full tone. */
+    seam: TONES.map(({ seam }) => new MeshStandardMaterial({ color: seam, roughness: 0.35, metalness: 0.2 })),
     /** White label panels on the slab fronts. */
     panel: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.18 }),
     /** Brushed aluminum: the signal rail and cable collars. */

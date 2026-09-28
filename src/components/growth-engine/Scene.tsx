@@ -8,8 +8,6 @@ import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
 import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
 import { palette } from "./palette";
-import PipelineArc from "./PipelineArc";
-import PipelineGauge from "./PipelineGauge";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
 import { FocusContext, HoverContext, Story, StoryContext } from "./story";
@@ -110,8 +108,6 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
                 {i === CHANNELS.length - 1 && <EngineCore />}
               </StackLayer>
             ))}
-            <PipelineArc />
-            <PipelineGauge />
           </Breathing>
         </group>
       </HoverContext.Provider>
