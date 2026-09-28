@@ -5,7 +5,7 @@ import { Color, CurvePath, LineCurve3, QuadraticBezierCurve3, Vector3, type Grou
 import type { Line2 } from "three-stdlib";
 import { CHANNELS } from "./channels";
 import { LAYER } from "./layout";
-import { MARK_STYLE, paintMark, type Mark } from "./marks";
+import { paintBadge, type Mark } from "./marks";
 import { INK_PX, TONES, materials } from "./palette";
 import { easeOutBack, useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
@@ -63,22 +63,8 @@ function Puck({ route }: { route: Route }) {
   const ring = useRef<MeshBasicMaterial>(null);
   const tone = TONES[route.k];
 
-  const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      // Pure white badge (the face is unlit), then the logo at its brand size.
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
-      ctx.fill();
-      const s = (w * MARK_STYLE[route.mark].fit) / 24;
-      ctx.save(); // repaints reuse the context, so don't let the transform stack up
-      ctx.translate(w / 2 - 12 * s, h / 2 - 12 * s);
-      ctx.scale(s, s);
-      paintMark(ctx, route.mark);
-      ctx.restore();
-    },
-    [route.mark],
-  );
+  // Pure white badge (the face is unlit), then the logo at its brand size.
+  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => paintBadge(ctx, w, h, route.mark), [route.mark]);
   const face = useCanvasTexture(512, 512, draw);
   const end = route.path[route.path.length - 1];
 

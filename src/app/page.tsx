@@ -1,15 +1,16 @@
-import FallingPill from "@/components/FallingPill";
 import EmbeddedExecution from "@/components/EmbeddedExecution";
-import Hero from "@/components/Hero";
+import LandedPill from "@/components/LandedPill";
+import MissionHero from "@/components/mission/MissionHero";
 import Stats from "@/components/Stats";
 import TrustedBy from "@/components/TrustedBy";
 
 export default function Home() {
   return (
     <main>
-      <FallingPill landed={<TrustedBy />} below={<Stats />}>
-        <Hero />
-      </FallingPill>
+      <MissionHero />
+      <LandedPill below={<Stats />}>
+        <TrustedBy />
+      </LandedPill>
       <EmbeddedExecution />
     </main>
   );

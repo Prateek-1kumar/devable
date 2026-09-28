@@ -54,3 +54,17 @@ export function paintMark(ctx: CanvasRenderingContext2D, mark: Mark) {
   ctx.fillRect(12, 9.5, 12, 5); // crossbar
   ctx.restore();
 }
+
+/** White round badge with the mark at its brand size (moved from Destinations' Puck). */
+export function paintBadge(ctx: CanvasRenderingContext2D, w: number, h: number, mark: Mark) {
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2);
+  ctx.fill();
+  const s = (w * MARK_STYLE[mark].fit) / 24;
+  ctx.save(); // repaints reuse the context, so don't let the transform stack up
+  ctx.translate(w / 2 - 12 * s, h / 2 - 12 * s);
+  ctx.scale(s, s);
+  paintMark(ctx, mark);
+  ctx.restore();
+}

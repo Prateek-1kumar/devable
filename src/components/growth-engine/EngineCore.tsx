@@ -64,7 +64,7 @@ function layout() {
 }
 
 /** The mark's striped "D" (proportions from public/brand/devable-mark.png), white on transparent. */
-function drawMark(ctx: CanvasRenderingContext2D, w: number) {
+export function drawMark(ctx: CanvasRenderingContext2D, w: number) {
   const s = w / 512;
   const [left, top, bottom, bend] = [110 * s, 103 * s, 408 * s, 265 * s];
   const rx = 150 * s;

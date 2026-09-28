@@ -55,7 +55,7 @@ export function paintFade(mesh: Mesh, low: string, high: string, height: number,
  * keep their hue instead of greying and light gradients stay vivid.
  */
 const INNER_GLOW = 0.28;
-function glowFromWithin<T extends MeshPhysicalMaterial>(material: T) {
+export function glowFromWithin<T extends MeshPhysicalMaterial>(material: T) {
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",

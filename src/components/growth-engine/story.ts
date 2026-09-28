@@ -1,16 +1,12 @@
 import { createContext, useContext } from "react";
+import { clamp01, easeOutCubic } from "./ease";
 import { layerY, STACK_TOP } from "./layout";
 
 // The growth engine's timeline: a one-time intro, then signal pulses at
 // random gaps (never a fixed loop). Components read it every frame through
 // useStory(); nothing here re-renders React.
 
-export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-export const easeOutCubic = (x: number) => 1 - (1 - x) ** 3;
-export const easeOutBack = (x: number) => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2;
-/** Frame-rate independent smoothing toward a target. */
-export const damp = (current: number, target: number, lambda: number, dt: number) =>
-  current + (target - current) * (1 - Math.exp(-lambda * dt));
+export { clamp01, damp, easeOutBack, easeOutCubic } from "./ease";
 
 // Intro, in seconds from mount. Plays once.
 export const INTRO = { terminalAt: 0.2, terminalFor: 0.8, layersAt: 1.2, layerFor: 0.6, layerStagger: 0.35, signalAt: 2.8 };
