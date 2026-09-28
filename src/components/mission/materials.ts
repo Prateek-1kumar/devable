@@ -1,5 +1,4 @@
 import { CanvasTexture, Color, MeshPhysicalMaterial, MeshStandardMaterial, SRGBColorSpace } from "three";
-import { glowFromWithin } from "../growth-engine/palette";
 import { mulberry32 } from "./world";
 
 // The mission's own materials, on top of the shared studio set in palette.ts
@@ -57,8 +56,6 @@ function build() {
     }),
     towerSteel: new MeshPhysicalMaterial({ color: "#0f3d2b", roughness: 0.5, metalness: 0.25, clearcoat: 0.3 }),
     livery: new MeshPhysicalMaterial({ color: "#179a55", roughness: 0.35, clearcoat: 0.5 }),
-    /** Pearls glow in their instance colour (instanceColor feeds vColor). */
-    pearl: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 })),
     lens: new MeshPhysicalMaterial({ color: "#0d2a2f", roughness: 0.05, clearcoat: 1 }),
   };
 }

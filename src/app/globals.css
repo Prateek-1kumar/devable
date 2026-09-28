@@ -64,6 +64,16 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Mission DVB-01's feed panel: once its sky has gone to space, the ink inside turns light
+   (MissionHero writes data-ink; every text-foreground utility follows the token). */
+.mission-panel[data-ink="dark"] {
+  --foreground: #f3f5f7;
+}
+.mission-panel :where(p, span, h1, dt, dd, li, button, a) {
+  transition-property: color;
+  transition-duration: 200ms;
+}
+
 /* Headings and body share Instrument Sans. */
 @layer base {
   h1, h2, h3, h4, h5, h6 {

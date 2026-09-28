@@ -1,14 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useLenis } from "lenis/react";
 import type Lenis from "lenis";
 import { clamp01, damp } from "../growth-engine/ease";
 import MissionCopy, { StillExtras } from "./MissionCopy";
 import MissionHud, { type DomNodes } from "./MissionHud";
 import type { Progress } from "./Scene";
-import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, scrollS, status, storyP, theta, velKms } from "./timeline";
+import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, scrollS, skyAt, status, STILL_QUERY, storyP, theta, velKms } from "./timeline";
 
 // Mission DVB-01, the pinned hero: a tall section whose sticky frame holds the
 // copy, the 3D world and its instruments. One smoothed scroll progress (0..1)
@@ -18,8 +18,6 @@ import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pi
 // The 3D bundle loads after the page, so the headline paints instantly.
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 
-// Exactly the complement of Tailwind's `motion-safe:lg:` (lg is 64rem, which follows the browser font size).
-const STILL_QUERY = "(width < 64rem), (prefers-reduced-motion: reduce)";
 const subscribe = (onChange: () => void) => {
   const mq = window.matchMedia(STILL_QUERY);
   mq.addEventListener("change", onChange);
@@ -37,9 +35,14 @@ const flag = (el: HTMLElement | null | undefined, name: string, on: boolean) => 
   if (el && el.getAttribute(name) !== v) el.setAttribute(name, v);
 };
 
+const sky0 = skyAt(0);
+/** The server-rendered sky (p 0); the loop rewrites it before the first pinned paint. */
+const SKY_START = { "--sky-z": sky0.z, "--sky-h": sky0.h } as CSSProperties;
+
 export default function MissionHero() {
   const still = useSyncExternalStore(subscribe, () => window.matchMedia(STILL_QUERY).matches, () => true);
   const section = useRef<HTMLElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const progress = useRef<Progress>({ shown: 0 });
   const dom = useRef<DomNodes>(new Map());
   const span = useRef({ top: 0, span: 1 });
@@ -62,8 +65,14 @@ export default function MissionHero() {
     return () => io.disconnect();
   }, []);
 
-  // The scroll loop: a DOM rAF that runs only while the hero is on screen.
+  // Screenshot and test hook: the scroll fraction for a story p.
   useEffect(() => {
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __missionScrollS?: typeof scrollS }).__missionScrollS = scrollS;
+  }, []);
+
+  // The scroll loop: a DOM rAF that runs only while the hero is on screen. A layout effect, so a
+  // mid-hero reload paints its own sky, never the pad's.
+  useLayoutEffect(() => {
     const el = section.current;
     if (still || !el || !onScreen) return;
     const box = span.current;
@@ -92,6 +101,7 @@ export default function MissionHero() {
     let beatNow = -1;
     let captionNow = -2;
     let padNow: boolean | null = null;
+    let inkNow: "light" | "dark" | undefined;
 
     const writeDom = (p: number, s: number) => {
       const n = dom.current;
@@ -117,6 +127,15 @@ export default function MissionHero() {
       flag(h("allGo"), "data-on", p >= 0.102 && payloadGo(p));
       for (let k = 0; k < 5; k++) flag(h(`mark${k}`), "data-lit", firstLit(k, th));
       write(h("outcome"), pipe);
+
+      // The sky behind the canvas and the ink over it.
+      const pn = panel.current;
+      if (pn) {
+        const sky = skyAt(p, inkNow);
+        pn.style.setProperty("--sky-z", sky.z);
+        pn.style.setProperty("--sky-h", sky.h);
+        if (sky.ink !== inkNow) pn.setAttribute("data-ink", (inkNow = sky.ink));
+      }
 
       const b = beatAt(p, beatNow);
       if (b !== beatNow) setBeat((beatNow = b));
@@ -171,16 +190,25 @@ export default function MissionHero() {
         Skip the launch sequence
       </a>
       <div className="relative flex flex-col gap-10 px-6 pt-32 pb-16 sm:px-12 lg:grid lg:min-h-svh lg:content-center lg:gap-8 lg:px-[8vw] lg:py-24 motion-safe:lg:sticky motion-safe:lg:top-0 motion-safe:lg:h-svh motion-safe:lg:overflow-hidden motion-safe:lg:py-0">
-        <MissionCopy caption={still ? 0 : caption} pinned={!still} bind={bind} />
+        {/* The feed panel (pinned mode): a rounded frame under the navbar holding the sky, the scene and every
+            instrument, so the navbar stays on white. Elsewhere it is layout-transparent. */}
         <div
-          aria-hidden="true"
-          className="relative -mx-6 aspect-square w-[calc(100%+3rem)] transition-opacity duration-700 sm:-mx-12 sm:w-[calc(100%+6rem)] lg:absolute lg:inset-0 lg:mx-0 lg:aspect-auto lg:w-auto"
-          style={{ opacity: ready ? 1 : 0 }}
+          ref={panel}
+          data-ink="light"
+          className="mission-panel contents motion-safe:lg:absolute motion-safe:lg:inset-x-3 motion-safe:lg:top-[88px] motion-safe:lg:bottom-3 motion-safe:lg:grid motion-safe:lg:content-center motion-safe:lg:overflow-hidden motion-safe:lg:rounded-[24px] motion-safe:lg:px-[calc(8vw-12px)] motion-safe:lg:[background:linear-gradient(180deg,var(--sky-z)_0%,var(--sky-h)_72%,var(--sky-h)_100%)]"
+          style={SKY_START}
         >
-          <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={padShadows} onReady={onReady} />
+          <MissionCopy caption={still ? 0 : caption} pinned={!still} bind={bind} />
+          <div
+            aria-hidden="true"
+            className="relative -mx-6 aspect-square w-[calc(100%+3rem)] transition-opacity duration-700 sm:-mx-12 sm:w-[calc(100%+6rem)] lg:absolute lg:inset-0 lg:mx-0 lg:aspect-auto lg:w-auto"
+            style={{ opacity: ready ? 1 : 0 }}
+          >
+            <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={padShadows} onReady={onReady} />
+          </div>
+          {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}
         </div>
         <StillExtras className="relative z-10 motion-safe:lg:hidden" />
-        {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}
       </div>
     </section>
   );

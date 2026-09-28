@@ -80,7 +80,7 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
       </div>
 
       {/* Telemetry. */}
-      <dl aria-hidden="true" className={`absolute top-[104px] left-[8vw] flex gap-7 ${MONO} text-[11px] leading-none`}>
+      <dl aria-hidden="true" className={`absolute top-6 left-[calc(8vw-12px)] flex gap-7 ${MONO} text-[11px] leading-none`}>
         <div className="text-foreground/70">DVB‑01</div>
         <Field label="MET">
           <span ref={node("met")} className="inline-block min-w-[11ch]">T–48:00:00</span>
@@ -101,10 +101,8 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
         </Field>
       </dl>
 
-      {/* A soft page-white band under the rail, so the pad, the smoke or the planet passing below never collide with its labels. */}
-      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-background from-35% to-transparent" />
       {/* Flight plan: the story's beats, clickable. */}
-      <nav aria-label="Flight plan" className="pointer-events-auto absolute inset-x-[8vw] bottom-7">
+      <nav aria-label="Flight plan" className="pointer-events-auto absolute inset-x-[calc(8vw-12px)] bottom-6">
         <div ref={node("rail")} className="relative h-px bg-foreground/12 [--p:0]">
           <div className="absolute inset-0 origin-left bg-forest [transform:scaleX(var(--p))]" />
           <div className="absolute top-[-4px] left-[calc(var(--p)*100%)] h-[9px] w-px bg-forest" />

@@ -1,44 +1,78 @@
-import { MathUtils, Quaternion, Vector3 } from "three";
+import { MathUtils, Matrix4, Quaternion, Vector3 } from "three";
 import {
+  aim,
   CAMERA_KEYS,
+  craftTheta,
+  CUT_P,
+  EARTH_ROWS,
+  eio,
   explodeModule,
+  geo,
   lerp,
   MODULE_Y0,
+  padRise,
   R,
   radius,
-  riseY,
   seg,
-  eio,
-  STATION_LAT,
   STATIONS,
+  SUN_ORBIT,
+  SUN_PAD,
   theta,
   turn,
+  vehicleScale,
   type CameraKey,
 } from "./timeline";
 
-// World space for Mission DVB-01, drawn NOT TO SCALE. The planet's top point is
-// the origin (the pad); the mission plane is XY and θ runs clockwise seen from +Z.
+// World space for Mission DVB-01, drawn NOT TO SCALE, in two scale spaces that are never on
+// screen together. Before CUT_P the pad set (pad units, the pad at the origin, ground at y 0);
+// from CUT_P on the orbit set, where the Earth's top point (the Cape) is the origin and the
+// mission plane is XY with θ running clockwise seen from +Z.
+
+const Y = new Vector3(0, 1, 0);
+const D2R = Math.PI / 180;
 
 export const C = new Vector3(0, -R, 0);
 export const PAD_TOP = 0.03;
 export const BELL_Y = 0.09;
 export const PSI = 22.5; // vehicle yaw on the pad: the D faces 7.5° left of the camera
-/** Graticule axis: the pole sits 50° from the pad, away from the camera. */
-export const AXIS = new Vector3(0, 0.64, -0.77).normalize();
 export const TOWER = new Vector3(-1.4, 0, -0.25);
 
-const Y = new Vector3(0, 1, 0);
-const D2R = Math.PI / 180;
+
+// ── Geography ────────────────────────────────────────────────────────────
+/** Earth's rotation pole in world space: north leans away from the +Z side. */
+export const POLE = new Vector3(0, Math.sin(28.5 * D2R), -Math.cos(28.5 * D2R)); // ≈ (0, 0.477, −0.879)
+/** Object → world rotation of the Earth sphere: the Cape to +Y, local north to −Z, local east to +X. */
+export const EARTH_ROT = new Quaternion().setFromRotationMatrix(
+  new Matrix4().set(...EARTH_ROWS[0], 0, ...EARTH_ROWS[1], 0, ...EARTH_ROWS[2], 0, 0, 0, 0, 1),
+);
+/** World-space surface normal of a place. */
+export const geoNormal = (lat: number, lon: number, out = new Vector3()) => out.set(...geo(lat, lon)).applyQuaternion(EARTH_ROT);
+/** Each station's world-space surface normal. */
+export const STATION_N = STATIONS.map((s) => new Vector3(...s.normal));
+
+// ── Sun ──────────────────────────────────────────────────────────────────
+const SUN_A = new Vector3(...SUN_PAD).normalize();
+const SUN_B = new Vector3(...SUN_ORBIT).normalize();
+const sunQ = new Quaternion().setFromUnitVectors(SUN_A, SUN_B);
+const sunQt = new Quaternion();
+/** The sun direction at p: the morning pad sun, slerped to the orbit sun over .25–.29 (only the rocket and sky are on screen). */
+export function sunDir(p: number, out = new Vector3()) {
+  const t = eio(seg(p, 0.25, 0.29));
+  return out.copy(SUN_A).applyQuaternion(sunQt.identity().slerp(sunQ, t));
+}
 
 export function polar(deg: number, r: number, out = new Vector3()) {
   const a = deg * D2R;
   return out.set(Math.sin(a) * r, -R + Math.cos(a) * r, 0);
 }
 
-/** The module centre at p (no idle bob). */
+/** The module (satellite) centre at p, no idle bob: pad units before CUT_P, orbit space from it on. */
 export function craftPosition(p: number, out = new Vector3()) {
   if (p < 0.125) return out.set(0, MODULE_Y0 + 0.16 * explodeModule(p), 0);
-  if (p < 0.26) return out.set(0, MODULE_Y0 + riseY(p), 0);
+  if (p < CUT_P) {
+    const r = padRise(p);
+    return out.set(r.x, MODULE_Y0 + r.y, 0);
+  }
   if (p < 0.4) {
     const t = turn(p);
     return polar(t.theta, t.r, out);
@@ -49,10 +83,11 @@ export function craftPosition(p: number, out = new Vector3()) {
 
 const ta = new Vector3();
 const tb = new Vector3();
-/** Direction of travel of the scripted path at p. */
+/** Direction of travel of the scripted path at p (sampled inside one scale space, never across the cut). */
 export function craftTangent(p: number, out = new Vector3()) {
-  craftPosition(p - 0.001, ta);
-  craftPosition(p + 0.001, tb);
+  const pad = p < CUT_P;
+  craftPosition(pad ? p - 0.001 : Math.max(CUT_P, p - 0.001), ta);
+  craftPosition(pad ? Math.min(CUT_P - 1e-6, p + 0.001) : p + 0.001, tb);
   out.subVectors(tb, ta);
   return out.lengthSq() < 1e-12 ? out.copy(Y) : out.normalize();
 }
@@ -98,13 +133,6 @@ export function boosterPose(p: number, pos: Vector3, quat: Quaternion) {
   return p < 0.44;
 }
 
-// ── Stations ─────────────────────────────────────────────────────────────
-export const stationNormal = (k: number, out = new Vector3()) => {
-  const th = STATIONS[k].theta * D2R;
-  const ph = STATION_LAT * D2R;
-  return out.set(Math.sin(th) * Math.cos(ph), Math.cos(th) * Math.cos(ph), Math.sin(ph));
-};
-
 // ── The suborbital ghost ─────────────────────────────────────────────────
 const GHOST_H = new Vector3(Math.cos(14 * D2R), 0, Math.sin(14 * D2R));
 export function ghostPoint(u: number, out = new Vector3()) {
@@ -127,22 +155,48 @@ export function ghostImpactFrame() {
 }
 
 // ── Camera ───────────────────────────────────────────────────────────────
-export type CameraPose = { position: Vector3; target: Vector3; d: number; fov: number; shift: number };
-export const cameraPoseInit = (): CameraPose => ({ position: new Vector3(), target: new Vector3(), d: 1, fov: 22, shift: 0 });
+export type CameraPose = { position: Vector3; target: Vector3; up: Vector3; d: number; fov: number; shift: number };
+export const cameraPoseInit = (): CameraPose => ({ position: new Vector3(), target: new Vector3(), up: new Vector3(0, 1, 0), d: 1, fov: 22, shift: 0 });
 
 const ca = new Vector3();
 const cb = new Vector3();
 const craftNow = new Vector3();
-function keyTarget(key: CameraKey, craft: Vector3, out: Vector3) {
+const craftAim = new Vector3();
+const axis = new Vector3();
+const dir = new Vector3();
+const local = new Vector3();
+const orbitUp = new Vector3();
+const Z = new Vector3(0, 0, 1);
+const craftQ = new Quaternion();
+function keyTarget(key: CameraKey, out: Vector3) {
   const f = key[1];
   out.set(f ? f[0] : 0, f ? f[1] : 0, f ? f[2] : 0);
-  return key[2] > 0 ? out.lerp(craft, key[2]) : out;
+  return key[2] > 0 ? out.lerp(craftAim, key[2]) : out;
 }
-function place(out: CameraPose, d: number, az: number, el: number) {
+/** Follow keys measure distance in pad units. */
+const keyDist = (key: CameraKey, scale: number) => key[3] * (key[2] > 0 ? scale : 1);
+
+/** Places the camera at distance d along (az, el), turned into the craft's local frame by `follow`, with the blended up. */
+function place(out: CameraPose, p: number, d: number, az: number, el: number, follow: number, up: number) {
   const [a, e] = [az * D2R, el * D2R];
+  dir.set(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)).applyAxisAngle(Z, -craftTheta(p) * follow * D2R);
   out.d = d;
-  out.position.set(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e)).multiplyScalar(d).add(out.target);
+  out.position.copy(dir).multiplyScalar(d).add(out.target);
+  // up: the craft's radial (+Y on the pad) blended to the orbit frame's −Z, projected off the view axis.
+  if (p < CUT_P) local.copy(Y);
+  else local.subVectors(craftNow, C).normalize();
+  orbitUp.set(0, 0, -1).addScaledVector(dir, dir.z).normalize(); // Zs − (Zs·D)D with Zs = −Z
+  out.up.copy(local).lerp(orbitUp, up);
+  if (out.up.lengthSq() < 1e-8) out.up.copy(orbitUp);
+  out.up.normalize();
   return out;
+}
+
+/** Updates the craft point and the aim point (the vehicle's visual centre) at p. */
+function craftFrame(p: number) {
+  craftPosition(p, craftNow);
+  axis.copy(Y).applyQuaternion(craftQuaternion(p, craftQ));
+  craftAim.copy(craftNow).addScaledVector(axis, -aim(p) * vehicleScale(p));
 }
 
 /** The camera as a pure function of p: eased between keys, targets can follow the craft. */
@@ -152,22 +206,25 @@ export function cameraPose(p: number, out: CameraPose) {
   while (i < keys.length - 2 && p >= keys[i + 1][0]) i++;
   const [k0, k1] = [keys[i], keys[i + 1]];
   const t = eio(seg(p, k0[0], k1[0]));
-  craftPosition(p, craftNow);
-  keyTarget(k0, craftNow, ca);
-  keyTarget(k1, craftNow, cb);
+  const s = vehicleScale(p);
+  craftFrame(p);
+  keyTarget(k0, ca);
+  keyTarget(k1, cb);
   out.target.lerpVectors(ca, cb, t);
   out.fov = lerp(k0[6], k1[6], t);
   out.shift = lerp(k0[7], k1[7], t);
-  return place(out, Math.exp(lerp(Math.log(k0[3]), Math.log(k1[3]), t)), lerp(k0[4], k1[4], t), lerp(k0[5], k1[5], t));
+  const d = Math.exp(lerp(Math.log(keyDist(k0, s)), Math.log(keyDist(k1, s)), t));
+  return place(out, p, d, lerp(k0[4], k1[4], t), lerp(k0[5], k1[5], t), lerp(k0[2], k1[2], t), lerp(k0[8], k1[8], t));
 }
 
 /** A single fixed key (the still poses). */
 export function cameraAt(key: CameraKey, out: CameraPose) {
-  craftPosition(key[0], craftNow);
-  keyTarget(key, craftNow, out.target);
+  const p = key[0];
+  craftFrame(p);
+  keyTarget(key, out.target);
   out.fov = key[6];
   out.shift = key[7];
-  return place(out, key[3], key[4], key[5]);
+  return place(out, p, keyDist(key, vehicleScale(p)), key[4], key[5], key[2], key[8]);
 }
 
 /** Seeded randomness so the smoke is the same on every visit. */
@@ -183,3 +240,11 @@ export function mulberry32(seed: number) {
 }
 
 export const deg = MathUtils.degToRad;
+
+// ── Dev self-check ───────────────────────────────────────────────────────
+if (process.env.NODE_ENV !== "production") {
+  const cape = geoNormal(28.5, -80.6);
+  console.assert(cape.distanceTo(Y) < 1e-6, "mission: EARTH_ROT must put the Cape at +Y", cape);
+  const pole = Y.clone().applyQuaternion(EARTH_ROT);
+  console.assert(pole.distanceTo(POLE) < 1e-6, "mission: EARTH_ROT must map north to POLE", pole);
+}

@@ -22,9 +22,8 @@ import { paintBadge } from "../growth-engine/marks";
 import { materials } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
-import { missionMaterials } from "./materials";
 import { contact, eio, firstLit, PEARLS, R, seg, STATIONS } from "./timeline";
-import { C, stationNormal } from "./world";
+import { C, STATION_N } from "./world";
 
 // Ground stations: the platforms developers use, as porcelain pucks with the
 // real logos, a champagne rim and a seam in their channel's colour, each with
@@ -68,7 +67,7 @@ function Puck({ k, register }: { k: number; register: Register }) {
   const face = useCanvasTexture(512, 512, draw);
   const foot = useCanvasTexture(8, 128, drawFootprint);
   const dish = useMemo(() => dishGeometry(0.32, 0.09), []);
-  const quaternion = useMemo(() => new Quaternion().setFromUnitVectors(Y, stationNormal(k)), [k]);
+  const quaternion = useMemo(() => new Quaternion().setFromUnitVectors(Y, STATION_N[k]), [k]);
   return (
     <>
       <group
@@ -167,7 +166,6 @@ function Puck({ k, register }: { k: number; register: Register }) {
 
 export default function Stations() {
   const frame = useMission();
-  const mm = missionMaterials();
   const refs = useRef<StationRefs[]>(STATIONS.map(() => ({ puck: null, ring: null, head: null, foot: null, cone: null, coneMat: null })));
   const register = useCallback<Register>((k, key, value) => {
     refs.current[k][key] = value;
@@ -175,7 +173,7 @@ export default function Stations() {
   const links = useRef<(Line2 | null)[]>([]);
   const casings = useRef<(Line2 | null)[]>([]);
   const pearls = useRef<InstancedMesh>(null);
-  const normals = useMemo(() => STATIONS.map((_, k) => stationNormal(k)), []);
+  const normals = STATION_N;
   const colors = useMemo(() => STATIONS.map((s) => new Color(CHANNELS[s.channel].color)), []);
   const linkPts = useMemo(() => [new Vector3(), new Vector3(0, 1, 0)], []);
   const scratch = useMemo(
@@ -338,8 +336,9 @@ export default function Stations() {
           />
         </group>
       ))}
-      <instancedMesh ref={pearls} args={[undefined, undefined, MAX_PEARLS]} material={mm.pearl} visible={false} frustumCulled={false}>
+      <instancedMesh ref={pearls} args={[undefined, undefined, MAX_PEARLS]} visible={false} frustumCulled={false}>
         <sphereGeometry args={[0.16, 16, 12]} />
+        <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
     </group>
   );

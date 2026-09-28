@@ -26,7 +26,7 @@ import { glowFromWithin, materials, paintFade, palette, TONES } from "../growth-
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
 import { flameRamp, missionMaterials } from "./materials";
-import { explodeArray, explodeCapsule, explodeModule, hingeAngle, latchAt, latched, seg } from "./timeline";
+import { explodeArray, explodeCapsule, explodeModule, hingeAngle, latchAt, latched, MODULE_Y0, seg } from "./timeline";
 import { boosterPose, PAD_TOP } from "./world";
 
 // DVB-01. The Devable service module (black gloss, gold foil, the striped D on
@@ -43,6 +43,9 @@ const TIP_Y = -0.94;
 const CELLS_Z = PANEL.z + PANEL.t / 2 + 0.0015;
 const ROLE = ["CONTENT", "SEARCH", "REDDIT", "CREATORS"];
 const OFF = new Color("#23272c");
+// Interim until the WS2 launcher: this model's module centre sits 2.1 above its base, the contract's at MODULE_Y0.
+const SEAT = MODULE_Y0 - 2.1;
+const seatAxis = new Vector3();
 
 // ── Flame ────────────────────────────────────────────────────────────────
 const FLAME_PROFILE = [
@@ -279,6 +282,7 @@ export default function Vehicle() {
     if (g) {
       const bob = 0.012 * frame.scale * Math.sin(1.1 * t) * (p < 0.125 ? em : 1);
       g.position.copy(frame.craft).setY(frame.craft.y + bob);
+      g.position.addScaledVector(seatAxis.set(0, 1, 0).applyQuaternion(frame.quat), -SEAT * frame.scale);
       g.quaternion.copy(frame.quat);
       g.scale.setScalar(frame.scale);
     }
@@ -294,6 +298,7 @@ export default function Vehicle() {
         const flying = p >= 0.125 && p < 0.355;
         b.position.copy(v).setY(v.y + (flying ? 0.012 * frame.scale * Math.sin(1.1 * t) : 0));
         b.quaternion.copy(q);
+        b.position.addScaledVector(seatAxis.set(0, 1, 0).applyQuaternion(q), -SEAT * frame.scale);
         b.scale.setScalar(p < 0.355 ? frame.scale : 0.6);
       }
     }

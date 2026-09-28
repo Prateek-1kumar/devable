@@ -1,208 +1,437 @@
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
-import { Color, FrontSide, MeshPhysicalMaterial, Vector3, Vector4, type Mesh, type ShaderMaterial } from "three";
-import type { Line2 } from "three-stdlib";
+// Textures (public/textures/earth/):
+//  day_*.webp       NASA Blue Marble Next Generation, July 2004 (world.topo.bathy.200407), public domain. Credit: NASA Earth Observatory / Reto Stöckli.
+//  night_*.webp     NASA Black Marble 2016 (BlackMarble_2016_01deg), public domain. Credit: NASA Earth Observatory.
+//  clouds_*.webp    NASA Visible Earth cloud_combined_2048, public domain.
+//  height_2048.webp NASA Earth Observatory GEBCO_08 elevation (Jesse Allen, GEBCO/BODC data), public domain.
+//  water_2048.webp  three.js r186 examples/textures/planets/earth_specular_2048.jpg, MIT (c) 2010-2026 three.js authors.
+// No NASA endorsement implied; no NASA insignia used.
+
+import { Suspense, useCallback, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
+import {
+  AddEquation,
+  BackSide,
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  CustomBlending,
+  OneFactor,
+  RepeatWrapping,
+  SRGBColorSpace,
+  Vector3,
+  type Group,
+  type PerspectiveCamera,
+  type ShaderMaterial,
+  type Texture,
+} from "three";
 import { useMission } from "./frame";
-import { eio, KARMAN, R, seg, STATIONS, windowed } from "./timeline";
-import { C, mulberry32, polar, stationNormal } from "./world";
+import { INK_FLIP, lerp, R, seg, STILL_QUERY } from "./timeline";
+import { C, EARTH_ROT, mulberry32, sunDir } from "./world";
 
-// The planet. On the pad the ground glows page white; as the ascent pulls
-// back the glow drains and the painted globe shows through: an emerald ocean
-// with white ceramic continents (the pad and every station sit on land), a
-// mint shoreline and a mint halo at the limb.
+// The Earth as a photograph: NASA day and night imagery lit by one hard sun, sharp ocean glint,
+// relief from real elevation, a drifting cloud shell with its own shadows, and a thin
+// impact-parameter atmosphere on the limb. No spin (the clouds drift instead), no glow halo.
 
-const T = 0.12; // land threshold
-const GLOW = 3;
-/** The key light's direction, so the continents and the ocean brighten on the sun side. */
-const SUN = new Vector3(-0.43, 0.72, 0.57).normalize();
-const INNER_GLOW = 0.12; // as glowFromWithin: the surface colour glows a little, so shaded faces keep their hue
+const DIR = "/textures/earth/";
+const DESKTOP = {
+  day: `${DIR}day_2048.webp`,
+  night: `${DIR}night_2048.webp`,
+  clouds: `${DIR}clouds_2048.webp`,
+  water: `${DIR}water_2048.webp`,
+  height: `${DIR}height_2048.webp`,
+} as const;
+const STILL = { ...DESKTOP, day: `${DIR}day_1024.webp`, night: `${DIR}night_1024.webp`, clouds: `${DIR}clouds_1024.webp` } as const;
+// Loaded with the lazy scene chunk, long before the Earth is on screen at p .27 (the still frame's set on phones).
+if (typeof window !== "undefined") useTexture.preload(Object.values(window.matchMedia(STILL_QUERY).matches ? STILL : DESKTOP));
+
+const REVEAL_MS = 600;
+const ATMO_S = 1.025;
+const CLOUD_S = 1.006;
+
+/** Detail bias by shot: soft through the chase and the satellite close-ups, where the Earth reads as defocus, not pixels. */
+const FOCUS_KEYS: readonly (readonly [number, number])[] = [
+  [0.27, 1.5],
+  [0.31, 0],
+  [0.345, 0],
+  [0.352, 2.5],
+  [0.56, 2.5],
+  [0.6, 0],
+];
+function focusBias(p: number) {
+  if (p <= FOCUS_KEYS[0][0]) return FOCUS_KEYS[0][1];
+  for (let i = 0; i < FOCUS_KEYS.length - 1; i++) {
+    const [[a, va], [b, vb]] = [FOCUS_KEYS[i], FOCUS_KEYS[i + 1]];
+    if (p <= b) return lerp(va, vb, seg(p, a, b));
+  }
+  return FOCUS_KEYS[FOCUS_KEYS.length - 1][1];
+}
 
 /**
- * The land field: a seeded sum of sines over a gently warped sphere (8 continent-scale terms,
- * then two finer tiers for ragged coasts, islands and relief), plus a soft bump under the pad
- * and every station so they all sit on land. Evaluated per fragment, so coastlines stay crisp
- * at every distance; the same field is the terrain height for a shaded relief.
+ * Additive glow that stays valid premultiplied colour over the transparent canvas: the shaders write
+ * alpha = max(rgb), so the CSS sky behind shows through as (1 − a), and over black space it reads as pure addition.
  */
-const N_TERMS = 21;
-function landField() {
-  const rand = mulberry32(11);
-  const terms: { d: Vector3; f: number; ph: number; a: number }[] = [];
-  const dir = () => new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
-  for (let k = 0; k < 8; k++) terms.push({ d: dir(), f: 3 + 4 * rand(), ph: 2 * Math.PI * rand(), a: (k + 1) ** -0.4 });
-  const sumA = terms.reduce((s, t) => s + t.a, 0);
-  for (let k = 0; k < 7; k++) terms.push({ d: dir(), f: 9 + 7 * rand(), ph: 2 * Math.PI * rand(), a: (0.3 * sumA) / 7 });
-  for (let k = 0; k < 6; k++) terms.push({ d: dir(), f: 22 + 14 * rand(), ph: 2 * Math.PI * rand(), a: (0.12 * sumA) / 6 });
-  const caps = [{ n: new Vector3(0, 1, 0), r: 14 }, ...STATIONS.map((_, k) => ({ n: stationNormal(k), r: 12 }))];
-  return {
-    uTermA: { value: terms.map((t) => new Vector4(t.d.x, t.d.y, t.d.z, t.f)) },
-    uTermB: { value: terms.map((t) => new Vector4(t.ph, t.a / sumA, 0, 0)) },
-    uCaps: { value: caps.map((c) => new Vector4(c.n.x, c.n.y, c.n.z, c.r)) },
-    uSun: { value: SUN },
-    uDeep: { value: new Color("#0a4a33") },
-    uMid: { value: new Color("#0f6b48") },
-    uShallow: { value: new Color("#1f9a68") },
-    uCoast: { value: new Color("#6fd8ae") },
-    uLow: { value: new Color("#cde6d4") }, // sage coastal plain
-    uMidLand: { value: new Color("#e9f3ec") },
-    uHigh: { value: new Color("#fbfdf9") }, // porcelain highlands
-  };
+const ADD_RGB = {
+  blending: CustomBlending,
+  blendEquation: AddEquation,
+  blendSrc: OneFactor,
+  blendDst: OneFactor,
+  blendSrcAlpha: OneFactor,
+  blendDstAlpha: OneFactor,
+} as const;
+
+// Object-space tangent frame on three's sphere: east = cross(Y, n), north = cross(n, east), carried to world space.
+const SURFACE_VERT = /* glsl */ `
+  varying vec2 vUv;
+  varying vec3 vN, vT, vB, vPosW;
+  void main() {
+    vUv = uv;
+    vec3 n = normalize(position);
+    vec3 t = cross(vec3(0.0, 1.0, 0.0), n);
+    t = dot(t, t) < 1e-8 ? vec3(0.0, 0.0, -1.0) : normalize(t);
+    vec3 b = cross(n, t);
+    mat3 m = mat3(modelMatrix);
+    vN = normalize(m * n);
+    vT = normalize(m * t);
+    vB = normalize(m * b);
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vPosW = w.xyz;
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }
+`;
+
+const EARTH_FRAG = /* glsl */ `
+  uniform sampler2D uDay, uNight, uClouds, uWater, uHeight;
+  uniform vec3 uSun, uPlaceholder, uAtmoDay, uAtmoTwilight;
+  uniform float uCloudU, uReveal, uFocusBias, uRelief, uGain;
+  varying vec2 vUv;
+  varying vec3 vN, vT, vB, vPosW;
+  const vec2 TX = vec2(1.0 / 2048.0, 1.0 / 1024.0);
+  void main() {
+    vec3 N = normalize(vN), T = normalize(vT), B = normalize(vB), V = normalize(cameraPosition - vPosW);
+    // Relief from the elevation map, as a tangent-space normal.
+    float hE = texture2D(uHeight, vUv + vec2(TX.x, 0.0), uFocusBias).r, hW = texture2D(uHeight, vUv - vec2(TX.x, 0.0), uFocusBias).r;
+    float hN = texture2D(uHeight, vUv + vec2(0.0, TX.y), uFocusBias).r, hS = texture2D(uHeight, vUv - vec2(0.0, TX.y), uFocusBias).r;
+    vec3 tn = normalize(vec3(-(hE - hW) * uRelief, -(hN - hS) * uRelief, 1.0));
+    vec3 Nb = normalize(T * tn.x + B * tn.y + N * tn.z);
+    float ndl = dot(N, uSun), lit = max(dot(Nb, uSun), 0.0);
+    float day = smoothstep(-0.06, 0.20, ndl), twi = exp(-pow(ndl / 0.14, 2.0));
+    // Clouds and the shadows they throw, offset toward the sun (RepeatWrapping, never fract()).
+    vec2 cuv = vec2(vUv.x + uCloudU, vUv.y);
+    vec2 toSun = vec2(dot(uSun, T), dot(uSun, B));
+    float cloud = smoothstep(0.18, 0.85, texture2D(uClouds, cuv, uFocusBias).r);
+    float cShadow = smoothstep(0.18, 0.85, texture2D(uClouds, cuv + toSun * vec2(0.0025, 0.005), uFocusBias).r);
+    float water = texture2D(uWater, vUv).r;
+    // The Blue Marble sea is composited bright; a camera in orbit sees it deeper.
+    vec3 albedo = texture2D(uDay, vUv, uFocusBias).rgb * (1.0 - 0.45 * cShadow * day) * mix(1.0, 0.7, water);
+    // Exposed for the lit Earth, as an orbital camera is: a softened Lambert, plus the faint blue in-scatter over the day side.
+    vec3 col = albedo * (0.012 + uGain * pow(lit, 0.7)) + uAtmoDay * 0.012 * smoothstep(0.05, 0.6, ndl);
+    // Sun glint on open water (the flat normal: the sea has no relief).
+    vec3 H = normalize(uSun + V);
+    float nh = max(dot(N, H), 0.0);
+    vec3 glintTint = mix(vec3(1.0, 0.55, 0.3), vec3(1.0, 0.96, 0.9), smoothstep(0.0, 0.35, ndl));
+    col += glintTint * (pow(nh, 160.0) * 0.8 + pow(nh, 18.0) * 0.05) * water * (1.0 - cloud) * day;
+    // City lights on the night side, dimmed under cloud.
+    vec3 night = max(texture2D(uNight, vUv, uFocusBias).rgb - 0.05, 0.0) * 2.4 * (1.0 - cloud * 0.85);
+    col = mix(night, col, day);
+    col *= mix(vec3(1.0), vec3(1.0, 0.62, 0.45), twi * 0.55);
+    // Aerial perspective toward the limb, blue by day, amber at the terminator.
+    float fres = pow(1.0 - max(dot(N, V), 0.0), 2.5);
+    col = mix(col, mix(uAtmoTwilight, uAtmoDay, smoothstep(-0.05, 0.35, ndl)), fres * smoothstep(0.0, 1.0, ndl) * 0.45);
+    gl_FragColor = vec4(mix(uPlaceholder, col, uReveal), 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+const CLOUD_FRAG = /* glsl */ `
+  uniform sampler2D uClouds;
+  uniform vec3 uSun;
+  uniform float uCloudU, uReveal, uFocusBias;
+  varying vec2 vUv;
+  varying vec3 vN, vT, vB, vPosW;
+  void main() {
+    float ndl = dot(normalize(vN), uSun);
+    float c = texture2D(uClouds, vec2(vUv.x + uCloudU, vUv.y), uFocusBias).r;
+    float alpha = smoothstep(0.18, 0.85, c) * 0.92 * smoothstep(-0.25, 0.1, ndl) * uReveal;
+    vec3 rgb = vec3(pow(clamp((ndl + 0.1) / 1.1, 0.0, 1.0), 0.6)) * mix(vec3(1.0, 0.7, 0.5), vec3(1.0), smoothstep(0.0, 0.3, ndl));
+    gl_FragColor = vec4(rgb, alpha);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+const ATMO_VERT = /* glsl */ `
+  varying vec3 vPosW, vNW;
+  void main() {
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vPosW = w.xyz;
+    vNW = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }
+`;
+// Impact parameter: how close the view ray passes to the centre. Rays that graze the surface cross
+// the most air; density falls off toward the shell. The band is held to about uRimPx screen pixels
+// (never more than the shell), so it reads as a hairline in the close limb shots and a thin rim in
+// the wides. Pixels over the disc are behind the opaque Earth.
+const ATMO_FRAG = /* glsl */ `
+  uniform vec3 uCenter, uSun, uDay, uTwilight;
+  uniform float uR, uS, uReveal, uGain, uPixelAngle, uRimPx;
+  varying vec3 vPosW, vNW;
+  void main() {
+    vec3 rd = normalize(vPosW - cameraPosition);
+    float tca = dot(uCenter - cameraPosition, rd);
+    vec3 closest = cameraPosition + rd * tca;
+    vec3 off = closest - uCenter;
+    float b = length(off);
+    float band = min(uR * (uS - 1.0), uRimPx * uPixelAngle * max(tca, 0.0));
+    float t = clamp((b - uR) / band, 0.0, 1.0);
+    float dens = pow(1.0 - t, 1.6);
+    float ndl = dot(off / b, uSun);
+    vec3 col = mix(uTwilight, uDay, smoothstep(-0.12, 0.3, ndl));
+    float lit = smoothstep(-0.2, 0.2, ndl) * mix(0.55, 1.0, smoothstep(0.0, 0.3, ndl)); // the night limb fades out
+    col = mix(col, vec3(0.75, 0.88, 1.0), 0.35 * pow(1.0 - t, 6.0) * smoothstep(0.1, 0.5, ndl)); // paler where the air is thickest
+    vec3 glow = col * dens * lit * uGain * uReveal;
+    gl_FragColor = vec4(glow, min(1.0, max(glow.r, max(glow.g, glow.b))));
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+const STAR_COUNT = 2000;
+const STAR_VERT = /* glsl */ `
+  attribute float aSize, aBright;
+  uniform float uDpr, uOpacity, uEarthAng, uCopyX, uCopyFade;
+  uniform vec3 uEarthDir;
+  varying float vB;
+  void main() {
+    vec3 d = normalize(position);
+    float ang = acos(clamp(dot(d, uEarthDir), -1.0, 1.0));
+    float nearEarth = smoothstep(1.15, 1.6, ang / uEarthAng);
+    vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    float x = clip.x / clip.w;
+    float inCopy = 1.0 - smoothstep(uCopyX - 0.15, uCopyX, x);
+    float px = aSize * uDpr;
+    vB = aBright * nearEarth * uOpacity * (1.0 - uCopyFade * inCopy) * min(px, 1.0);
+    gl_PointSize = max(px, 1.0);
+    gl_Position = clip;
+  }
+`;
+const STAR_FRAG = /* glsl */ `
+  varying float vB;
+  void main() {
+    vec2 c = gl_PointCoord * 2.0 - 1.0;
+    float a = 1.0 - smoothstep(0.4, 1.0, dot(c, c));
+    gl_FragColor = vec4(vec3(vB * a), vB * a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+/** Star directions, sizes (0.6–1.4 px) and brightnesses (0.06–0.3, most near 0.1), seeded so every visit is the same sky. */
+function starGeometry() {
+  const rand = mulberry32(29);
+  const pos = new Float32Array(STAR_COUNT * 3);
+  const size = new Float32Array(STAR_COUNT);
+  const bright = new Float32Array(STAR_COUNT);
+  const v = new Vector3();
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const z = 2 * rand() - 1;
+    const a = 2 * Math.PI * rand();
+    const s = Math.sqrt(1 - z * z);
+    v.set(s * Math.cos(a), z, s * Math.sin(a)).toArray(pos, i * 3);
+    const r = rand();
+    size[i] = 0.6 + 0.8 * rand() ** 2;
+    bright[i] = 0.06 + 0.24 * r ** 4 + 0.04 * rand();
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(pos, 3));
+  g.setAttribute("aSize", new BufferAttribute(size, 1));
+  g.setAttribute("aBright", new BufferAttribute(bright, 1));
+  return g;
 }
 
-const PLANET_PARS = /* glsl */ `
-  uniform vec4 uTermA[${N_TERMS}];
-  uniform vec4 uTermB[${N_TERMS}];
-  uniform vec4 uCaps[6];
-  uniform vec3 uSun, uDeep, uMid, uShallow, uCoast, uLow, uMidLand, uHigh;
-  varying vec3 vObjN;
-  float pCoast; // 1 on land, 0 at sea (drives the gloss)
-  float pHeight; // terrain height for the relief
-  vec3 planetColor() {
-    vec3 n = normalize(vObjN);
-    vec3 m = normalize(n + 0.3 * vec3(sin(5.1 * n.y + 1.3), sin(4.7 * n.z + 0.2), sin(5.3 * n.x + 2.2)));
-    float land = 0.0;
-    float fine = 0.0;
-    for (int i = 0; i < ${N_TERMS}; i++) {
-      float t = uTermB[i].y * sin(uTermA[i].w * dot(m, uTermA[i].xyz) + uTermB[i].x);
-      land += t;
-      if (i >= 8) fine += t;
-    }
-    for (int i = 0; i < 6; i++) {
-      float ang = degrees(acos(clamp(dot(n, uCaps[i].xyz), -1.0, 1.0))) / uCaps[i].w;
-      land += 0.45 * exp(-ang * ang);
-    }
-    float w = max(fwidth(land) * 0.8, 0.0015); // about a pixel, whatever the distance
-    float coast = smoothstep(${T.toFixed(3)} - w, ${T.toFixed(3)} + w, land);
-    pCoast = coast;
-    float sea = ${T.toFixed(3)} - land; // > 0 offshore, growing with depth
-    float sun = smoothstep(-0.4, 0.95, dot(n, uSun));
-    // Ocean: a shelf by the coast, then mid water, then the deep; the sun side lifts it a little.
-    vec3 ocean = mix(uShallow, uMid, smoothstep(0.0, 0.06, sea));
-    ocean = mix(ocean, uDeep, smoothstep(0.08, 0.3, sea));
-    ocean = mix(ocean, uShallow, 0.22 * sun);
-    float shore = 1.0 - smoothstep(max(0.008, 2.0 * w), max(0.008, 2.0 * w) + w, sea);
-    ocean = mix(ocean, uCoast, 0.75 * shore);
-    // Land: crisp terraces, a sage coastal plain, pale uplands, porcelain highlands.
-    float e = -sea + 0.5 * fine;
-    float we = max(fwidth(e) * 0.8, 0.0015);
-    float t1 = smoothstep(0.035 - we, 0.035 + we, e);
-    float t2 = smoothstep(0.11 - we, 0.11 + we, e);
-    vec3 ground = mix(mix(uLow, uMidLand, t1), uHigh, t2) * mix(0.94, 1.0, sun);
-    pHeight = coast * (0.5 * max(-sea, 0.0) + fine);
-    return mix(ocean, ground, coast);
-  }
-  // As three's bump mapping (perturbNormalArb), from screen-space derivatives of the height.
-  vec3 reliefNormal(vec3 surf_pos, vec3 surf_norm, float h, float faceDirection) {
-    vec2 dHdxy = vec2(dFdx(h), dFdy(h));
-    vec3 vSigmaX = normalize(dFdx(surf_pos));
-    vec3 vSigmaY = normalize(dFdy(surf_pos));
-    vec3 vN = surf_norm;
-    vec3 R1 = cross(vSigmaY, vN);
-    vec3 R2 = cross(vN, vSigmaX);
-    float fDet = dot(vSigmaX, R1) * faceDirection;
-    vec3 vGrad = sign(fDet) * (dHdxy.x * R1 + dHdxy.y * R2);
-    return normalize(abs(fDet) * surf_norm - vGrad);
-  }
-`;
+/** The copy scrim's opacity (WS4 draws it); the stars dim behind the copy column by the same amount. */
+const scrimOpacity = (p: number) => (p < INK_FLIP ? 0 : p >= 0.27 && p < 0.56 ? 1 : 0.5);
 
-const RELIEF = 0.6; // bump strength (height is in field units)
-
-function planetMaterial(uniforms: ReturnType<typeof landField>) {
-  const mat = new MeshPhysicalMaterial({
-    color: "#ffffff",
-    roughness: 0.6,
-    specularIntensity: 0.5, // the glaze's grazing sheen, without milking the limb
-    emissive: "#ffffff",
-    emissiveIntensity: GLOW,
-    polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1,
-  });
-  mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, uniforms);
-    shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vObjN;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvObjN = position;");
-    shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\n${PLANET_PARS}`)
-      .replace("#include <color_fragment>", "#include <color_fragment>\nvec3 surface = planetColor();\ndiffuseColor.rgb *= surface;")
-      // Glazed water, matte land: the soft studio glints only run across the sea.
-      .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(0.4, 0.92, pCoast);")
-      .replace(
-        "#include <normal_fragment_maps>",
-        `#include <normal_fragment_maps>\nnormal = reliefNormal(-vViewPosition, normal, ${RELIEF.toFixed(2)} * pHeight, faceDirection);`,
-      )
-      .replace(
-        "#include <emissivemap_fragment>",
-        `#include <emissivemap_fragment>\ntotalEmissiveRadiance += surface * ${INNER_GLOW.toFixed(2)};`,
-      );
-  };
-  mat.customProgramCacheKey = () => "mission-planet-2";
-  return mat;
-}
-
-const ATMOS_VERT = /* glsl */ `
-  varying vec3 vN;
-  varying vec3 vV;
-  void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    vN = normalize(normalMatrix * normal);
-    vV = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
-  }
-`;
-const ATMOS_FRAG = /* glsl */ `
-  uniform float uReveal;
-  varying vec3 vN;
-  varying vec3 vV;
-  void main() {
-    float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
-    vec3 rgb = mix(vec3(0.624, 0.910, 0.816), vec3(0.72, 0.93, 0.88), fres);
-    // Brightest just outside the limb, fading to nothing at the shell's own silhouette (no hard ring).
-    float edge = 1.0 - smoothstep(0.45, 1.0, fres); // 0.45 is about the planet's own limb: the glow falls off outward from it
-    gl_FragColor = vec4(rgb, 0.9 * fres * edge * uReveal);
-  }
-`;
-
-export default function Planet() {
+function Stars() {
   const frame = useMission();
-  const atmos = useRef<Mesh>(null);
-  const atmosMat = useRef<ShaderMaterial>(null);
-  const karman = useRef<Line2>(null);
-  const body = useMemo(() => planetMaterial(landField()), []);
-  const bodyRef = useRef<MeshPhysicalMaterial>(body);
-  const uniforms = useMemo(() => ({ uReveal: { value: 0 } }), []);
-  const karmanPts = useMemo(() => Array.from({ length: 128 }, (_, i) => polar(-20 + (90 * i) / 127, KARMAN)), []);
-
-  useFrame(() => {
+  const group = useRef<Group>(null);
+  const mat = useRef<ShaderMaterial>(null);
+  const geometry = useMemo(() => starGeometry(), []);
+  const uniforms = useMemo(
+    () => ({
+      uDpr: { value: 1 },
+      uOpacity: { value: 0 },
+      uEarthAng: { value: 1 },
+      uEarthDir: { value: new Vector3(0, -1, 0) },
+      uCopyX: { value: 0 },
+      uCopyFade: { value: 0 },
+    }),
+    [],
+  );
+  useFrame((state) => {
+    const g = group.current;
+    const m = mat.current;
+    if (!g || !m) return;
     const p = frame.p;
-    // Page white on the pad. 3 (not 1.4): at grazing angles the clearcoat dims the base layer,
-    // emissive included, and a lower value let the ocean show as a mint rim along the horizon.
-    bodyRef.current.emissiveIntensity = GLOW * (1 - eio(seg(p, 0.27, 0.35)));
-    // The halo stays out until the pull-back: on the pad its shell floats 0.63 above the ground.
-    if (atmos.current) atmos.current.visible = p >= 0.3;
-    // (It steps out during the deploy close-up, where only its edge would peek in under the copy.)
-    if (atmosMat.current) atmosMat.current.uniforms.uReveal.value = seg(p, 0.3, 0.42) * (1 - windowed(p, 0.42, 0.44, 0.56, 0.6));
-    const ka = karman.current;
-    if (ka) {
-      const o = 0.35 * windowed(p, 0.22, 0.27, 0.5, 0.56);
-      ka.visible = o > 0.001;
-      ka.material.opacity = o;
-      ka.material.dashSize = 0.0031 * frame.dist;
-      ka.material.gapSize = 0.0023 * frame.dist;
+    const cam = state.camera as PerspectiveCamera;
+    g.position.copy(cam.position);
+    g.scale.setScalar(0.8 * cam.far);
+    const u = m.uniforms;
+    const dist = u.uEarthDir.value.subVectors(C, cam.position).length();
+    u.uEarthDir.value.divideScalar(dist);
+    u.uEarthAng.value = Math.asin(Math.min(1, R / dist));
+    u.uDpr.value = state.gl.getPixelRatio();
+    u.uOpacity.value = seg(p, 0.265, 0.29) * (p >= 0.345 && p < 0.56 ? 0.5 : 1);
+    // The copy column's right edge in NDC: it starts at 8vw (12px panel inset) and is at most 38rem wide.
+    const vw = typeof window === "undefined" ? state.size.width : window.innerWidth;
+    u.uCopyX.value = -1 + (2 * (0.08 * vw - 12 + 608)) / state.size.width;
+    u.uCopyFade.value = 0.8 * scrimOpacity(p);
+  });
+  return (
+    <group ref={group}>
+      <points geometry={geometry} renderOrder={-1} frustumCulled={false}>
+        <shaderMaterial ref={mat} vertexShader={STAR_VERT} fragmentShader={STAR_FRAG} uniforms={uniforms} transparent depthWrite={false} toneMapped={false} {...ADD_RGB} />
+      </points>
+    </group>
+  );
+}
+
+/** The per-frame uniforms of the surface shaders (each material gets its own objects). */
+const liveUniforms = () => ({
+  uSun: { value: new Vector3(0, 1, 0) },
+  uCloudU: { value: 0 },
+  uReveal: { value: 0 },
+  uFocusBias: { value: 0 },
+});
+
+/** Drops the textured Earth in over the placeholder once its maps have loaded. */
+function Earth({ still }: { still: boolean }) {
+  const frame = useMission();
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  const reveal = useRef({ t: 0, done: false });
+  const earthMat = useRef<ShaderMaterial>(null);
+  const cloudMat = useRef<ShaderMaterial>(null);
+  const atmoMat = useRef<ShaderMaterial>(null);
+
+  const onLoad = useCallback(
+    (maps: unknown) => {
+      // drei hands over the loaded array in key order (its types say the keyed object; accept both).
+      const list = (Array.isArray(maps) ? maps : Object.values(maps as object)) as Texture[];
+      const [day, night, cloud] = list;
+      const aniso = gl.capabilities.getMaxAnisotropy();
+      for (const t of list) {
+        t.anisotropy = aniso;
+        t.needsUpdate = true;
+      }
+      day.colorSpace = SRGBColorSpace;
+      night.colorSpace = SRGBColorSpace;
+      cloud.wrapS = RepeatWrapping;
+    },
+    [gl],
+  );
+  const maps = useTexture(still ? STILL : DESKTOP, onLoad);
+
+  const earthUniforms = useMemo(
+    () => ({
+      ...liveUniforms(),
+      uDay: { value: maps.day },
+      uNight: { value: maps.night },
+      uClouds: { value: maps.clouds },
+      uWater: { value: maps.water },
+      uHeight: { value: maps.height },
+      uPlaceholder: { value: new Color("#0b1d3a") },
+      uAtmoDay: { value: new Color("#4db2ff") },
+      uAtmoTwilight: { value: new Color("#bc490b") },
+      uRelief: { value: 6 },
+      uGain: { value: 1.8 },
+    }),
+    [maps],
+  );
+  const cloudUniforms = useMemo(() => ({ ...liveUniforms(), uClouds: { value: maps.clouds } }), [maps]);
+  const atmoUniforms = useMemo(
+    () => ({
+      uSun: { value: new Vector3(0, 1, 0) },
+      uReveal: { value: 0 },
+      uCenter: { value: C.clone() },
+      uR: { value: R },
+      uS: { value: ATMO_S },
+      uDay: { value: new Color("#4db2ff") },
+      uTwilight: { value: new Color("#bc490b") },
+      uGain: { value: 1.3 },
+      uPixelAngle: { value: 0.001 },
+      uRimPx: { value: 6 },
+    }),
+    [],
+  );
+
+  useFrame((state, delta) => {
+    const p = frame.p;
+    const m = earthMat.current;
+    if (!m) return;
+    if (!reveal.current.done) {
+      reveal.current.t = frame.still ? 1 : Math.min(1, reveal.current.t + (delta * 1000) / REVEAL_MS);
+      if (reveal.current.t >= 1) {
+        reveal.current.done = true;
+        state.gl.domElement.closest("section")?.setAttribute("data-earth-ready", "1");
+        if (frame.still) invalidate();
+      }
+    }
+    // Each material owns its uniform objects, so every one is written.
+    const cloudU = 0.02 * p + 0.00012 * frame.t;
+    const bias = focusBias(p);
+    const a = atmoMat.current;
+    if (a) {
+      const cam = state.camera as PerspectiveCamera;
+      a.uniforms.uPixelAngle.value = (2 * Math.tan((cam.fov * Math.PI) / 360)) / state.size.height;
+    }
+    for (const mat of [m, cloudMat.current, a]) {
+      if (!mat) continue;
+      const u = mat.uniforms;
+      sunDir(p, u.uSun.value);
+      u.uReveal.value = reveal.current.t;
+      if (u.uCloudU) u.uCloudU.value = cloudU;
+      if (u.uFocusBias) u.uFocusBias.value = bias;
     }
   });
 
   return (
-    <group>
-      <mesh position={C} material={body}>
-        <sphereGeometry args={[R, 192, 128]} />
+    <group position={C} quaternion={EARTH_ROT}>
+      <mesh renderOrder={0}>
+        <sphereGeometry args={[R, 128, 64]} />
+        <shaderMaterial ref={earthMat} vertexShader={SURFACE_VERT} fragmentShader={EARTH_FRAG} uniforms={earthUniforms} />
       </mesh>
-      <mesh ref={atmos} position={C} visible={false} renderOrder={-1}>
-        <sphereGeometry args={[R * 1.045, 128, 96]} />
-        <shaderMaterial ref={atmosMat} vertexShader={ATMOS_VERT} fragmentShader={ATMOS_FRAG} uniforms={uniforms} transparent depthWrite={false} side={FrontSide} />
+      <mesh renderOrder={1} scale={CLOUD_S}>
+        <sphereGeometry args={[R, 128, 64]} />
+        <shaderMaterial ref={cloudMat} vertexShader={SURFACE_VERT} fragmentShader={CLOUD_FRAG} uniforms={cloudUniforms} transparent depthWrite={false} />
       </mesh>
-      <Line ref={karman} points={karmanPts} color="#0ea5e9" lineWidth={1} dashed dashSize={0.05} gapSize={0.035} transparent opacity={0} />
+      <mesh renderOrder={2} scale={ATMO_S}>
+        <sphereGeometry args={[R, 96, 48]} />
+        <shaderMaterial ref={atmoMat} vertexShader={ATMO_VERT} fragmentShader={ATMO_FRAG} uniforms={atmoUniforms} side={BackSide} transparent depthWrite={false} {...ADD_RGB} />
+      </mesh>
     </group>
+  );
+}
+
+/** Shown until the maps arrive: the same sphere in deep navy, so nothing pops. */
+function Placeholder() {
+  return (
+    <mesh position={C}>
+      <sphereGeometry args={[R, 64, 32]} />
+      <meshBasicMaterial color="#0b1d3a" />
+    </mesh>
+  );
+}
+
+export default function Planet({ still }: { still: boolean }) {
+  return (
+    <>
+      <Suspense fallback={<Placeholder />}>
+        <Earth still={still} />
+      </Suspense>
+      <Stars />
+    </>
   );
 }

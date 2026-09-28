@@ -1,16 +1,31 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
-import { Vector3, type PerspectiveCamera } from "three";
+import { Color, FogExp2, NeutralToneMapping, Vector3, type DirectionalLight, type Group, type HemisphereLight, type PerspectiveCamera } from "three";
 import { channelFocus } from "../growth-engine/channelFocus";
 import { FrameContext, MissionFrame, useMission } from "./frame";
 import LaunchSite from "./LaunchSite";
 import Planet from "./Planet";
 import Stations from "./Stations";
-import { CAMERA_KEYS, explodeCapsule, KARMAN, LABEL_IDS, labelOpacity, R0, STILL_SQUARE, type LabelId } from "./timeline";
+import {
+  aim,
+  CAMERA_KEYS,
+  CUT_P,
+  eio,
+  explodeCapsule,
+  LABEL_IDS,
+  labelOpacity,
+  lerp,
+  R,
+  R0,
+  seg,
+  skyHorizonLinear,
+  STILL_SQUARE,
+  type LabelId,
+} from "./timeline";
 import Trajectory from "./Trajectory";
 import Vehicle from "./Vehicle";
-import { cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar } from "./world";
+import { C, cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar, sunDir } from "./world";
 
 export type Progress = { shown: number };
 
@@ -32,9 +47,9 @@ type Props = {
 export default function Scene({ still, active, progress, labels, padShadows = false, onReady }: Props) {
   return (
     <Canvas
-      flat
       shadows="percentage"
-      dpr={[1, 2]}
+      dpr={[1, 1.75]}
+      gl={{ antialias: true, alpha: true, toneMapping: NeutralToneMapping, toneMappingExposure: 1 }}
       frameloop={still ? "demand" : active ? "always" : "never"}
       camera={{ fov: 22, near: 0.05, far: 2000, position: [6.95, 3.31, 12.03] }}
       onCreated={() => onReady?.()}
@@ -46,66 +61,121 @@ export default function Scene({ still, active, progress, labels, padShadows = fa
 
 function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" | "onReady">) {
   const [frame] = useState(() => new MissionFrame());
+  const padSet = useRef<Group>(null);
+  const orbitSet = useRef<Group>(null);
+  useFrame(() => {
+    // The two scale spaces are never on screen together: the cut at CUT_P swaps them.
+    const pad = frame.p < CUT_P;
+    if (padSet.current) padSet.current.visible = pad;
+    if (orbitSet.current) orbitSet.current.visible = !pad;
+  }, -2);
   return (
     <FrameContext.Provider value={frame}>
       <FramePass still={still} progress={progress} />
       <CameraRig />
       {still && <FocusInvalidate />}
+      <Lighting />
 
-      {/* Studio light: a soft sky, a shadow-casting key from the upper left, a cool rim from behind,
-          and an environment of softboxes for the gloss, the clearcoat streaks and the warm metal. */}
-      <hemisphereLight args={["#ffffff", "#e3ece6", 0.75]} />
-      <directionalLight
-        castShadow
-        position={[-6, 10, 8]}
-        intensity={1.35}
-        shadow-mapSize={[2048, 2048]}
-        shadow-radius={6}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.02}
-      >
-        <orthographicCamera attach="shadow-camera" args={[-3, 3, 3, -3, 1, 30]} />
-      </directionalLight>
-      <directionalLight position={[8, 4, -10]} intensity={0.6} color="#eaf6ff" />
-      <Environment resolution={128} frames={1}>
-        <Lightformer form="rect" intensity={1.2} position={[-4, 5, 4]} scale={[8, 4, 1]} target={[0, 0, 0]} />
-        <Lightformer form="rect" intensity={0.5} position={[5, 3, -3]} scale={[6, 3, 1]} target={[0, 0, 0]} />
-        <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
-        <Lightformer form="rect" intensity={0.9} position={[0, 3, -9]} scale={[12, 3, 1]} target={[0, 0, 0]} />
-        <Lightformer form="rect" intensity={0.3} color="#ffe7c7" position={[6, -2, 4]} scale={[4, 2, 1]} target={[0, 0, 0]} />
-      </Environment>
-      {/* Mounted once and gated by props: drei never disposes its render targets, so remounting leaked them.
-          frames 0 stops its per-frame shadow pass once the pad is off screen. */}
-      {!still && (
-        <group visible={padShadows}>
-          <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.4} far={3.5} opacity={0.3} resolution={1024} color="#0c3b29" frames={padShadows ? Infinity : 0} />
-        </group>
-      )}
-
-      <Planet />
-      <LaunchSite />
+      <group ref={padSet} name="padSet">
+        {/* Mounted once and gated by props: drei never disposes its render targets, so remounting leaked them.
+            frames 0 stops its per-frame shadow pass once the pad is off screen. */}
+        {!still && (
+          <group visible={padShadows}>
+            <ContactShadows position={[0, PAD_TOP + 0.002, 0]} scale={6} blur={2.5} far={3.5} opacity={0.35} resolution={1024} color="#1a1c1f" frames={padShadows ? Infinity : 0} />
+          </group>
+        )}
+        <LaunchSite />
+      </group>
+      <group ref={orbitSet} name="orbitSet" visible={false}>
+        <Planet still={still} />
+        <Trajectory />
+        <Stations />
+      </group>
       <Vehicle />
-      <Trajectory />
-      <Stations />
       {labels && <LabelWriter labels={labels} />}
     </FrameContext.Provider>
+  );
+}
+
+const SUN_PAD_COLOR = new Color("#fff4e6");
+const SUN_ORBIT_COLOR = new Color("#fffaf2");
+
+/**
+ * One hard sun (its shadow frustum follows the subject), a sky/ground fill on the pad, earthshine on the
+ * craft in orbit, and a two-panel environment for the gloss. Lights stay mounted; they switch off by
+ * intensity (never `visible`, which recompiles every material).
+ */
+function Lighting() {
+  const frame = useMission();
+  const sun = useRef<DirectionalLight>(null);
+  const hemi = useRef<HemisphereLight>(null);
+  const earthshine = useRef<DirectionalLight>(null);
+  const scratch = useRef({ dir: new Vector3(), aim: new Vector3(), axis: new Vector3(), fog: new FogExp2("#e6eef6", 0.009) });
+
+  useFrame((state) => {
+    const { p, scale } = frame;
+    const { dir, aim: at, axis, fog } = scratch.current;
+    const scene = state.scene;
+    if (scene.fog !== fog) scene.fog = fog;
+    const orbit = eio(seg(p, 0.25, 0.29));
+    // The subject: the vehicle's visual centre.
+    axis.set(0, 1, 0).applyQuaternion(frame.quat);
+    at.copy(frame.craft).addScaledVector(axis, -aim(p) * scale);
+
+    const s = sun.current;
+    if (s) {
+      sunDir(p, dir);
+      s.target.position.copy(at);
+      s.target.updateMatrixWorld();
+      s.position.copy(at).addScaledVector(dir, 20);
+      s.intensity = lerp(2.6, 3.2, orbit);
+      s.color.lerpColors(SUN_PAD_COLOR, SUN_ORBIT_COLOR, orbit);
+      const half = p < CUT_P ? 6 : 0.8 * scale * 2;
+      const cam = s.shadow.camera;
+      if (cam.right !== half) {
+        cam.left = cam.bottom = -half;
+        cam.right = cam.top = half;
+        cam.updateProjectionMatrix();
+      }
+      s.shadow.normalBias = 0.02 * Math.min(1, scale);
+    }
+    if (hemi.current) hemi.current.intensity = 0.6 * (1 - orbit);
+    const e = earthshine.current;
+    if (e) {
+      e.target.position.copy(frame.craft);
+      e.target.updateMatrixWorld();
+      e.position.subVectors(C, frame.craft).normalize().multiplyScalar(20).add(frame.craft);
+      e.intensity = p < CUT_P ? 0 : 0.35 * orbit;
+    }
+    // A scene property, so changing it does not recompile.
+    scene.environmentIntensity = lerp(0.6, 0.12, orbit);
+    // Haze on the pad in the CSS horizon colour; none in space (density 0 rather than null: no recompile at the cut).
+    const [r, g, b] = skyHorizonLinear(p);
+    fog.color.setRGB(r, g, b);
+    fog.density = p < CUT_P ? 0.009 : 0;
+  });
+
+  return (
+    <>
+      <directionalLight ref={sun} castShadow intensity={2.6} shadow-mapSize={[2048, 2048]} shadow-radius={4} shadow-bias={-0.0005} shadow-normalBias={0.02}>
+        <orthographicCamera attach="shadow-camera" args={[-6, 6, 6, -6, 0.5, 40]} />
+      </directionalLight>
+      <hemisphereLight ref={hemi} args={["#dfe9f5", "#b9b4aa", 0.6]} />
+      <directionalLight ref={earthshine} color="#8fb0d8" intensity={0} />
+      <Environment resolution={128} frames={1}>
+        <Lightformer form="ring" color="#e8f0f8" intensity={1.2} position={[0, 9, 0]} rotation-x={Math.PI / 2} scale={10} />
+        <Lightformer form="rect" color="#cfc8bc" intensity={0.5} position={[0, -6, 0]} rotation-x={-Math.PI / 2} scale={[20, 20, 1]} />
+      </Environment>
+    </>
   );
 }
 
 /** Advances the shared frame before any part reads it. */
 function FramePass({ still, progress }: { still: boolean; progress: RefObject<Progress> }) {
   const frame = useMission();
-  const primed = useRef(false);
   useFrame((state) => {
     const p = still ? 1 : (progress.current?.shown ?? 0);
     frame.update(p, still ? 0 : state.clock.elapsedTime, still);
-    // Shadows only matter on the pad; stop re-rendering the shadow map once it has faded.
-    // Render it once regardless (stills, mid-page reloads), or the pad samples an empty map and reads as shadowed.
-    state.gl.shadowMap.autoUpdate = p < 0.27;
-    if (!primed.current) {
-      primed.current = true;
-      state.gl.shadowMap.needsUpdate = true;
-    }
   }, -3);
   return null;
 }
@@ -133,7 +203,7 @@ function CameraRig() {
     if (frame.still) cameraAt(width / height > 1.2 ? CAMERA_KEYS[CAMERA_KEYS.length - 1] : STILL_SQUARE, pose);
     else cameraPose(frame.p, pose);
     cam.position.copy(pose.position);
-    cam.up.set(0, 1, 0);
+    cam.up.copy(pose.up);
     cam.lookAt(pose.target);
     const near = Math.max(0.05, 0.01 * pose.d);
     const far = 4 * pose.d + 80;
@@ -162,7 +232,7 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
   const frame = useMission();
   const fixed = useMemo(
     () => ({
-      karman: polar(18, KARMAN),
+      karman: polar(18, R + ((R0 - R) * 100) / 412),
       spike: ghostPoint(0.5).add(new Vector3(0, 0.3, 0)),
       meco: craftPosition(0.355).add(new Vector3(0, 0.8, 0)), // above the path, clear of the craft flying on past it
       orbit: polar(48, R0),
