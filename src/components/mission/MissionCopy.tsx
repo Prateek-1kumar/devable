@@ -9,32 +9,30 @@ import type { Bind } from "./MissionHud";
 import { OUTCOME, STATIONS } from "./timeline";
 
 // The hero's words. The intro block (the page H1) opens the sequence and stays
-// in the DOM; each beat then gets one caption: an index line, a title and a
-// short body. The loop in MissionHero writes the live parts (lit marks, the
-// pipeline number) straight to the nodes registered here.
+// in the DOM; each beat then gets one caption: a title and a short body. The
+// loop in MissionHero writes the live parts (lit marks, the pipeline number)
+// straight to the nodes registered here.
 
 
 const rise = "animate-fade-up motion-reduce:animate-none";
 const EASE = [0.22, 1, 0.36, 1] as const;
 const MONO = "font-mono uppercase tracking-[0.12em] tabular-nums";
 
-type Caption = { index: string; title: string; body?: string; extra?: "marks" | "outcome" };
+type Caption = { title: string; body?: string; extra?: "marks" | "outcome" };
 const CAPTIONS: Record<number, Caption> = {
-  1: { index: "01 / 07 · TERMINAL COUNT", title: "Integrated. Go for launch.", body: "Your product rides on top. Devable carries it, with four channel systems latched on." },
-  2: { index: "02 / 07 · LAUNCH", title: "A launch is a burst.", body: "Show HN, the creator drop, the announcement, sequenced to the hour. It gets you off the pad." },
-  3: { index: "03 / 07 · TRAJECTORY", title: "Most launches are suborbital.", body: "A spike, then gravity. We plan the path to orbit before anything lights." },
+  1: { title: "Integrated. Go for launch.", body: "Your product rides on top. Devable carries it, with four channel systems latched on." },
+  2: { title: "A launch is a burst.", body: "Show HN, the creator drop, the announcement, sequenced to the hour. It gets you off the pad." },
+  3: { title: "Most launches are suborbital.", body: "A spike, then gravity. We plan the path to orbit before anything lights." },
   4: {
-    index: "04 / 07 · DEPLOY",
     title: "Four systems. One mission.",
     body: "Technical content, SEO and AI search, Reddit and creators deploy together, on one craft that stays in orbit with your product.",
   },
-  5: { index: "05 / 07 · DOWNLINK", title: "In contact where developers look.", body: "Every pass puts your product in front of them again.", extra: "marks" },
+  5: { title: "In contact where developers look.", body: "Every pass puts your product in front of them again.", extra: "marks" },
   6: {
-    index: "06 / 07 · COURSE CORRECTION",
     title: "Measured every day. Corrected every week.",
     body: "Telemetry from every channel steers the next burn: what ranks, what gets cited, what converts.",
   },
-  7: { index: "07 / 07 · SUSTAINED ORBIT", title: "Launches spike. Orbits compound.", extra: "outcome" },
+  7: { title: "Launches spike. Orbits compound.", extra: "outcome" },
 };
 
 function Mark({ mark, size }: { mark: keyof typeof MARKS; size: number }) {
@@ -106,8 +104,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
                   className="invisible translate-y-3.5 self-center opacity-0 transition-[opacity,translate,visibility] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] [grid-area:1/1] data-[on=true]:visible data-[on=true]:translate-y-0 data-[on=true]:opacity-100 data-[on=true]:delay-150 data-[on=true]:duration-550"
                 >
                   <div aria-hidden="true">
-                    <p className={`${MONO} text-[11px] text-foreground/45`}>{c.index}</p>
-                    <p className="mt-5 max-w-[30rem] text-[clamp(2rem,3.4vw,3.2rem)] leading-[1.05] font-normal tracking-[-0.035em] text-balance">{c.title}</p>
+                    <p className="max-w-[30rem] text-[clamp(2rem,3.4vw,3.2rem)] leading-[1.05] font-normal tracking-[-0.035em] text-balance">{c.title}</p>
                     {c.body && <p className="mt-4 max-w-[26rem] text-lg leading-relaxed text-foreground/60">{c.body}</p>}
                     {c.extra === "marks" && <MarksRow bind={bind} />}
                   </div>
@@ -130,7 +127,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
           </div>
           <ol className="sr-only">
             {Object.values(CAPTIONS).map((c) => (
-              <li key={c.index}>
+              <li key={c.title}>
                 {c.title} {c.body} {c.extra === "outcome" ? `+${OUTCOME}% pipeline growth (illustrative).` : ""}
               </li>
             ))}

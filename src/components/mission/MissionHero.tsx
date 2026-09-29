@@ -8,7 +8,7 @@ import { clamp01, damp } from "../growth-engine/ease";
 import MissionCopy, { StillExtras } from "./MissionCopy";
 import MissionHud, { type DomNodes } from "./MissionHud";
 import type { Progress } from "./Scene";
-import { altKm, arrayGo, captionAt, craftR, firstLit, met, payloadGo, pipeline, status, storyP, theta, velKms } from "./timeline";
+import { arrayGo, captionAt, firstLit, payloadGo, pipeline, storyP, theta } from "./timeline";
 
 // Mission DVB-01, the pinned hero: a tall section whose sticky frame holds the
 // copy, the 3D world and its instruments. One smoothed scroll progress (0..1)
@@ -93,19 +93,8 @@ export default function MissionHero() {
     const writeDom = (p: number) => {
       const n = dom.current;
       const h = (key: string) => n.get(key);
-      const r = craftR(p);
       const th = theta(p);
-      write(h("met"), met(p));
-      const st = status(p);
-      write(h("status"), st.text);
-      flag(h("status"), "data-act", st.act);
-      write(h("alt"), `${altKm(p, r)} KM`);
-      write(h("vel"), `${velKms(p, r).toFixed(2)} KM/S`);
       const pipe = `+${Math.round(pipeline(p))}%`;
-      write(h("pipe"), pipe);
-      flag(h("altField"), "data-on", p >= 0.125);
-      flag(h("velField"), "data-on", p >= 0.125);
-      flag(h("pipeField"), "data-on", p >= 0.685);
       for (let i = 0; i < 4; i++) {
         write(h(`go${i}`), arrayGo(p, i) ? "GO" : "—");
         flag(h(`go${i}`), "data-go", arrayGo(p, i));

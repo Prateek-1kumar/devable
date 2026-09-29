@@ -5,9 +5,9 @@ import { channelFocus } from "../growth-engine/channelFocus";
 import { CHANNELS } from "../growth-engine/channels";
 import type { LabelId } from "./timeline";
 
-// The mission's instrument layer: a telemetry strip under the navbar and the
-// drafting labels that the scene projects onto its objects. All of it is
-// decorative (aria-hidden); the loop in MissionHero writes the live values.
+// The mission's instrument layer: the drafting labels that the scene projects
+// onto its objects. All of it is decorative (aria-hidden); the loop in
+// MissionHero writes the live values.
 
 /** Live DOM nodes by key, registered through `bind` and written by the loop in MissionHero. */
 export type DomNodes = Map<string, HTMLElement>;
@@ -74,38 +74,6 @@ export default function MissionHud({ className = "", ready, bind }: Props) {
           </Plain>
         ))}
       </div>
-
-      {/* Telemetry. */}
-      <dl aria-hidden="true" className={`absolute top-[104px] left-[8vw] flex gap-7 ${MONO} text-[11px] leading-none`}>
-        <div className="text-foreground/70">DVB‑01</div>
-        <Field label="MET">
-          <span ref={node("met")} className="inline-block min-w-[11ch]">T–48:00:00</span>
-        </Field>
-        <Field label="STATUS">
-          <span ref={node("status")} className="inline-block min-w-[30ch] transition-colors data-[act=true]:text-accent">
-            INTEGRATION
-          </span>
-        </Field>
-        <Field fieldRef={node("altField")} label="ALT" hidden>
-          <span ref={node("alt")} className="inline-block min-w-[7ch]">0 KM</span>
-        </Field>
-        <Field fieldRef={node("velField")} label="VEL" hidden>
-          <span ref={node("vel")} className="inline-block min-w-[10ch]">0.00 KM/S</span>
-        </Field>
-        <Field fieldRef={node("pipeField")} label="PIPELINE" hidden>
-          <span ref={node("pipe")} className="inline-block min-w-[6ch]">+0%</span>
-        </Field>
-      </dl>
-
-    </div>
-  );
-}
-
-function Field({ label, hidden, fieldRef, children }: { label: string; hidden?: boolean; fieldRef?: (el: HTMLElement | null) => void; children: ReactNode }) {
-  return (
-    <div ref={fieldRef} data-on={hidden ? "false" : "true"} className="flex gap-2 transition-opacity duration-500 data-[on=false]:opacity-0">
-      <dt className="text-foreground/35">{label}</dt>
-      <dd className="text-foreground/70">{children}</dd>
     </div>
   );
 }
