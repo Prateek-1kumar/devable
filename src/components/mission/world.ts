@@ -179,10 +179,13 @@ export function fairingPose(p: number) {
 }
 
 // ── The suborbital ghost ─────────────────────────────────────────────────
+// The launch spike: a ballistic arc (apex 1.22 u ≈ 180 km) yawed 14° out of the mission plane so it never
+// lies on the ascent trace, falling back 14° downrange.
 const GHOST_H = new Vector3(Math.cos(14 * D2R), 0, Math.sin(14 * D2R));
+const GHOST_ARC = 14;
 export function ghostPoint(u: number, out = new Vector3()) {
-  const ph = 16 * D2R * u;
-  const alt = 2.6 * 4 * u * (1 - u);
+  const ph = GHOST_ARC * D2R * u;
+  const alt = 1.22 * 4 * u * (1 - u);
   return out
     .set(0, 0, 0)
     .addScaledVector(GHOST_H, Math.sin(ph))
@@ -192,7 +195,7 @@ export function ghostPoint(u: number, out = new Vector3()) {
 }
 /** Unit tangent plane at the ghost's impact: along the arc and across it. */
 export function ghostImpactFrame() {
-  const ph = 16 * D2R;
+  const ph = GHOST_ARC * D2R;
   const n = new Vector3().addScaledVector(GHOST_H, Math.sin(ph)).addScaledVector(Y, Math.cos(ph));
   const along = new Vector3().addScaledVector(GHOST_H, Math.cos(ph)).addScaledVector(Y, -Math.sin(ph));
   const across = new Vector3().crossVectors(n, along);

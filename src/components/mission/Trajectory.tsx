@@ -1,224 +1,199 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
-import { BufferAttribute, BufferGeometry, Color, Quaternion, Vector3, type Group, type Mesh } from "three";
+import { AdditiveBlending, Color, Quaternion, Vector3, type Points } from "three";
 import type { Line2 } from "three-stdlib";
-import { glowFromWithin } from "../growth-engine/palette";
-import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
-import { clamp01, R0, seg, windowed } from "./timeline";
-import { craftPosition, ghostImpactFrame, ghostPoint, polar } from "./world";
+import Marker, { markerMaterial } from "./Marker";
+import { satelliteAttitude } from "./satelliteMotion";
+import { R, seg, smooth, SUN_ORBIT, windowed } from "./timeline";
+import { countUpTo, ghostPoints, ringPoints, samplePath } from "./trajectoryData";
+import { C, ghostImpactFrame, polar } from "./world";
 
-// The paths (the exhaust trail off the pad lives in the pad set): the dashed plan, the forest flown path,
-// the thickening colour tube of the compounding orbit, and the coral
-// suborbital "launch spike" ghost that falls back to the ground.
+// The flight-dynamics line system: thin white lines, depth-tested against the opaque Earth so their
+// back halves go behind it (no ghost pass), one amber for off-nominal. Flown path solid with a faint
+// additive glow, fading by lap and toward the limb; plan dashed; the suborbital spike a dimmer dashed
+// ghost with an amber impact ring; a pin at the Cape and a position dot at the craft. Lines show over
+// .30–.345 (the flight-dynamics wide) and from .58 on; the close shots have none.
 
-const TRAIL_TOP = 1.4;
-// The flown path in two pieces: everything up to the end of the first contact lap, and
-// the current lap, so the first can step aside while the correction dips below the plan.
-const FLOWN = { from: 0.125, to: 0.745, n: 1030 };
-const LAP = { from: 0.745, to: 0.85, n: 260 };
-const SPIRAL = { from: 0.85, to: 0.97, n: 400, radial: 12 };
-const GRADIENT = ["#4f46e5", "#0ea5e9", "#10b981", "#f5b301"].map((c) => new Color(c));
-const FOREST = new Color("#0c3b29");
-const AMBER = new Color("#fcb401");
-const CORAL = "#ec544b";
-/** Spiral tube radius along its length: thin where the orbit starts, thick where it has compounded. */
-const tubeR = (u: number) => 0.1 + 0.4 * u ** 1.6;
+const WHITE = "#eef4ff";
+const AMBER = "#ffb547";
+const LINE = { depthTest: true, depthWrite: false, transparent: true, toneMapped: false, renderOrder: 3 } as const;
+const DASH = { dashed: true, dashSize: 0.5, gapSize: 0.35 } as const;
+const CAUTION = { from: 0.785, to: 0.83 } as const;
 
-const samples = (from: number, to: number, n: number) => Array.from({ length: n }, (_, i) => craftPosition(from + ((to - from) * i) / (n - 1)));
+/** RGBA per point: the colour, alpha 1 (the per-frame fades write the alphas in place). */
+const rgba = (n: number, hex: string) => {
+  const c = new Color(hex).toArray();
+  return Array.from({ length: n }, (): [number, number, number, number] => [c[0], c[1], c[2], 1]);
+};
 
-/** A tube through the spiral samples (one ring per sample, so its reveal matches the craft), tapered and colour-graded. */
-function spiralTube(pts: Vector3[]) {
-  const { radial } = SPIRAL;
-  const n = pts.length;
-  const pos = new Float32Array(n * (radial + 1) * 3);
-  const col = new Float32Array(n * (radial + 1) * 3);
-  const nor = new Float32Array(n * (radial + 1) * 3);
-  const [t, b, off, c] = [new Vector3(), new Vector3(), new Vector3(), new Color()];
-  const Z = new Vector3(0, 0, 1); // the mission plane is XY
-  for (let i = 0; i < n; i++) {
-    const u = i / (n - 1);
-    t.subVectors(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]).normalize();
-    b.crossVectors(t, Z).normalize();
-    const g = u * (GRADIENT.length - 1);
-    const j = Math.min(GRADIENT.length - 2, Math.floor(g));
-    c.lerpColors(GRADIENT[j], GRADIENT[j + 1], g - j);
-    for (let k = 0; k <= radial; k++) {
-      const a = (k / radial) * Math.PI * 2;
-      off.copy(Z).multiplyScalar(Math.cos(a)).addScaledVector(b, Math.sin(a));
-      const at = (i * (radial + 1) + k) * 3;
-      off.toArray(nor, at);
-      off.multiplyScalar(tubeR(u)).add(pts[i]).toArray(pos, at);
-      c.toArray(col, at);
-    }
+/** Writes per-point alphas into a Line2's segment colour buffer (segment k holds points k and k+1). */
+function writeAlphas(line: Line2 | null, n: number, alpha: (i: number) => number) {
+  const attr = line?.geometry.attributes.instanceColorStart as { data?: { array: Float32Array; needsUpdate: boolean } } | undefined;
+  const data = attr?.data;
+  if (!data) return;
+  let prev = alpha(0);
+  for (let k = 0; k < n - 1; k++) {
+    const next = alpha(k + 1);
+    data.array[k * 8 + 3] = prev;
+    data.array[k * 8 + 7] = next;
+    prev = next;
   }
-  const index: number[] = [];
-  for (let i = 0; i < n - 1; i++)
-    for (let k = 0; k < radial; k++) {
-      const a = i * (radial + 1) + k;
-      const d = a + radial + 1;
-      index.push(a, a + 1, d, d, a + 1, d + 1); // counter-clockwise seen from outside
-    }
-  const g = new BufferGeometry();
-  g.setAttribute("position", new BufferAttribute(pos, 3));
-  g.setAttribute("normal", new BufferAttribute(nor, 3));
-  g.setAttribute("color", new BufferAttribute(col, 3));
-  g.setIndex(index);
-  g.setDrawRange(0, 0);
-  return g;
+  data.needsUpdate = true;
 }
 
-function drawScorch(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  ctx.save();
-  const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-  g.addColorStop(0, "rgba(12,59,41,0.25)");
-  g.addColorStop(1, "rgba(12,59,41,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  ctx.restore();
-}
-
-/** Reveals the first `n` segments of a Line2; hides it when there are none. */
-function reveal(line: Line2 | null, n: number) {
+function show(line: Line2 | Points | null, opacity: number, count?: number) {
   if (!line) return;
-  const count = Math.max(0, Math.floor(n));
-  line.visible = count > 0;
-  line.geometry.instanceCount = count;
+  line.visible = opacity > 0.002 && (count === undefined || count > 0);
+  if (!line.visible) return;
+  if ("isLine2" in line) {
+    line.material.opacity = opacity;
+    if (count !== undefined) line.geometry.instanceCount = count;
+  } else {
+    const m = markerMaterial(line);
+    if (m) m.uniforms.uOpacity.value = opacity;
+  }
 }
+
+const camDir = new Vector3();
+const SUN = new Vector3(...SUN_ORBIT).normalize();
+const view = new Vector3();
+const half = new Vector3();
+const normal = new Vector3();
+const att = new Quaternion();
 
 export default function Trajectory() {
   const frame = useMission();
-  const plan = useRef<Line2>(null);
   const flown = useRef<Line2>(null);
-  const lap = useRef<Line2>(null);
-  const spiral = useRef<Mesh>(null);
-  const head = useRef<Mesh>(null);
+  const glow = useRef<Line2>(null);
+  const plan = useRef<Line2>(null);
+  const ring = useRef<Line2>(null);
+  const caution = useRef<Line2>(null);
+  const cautionGhost = useRef<Line2>(null);
   const ghost = useRef<Line2>(null);
-  const cross = useRef<Line2>(null);
-  const scorch = useRef<Group>(null);
+  const impact = useRef<Points>(null);
+  const pin = useRef<Points>(null);
+  const dot = useRef<Points>(null);
+  const pulse = useRef<Points>(null);
+  const glint = useRef<Points>(null);
 
-  const planPts = useMemo(
-    () => [new Vector3(0, TRAIL_TOP, 0), ...samples(0.125, 0.4, 100), ...Array.from({ length: 361 }, (_, i) => polar(22 + i, R0))],
-    [],
-  );
-  const flownPts = useMemo(() => [new Vector3(0, TRAIL_TOP, 0), ...samples(FLOWN.from, FLOWN.to, FLOWN.n)], []);
-  const lapPts = useMemo(() => samples(LAP.from, LAP.to, LAP.n), []);
-  const spiralPts = useMemo(() => samples(SPIRAL.from, SPIRAL.to, SPIRAL.n), []);
-  const tube = useMemo(() => spiralTube(spiralPts), [spiralPts]);
-  const ghostPts = useMemo(() => Array.from({ length: 120 }, (_, i) => ghostPoint(i / 119)), []);
-  const impact = useMemo(() => {
-    const { at, n, along, across } = ghostImpactFrame();
-    const d1 = along.clone().add(across).normalize().multiplyScalar(0.3);
-    const d2 = along.clone().sub(across).normalize().multiplyScalar(0.3);
+  const data = useMemo(() => {
+    const flownPath = samplePath(0.26, 1, 0.12, true);
+    const planPath = samplePath(0.26, 0.4, 0.15);
+    const cautionPath = samplePath(CAUTION.from, CAUTION.to, 0.1);
+    const { at } = ghostImpactFrame();
     return {
-      cross: [at.clone().sub(d1), at.clone().add(d1), at.clone().sub(d2), at.clone().add(d2)],
-      at: at.clone().addScaledVector(n, 0.004),
-      quat: new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), n),
+      flown: flownPath,
+      flownColors: rgba(flownPath.pts.length, WHITE),
+      plan: planPath,
+      planColors: rgba(planPath.pts.length, WHITE),
+      caution: cautionPath,
+      ring: ringPoints(),
+      ringColors: rgba(721, WHITE),
+      ghost: ghostPoints(),
+      impactAt: at.clone().sub(C).setLength(R * 1.003).add(C).toArray(),
+      pinAt: polar(0, R * 1.0015).toArray(),
     };
   }, []);
-  const scorchTex = useCanvasTexture(256, 256, drawScorch);
 
-  useLayoutEffect(() => {
-    [plan, flown, lap, ghost].forEach((l) => reveal(l.current, 0));
-    if (cross.current) cross.current.visible = false;
-  }, []);
-
-  useFrame(() => {
+  useFrame((state) => {
     const p = frame.p;
-    const dash = (l: Line2 | null) => {
-      if (!l) return;
-      l.material.dashSize = 0.0031 * frame.dist;
-      l.material.gapSize = 0.0023 * frame.dist;
-    };
+    // The two windows the lines live in, eased so nothing pops.
+    const wide1 = windowed(p, 0.295, 0.305, 0.338, 0.346);
+    const wide2 = smooth(seg(p, 0.575, 0.6));
+    const on = Math.max(wide1, wide2);
 
-    // Plan: the ascent, then the arc to orbit, then (after the pull-back) the whole ring.
-    reveal(plan.current, p < 0.26 ? 0 : 101 * seg(p, 0.26, 0.3) + 48 * seg(p, 0.3, 0.4) + 312 * seg(p, 0.6, 0.66));
-    dash(plan.current);
-
-    // Flown path: its head is the craft.
-    reveal(flown.current, p <= FLOWN.from ? 0 : 1 + (FLOWN.n - 1) * seg(p, FLOWN.from, FLOWN.to));
-    reveal(lap.current, (LAP.n - 1) * seg(p, LAP.from, LAP.to));
-    // Below plan, the current lap turns amber in proportion to the residual, and returns to forest with the burn.
-    // (Eased, so the lap reads amber early instead of passing through a muddy olive.)
-    const off = p >= 0.785 && p < 0.85 ? clamp01((R0 - frame.r) / 0.45) : 0;
-    if (lap.current) lap.current.material.color.lerpColors(FOREST, AMBER, off * off * (3 - 2 * off));
-    // During the close-up the trail behind the craft would cut across the copy: it recedes, then returns with the pull-back.
-    const recede = 1 - windowed(p, 0.425, 0.45, 0.565, 0.6);
-    // Through the correction the earlier laps step aside, so the dashed plan is the reference the current lap dips under.
-    const earlier = recede * (1 - windowed(p, 0.75, 0.77, 0.85, 0.88));
-    const fadeTo = (l: Line2 | null, o: number) => {
-      if (!l) return;
-      l.material.opacity = o;
-      if (o < 0.001) l.visible = false; // fully faded lines still write depth: take them out of the pass
-    };
-    // Once the spiral tube takes over, the ink paths (flown, lap and the dashed plan) retire: the payoff is solid, not a line drawing.
-    const retire = 1 - seg(p, 0.87, 0.93);
-    fadeTo(flown.current, earlier * retire);
-    fadeTo(lap.current, retire);
-    fadeTo(plan.current, recede * retire);
-
-    // Spiral: the tube grows ring by ring behind the craft, a white bead at its head.
-    const n = Math.floor((SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
-    const sp = spiral.current;
-    if (sp) {
-      sp.visible = n > 0;
-      sp.geometry.setDrawRange(0, n * SPIRAL.radial * 6);
-    }
-    const hd = head.current;
-    if (hd) {
-      hd.visible = n > 0 && p < 0.97;
-      if (hd.visible) {
-        hd.position.copy(spiralPts[n]);
-        hd.scale.setScalar(1.6 * tubeR(n / (SPIRAL.n - 1)));
+    // Flown: revealed up to the craft; laps fade, the far side fades toward the limb; the caution
+    // stretch is left to the amber line until the burn is done.
+    const f = data.flown;
+    const count = Math.max(0, countUpTo(f.p, p) - 1);
+    show(flown.current, 0.85 * on, count);
+    show(glow.current, 0.07 * on, count);
+    if (on > 0 && count > 0) {
+      const th = frame.theta;
+      camDir.subVectors(state.camera.position, C).normalize();
+      const gap = p < 0.85 ? 0 : seg(p, 0.85, 0.862);
+      const alpha = (i: number) => {
+        const t = f.theta[i];
+        const lap = (0.15 + 0.85 * smooth(seg(t, th - 720, th - 360))) * (0.3 + 0.7 * smooth(seg(t, th - 360, th)));
+        const depth = 0.4 + 0.6 * smooth(seg(f.radial[i].dot(camDir), -0.3, 0.3));
+        const pi = f.p[i];
+        return lap * depth * (pi > CAUTION.from && pi < CAUTION.to ? gap : 1);
+      };
+      writeAlphas(flown.current, Math.min(f.pts.length, count + 2), alpha);
+      const src = flown.current?.geometry.attributes.instanceColorStart as unknown as { data: { array: Float32Array } } | undefined;
+      const dst = glow.current?.geometry.attributes.instanceColorStart as unknown as { data: { array: Float32Array; needsUpdate: boolean } } | undefined;
+      if (src && dst) {
+        dst.data.array.set(src.data.array);
+        dst.data.needsUpdate = true;
       }
     }
 
-    // The launch spike: a suborbital arc that falls back, marked where it lands.
-    const fade = 1 - seg(p, 0.56, 0.62);
-    reveal(ghost.current, p < 0.3 || p >= 0.62 ? 0 : 119 * seg(p, 0.3, 0.37));
-    if (ghost.current) ghost.current.material.opacity = 0.7 * fade;
-    dash(ghost.current);
-    const hit = fade * windowed(p, 0.37, 0.375, 2, 3);
-    if (cross.current) {
-      cross.current.visible = p >= 0.37 && p < 0.62;
-      cross.current.material.opacity = 0.9 * hit;
+    // Plan: the insertion arc ahead of the craft (flight-dynamics wide), and the parking ring.
+    show(plan.current, 0.35 * wide1);
+    if (wide1 > 0) writeAlphas(plan.current, data.plan.pts.length, (i) => smooth(seg(data.plan.p[i], p, p + 0.004)));
+    show(ring.current, (p < 0.85 ? 0.35 : 0.35 - 0.1 * seg(p, 0.85, 0.87)) * on);
+    if (on > 0) {
+      // Plan ahead, flown behind: where the latest pass over an angle is on the ring and still bright,
+      // the dashes step aside so they never flicker over the solid line. The sag keeps its plan.
+      const th = frame.theta;
+      writeAlphas(ring.current, 721, (i) => {
+        const last = th - ((((th - i / 2) % 360) + 360) % 360); // the latest θ that passed this angle
+        if (last < 22 || last >= 770 || (last > 695 && last < 750 && p < 0.85)) return 1;
+        return 1 - 0.9 * smooth(seg(last, th - 360, th));
+      });
     }
-    if (scorch.current) {
-      scorch.current.visible = p >= 0.37 && p < 0.62;
-      scorch.current.scale.setScalar(Math.max(0.01, hit));
+
+    // Caution: the sag below plan in amber, then a dashed ghost of it until .855.
+    const cCount = Math.max(0, countUpTo(data.caution.p, p) - 1);
+    show(caution.current, 0.9 * (1 - seg(p, 0.83, 0.836)) * wide2, cCount);
+    show(cautionGhost.current, 0.35 * seg(p, 0.83, 0.836) * (1 - seg(p, 0.848, 0.855)) * wide2, cCount);
+
+    // The launch spike and where it lands, the pin at the Cape.
+    show(ghost.current, 0.35 * windowed(p, 0.295, 0.305, 0.34, 0.35));
+    show(impact.current, windowed(p, 0.3, 0.31, 0.34, 0.35));
+    show(pin.current, wide1);
+
+    // Position dot with its pulse (every 1.6 s).
+    const d = dot.current;
+    const u = pulse.current;
+    show(d, on);
+    show(u, 0.4 * on * (1 - ((frame.t / 1.6) % 1)));
+    d?.position.copy(frame.craft);
+    if (u) {
+      u.position.copy(frame.craft);
+      const m = markerMaterial(u);
+      if (m) m.uniforms.uSize.value = 2 + 10 * ((frame.t / 1.6) % 1);
     }
+
+    // Sun glint off the arrays in the final hold: strongest near the specular geometry, never gone.
+    const gl = glint.current;
+    const hold = smooth(seg(p, 0.93, 0.96));
+    if (gl && hold > 0) {
+      satelliteAttitude(p, frame.craft, frame.quat, att);
+      normal.set(0, 1, 0).applyQuaternion(att.premultiply(frame.quat));
+      view.subVectors(state.camera.position, frame.craft).normalize();
+      half.addVectors(SUN, view).normalize();
+      gl.position.copy(frame.craft).addScaledVector(view, 0.25 * frame.scale); // in front of the bus, so its depth never hides it
+      show(gl, hold * (0.45 + 0.55 * Math.max(0, normal.dot(half)) ** 6));
+    } else show(gl, 0);
   });
 
   return (
     <group>
-      <Line ref={plan} points={planPts} color="#a9b3ad" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
-      <Line ref={flown} points={flownPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
-      <Line ref={lap} points={lapPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
-      <mesh ref={spiral} geometry={tube} visible={false} frustumCulled={false}>
-        <meshPhysicalMaterial
-          ref={(m) => {
-            if (m) glowFromWithin(m);
-          }}
-          vertexColors
-          color="#ffffff"
-          roughness={0.3}
-          clearcoat={0.6}
-          clearcoatRoughness={0.15}
-        />
-      </mesh>
-      <mesh ref={head} visible={false}>
-        <sphereGeometry args={[1, 24, 16]} />
-        <meshBasicMaterial color="#ffffff" toneMapped={false} />
-      </mesh>
-      <Line ref={ghost} points={ghostPts} color={CORAL} lineWidth={1.25} dashed dashSize={0.05} gapSize={0.04} transparent opacity={0.7} />
-      <Line ref={cross} points={impact.cross} segments color={CORAL} lineWidth={1.5} transparent opacity={0} />
-      <group ref={scorch} position={impact.at} quaternion={impact.quat} visible={false}>
-        <mesh>
-          <circleGeometry args={[0.35, 48]} />
-          <meshBasicMaterial map={scorchTex.texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-        </mesh>
-      </group>
+      <Line ref={ring} points={data.ring} vertexColors={data.ringColors} lineWidth={1} {...DASH} {...LINE} />
+      <Line ref={plan} points={data.plan.pts} vertexColors={data.planColors} lineWidth={1} {...DASH} {...LINE} />
+      <Line ref={ghost} points={data.ghost} color={WHITE} lineWidth={1} {...DASH} {...LINE} />
+      <Line ref={glow} points={data.flown.pts} vertexColors={data.flownColors} lineWidth={4} blending={AdditiveBlending} {...LINE} />
+      <Line ref={flown} points={data.flown.pts} vertexColors={data.flownColors} lineWidth={1.25} {...LINE} />
+      <Line ref={caution} points={data.caution.pts} color={AMBER} lineWidth={1.25} {...LINE} />
+      <Line ref={cautionGhost} points={data.caution.pts} color={AMBER} lineWidth={1.25} {...DASH} {...LINE} />
+      <Marker ref={impact} size={8} ring color={AMBER} position={data.impactAt as [number, number, number]} />
+      <Marker ref={pin} size={3} position={data.pinAt as [number, number, number]} />
+      <Marker ref={dot} size={5} />
+      <Marker ref={pulse} size={2} ring />
+      <Marker ref={glint} size={16} soft additive color="#fff4e2" />
     </group>
   );
 }
