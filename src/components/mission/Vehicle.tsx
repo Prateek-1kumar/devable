@@ -20,7 +20,7 @@ import { channelFocus } from "../growth-engine/channelFocus";
 import { CHANNELS, drawGlyph } from "../growth-engine/channels";
 import { damp } from "../growth-engine/ease";
 import { drawMark } from "../growth-engine/EngineCore";
-import { glowFromWithin, materials, paintFade, palette, TONES } from "../growth-engine/palette";
+import { glowFromWithin, materials, mix, paintFade, palette, TONES } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
 import { flameRamp, missionMaterials } from "./materials";
@@ -130,17 +130,17 @@ function drawCells(i: number) {
       for (let r = 0; r < rows; r++) {
         const [x, y] = [pad + c * cw, pad + r * ch];
         const g = ctx.createLinearGradient(x, y, x + cw, y);
-        g.addColorStop(0, "rgba(255,255,255,0.18)");
+        g.addColorStop(0, "rgba(255,255,255,0.14)");
         g.addColorStop(0.45, "rgba(255,255,255,0.05)");
         g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = g;
         ctx.fillRect(x + 2, y + 2, cw - 4, ch - 4);
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         for (const k of [0.33, 0.66]) ctx.fillRect(x + cw * k - 1, y + 4, 2, ch - 8);
       }
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.85;
     ctx.strokeStyle = TONES[i].edge;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     for (let c = 0; c <= cols; c++) {
       ctx.moveTo(pad + c * cw, pad);
@@ -233,7 +233,9 @@ export default function Vehicle() {
 
   useLayoutEffect(() => {
     panels.current.forEach((panel, i) => {
-      if (panel) paintFade(panel, CHANNELS[i].fade[1], CHANNELS[i].fade[0], PANEL.h, 0.35);
+      const { color, fade } = CHANNELS[i];
+      // The page's pastel fade washes out on white; pulled toward the signal color it pops.
+      if (panel) paintFade(panel, mix(fade[1], color, 0.45), mix(fade[0], color, 0.45), PANEL.h, 0.35);
     });
   }, []);
 
@@ -489,14 +491,14 @@ export default function Vehicle() {
                   <cylinderGeometry args={[0.006, 0.006, 0.07, 8]} />
                 </mesh>
               ))}
-              {/* Frame: an aluminium rim, so the lip shows on every edge and the back still shows the substrate's colour. */}
+              {/* Frame: a graphite rim, so the lip reads on every edge against the white sky and the back still shows the substrate's colour. */}
               {[-1, 1].map((s) => (
-                <mesh key={`x${s}`} position={[s * 0.103, PANEL.y, PANEL.z - 0.001]} material={m.alu}>
+                <mesh key={`x${s}`} position={[s * 0.103, PANEL.y, PANEL.z - 0.001]} material={mm.graphite}>
                   <boxGeometry args={[0.006, 0.912, 0.018]} />
                 </mesh>
               ))}
               {[-1, 1].map((s) => (
-                <mesh key={`y${s}`} position={[0, PANEL.y + s * 0.453, PANEL.z - 0.001]} material={m.alu}>
+                <mesh key={`y${s}`} position={[0, PANEL.y + s * 0.453, PANEL.z - 0.001]} material={mm.graphite}>
                   <boxGeometry args={[0.212, 0.006, 0.018]} />
                 </mesh>
               ))}

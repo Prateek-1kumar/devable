@@ -1,17 +1,18 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
-import { BufferAttribute, BufferGeometry, Color, LineCurve3, Quaternion, TubeGeometry, Vector3, type Group, type Mesh } from "three";
+import { BufferAttribute, BufferGeometry, Color, LineCurve3, Quaternion, TubeGeometry, Vector3, type Group, type InterleavedBufferAttribute, type Mesh } from "three";
 import type { Line2 } from "three-stdlib";
 import { glowFromWithin } from "../growth-engine/palette";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
-import { clamp01, R0, seg, windowed } from "./timeline";
+import { clamp01, craftTheta, R0, seg, windowed } from "./timeline";
 import { BELL_Y, craftPosition, ghostImpactFrame, ghostPoint, polar } from "./world";
 
-// The paths: the contrail off the pad, the dashed plan, the forest flown path,
-// the thickening colour tube of the compounding orbit, and the coral
-// suborbital "launch spike" ghost that falls back to the ground.
+// The paths: the contrail off the pad, the faint dashed plan, the flown path
+// (a graphite hairline that fades out behind the craft like a comet tail), the
+// thickening colour tube of the compounding orbit, and the coral suborbital
+// "launch spike" ghost that falls back to the ground.
 
 const TRAIL_TOP = 1.4;
 const TRAIL_SEGS = 32;
@@ -22,7 +23,12 @@ const FLOWN = { from: 0.125, to: 0.745, n: 1030 };
 const LAP = { from: 0.745, to: 0.85, n: 260 };
 const SPIRAL = { from: 0.85, to: 0.97, n: 400, radial: 12 };
 const GRADIENT = ["#4f46e5", "#0ea5e9", "#10b981", "#f5b301"].map((c) => new Color(c));
-const FOREST = new Color("#0c3b29");
+const INK = new Color("#2b3532");
+/** Degrees of orbit behind the craft over which the flown path fades to nothing. */
+const TAIL = 200;
+/** The hairline's alpha right behind the craft. */
+const TAIL_PEAK = 0.8;
+const PLAN_OPACITY = 0.5;
 const AMBER = new Color("#fcb401");
 const CORAL = "#ec544b";
 /** Spiral tube radius along its length: thin where the orbit starts, thick where it has compounded. */
@@ -46,6 +52,10 @@ function contrail() {
   g.computeVertexNormals();
   return g;
 }
+
+/** The orbit angle of every sample (plus the contrail top, at 0°, when `lead`). */
+const thetasOf = ({ from, to, n }: { from: number; to: number; n: number }, lead: boolean) =>
+  Float32Array.from([...(lead ? [0] : []), ...Array.from({ length: n }, (_, i) => craftTheta(from + ((to - from) * i) / (n - 1)))]);
 
 const samples = (from: number, to: number, n: number) => Array.from({ length: n }, (_, i) => craftPosition(from + ((to - from) * i) / (n - 1)));
 
@@ -100,6 +110,29 @@ function drawScorch(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.restore();
 }
 
+/** One white RGBA colour per point; the tail fade rewrites only the alphas. */
+const white = (n: number) => Array.from({ length: n }, () => [1, 1, 1, 1] as [number, number, number, number]);
+
+/**
+ * Comet tail: each point's alpha falls from TAIL_PEAK at the craft to 0 at TAIL degrees behind it.
+ * `thetas` are the points' orbit angles; the colour buffer holds one start and one end RGBA per segment.
+ */
+function fadeTail(line: Line2 | null, thetas: Float32Array, head: number) {
+  if (!line) return;
+  const attr = line.geometry.attributes.instanceColorStart as InterleavedBufferAttribute | undefined;
+  if (!attr) return;
+  const arr = attr.data.array as Float32Array;
+  const a = (i: number) => {
+    const k = clamp01(1 - (head - thetas[i]) / TAIL);
+    return TAIL_PEAK * k * k;
+  };
+  for (let i = 0; i < thetas.length - 1; i++) {
+    arr[i * 8 + 3] = a(i);
+    arr[i * 8 + 7] = a(i + 1);
+  }
+  attr.data.needsUpdate = true;
+}
+
 /** Reveals the first `n` segments of a Line2; hides it when there are none. */
 function reveal(line: Line2 | null, n: number) {
   if (!line) return;
@@ -127,6 +160,11 @@ export default function Trajectory() {
   );
   const flownPts = useMemo(() => [new Vector3(0, TRAIL_TOP, 0), ...samples(FLOWN.from, FLOWN.to, FLOWN.n)], []);
   const lapPts = useMemo(() => samples(LAP.from, LAP.to, LAP.n), []);
+  const flownThetas = useMemo(() => thetasOf(FLOWN, true), []);
+  const lapThetas = useMemo(() => thetasOf(LAP, false), []);
+  const flownColors = useMemo(() => white(flownPts.length), [flownPts]);
+  const lapColors = useMemo(() => white(lapPts.length), [lapPts]);
+  const tailHead = useRef(Number.NaN);
   const spiralPts = useMemo(() => samples(SPIRAL.from, SPIRAL.to, SPIRAL.n), []);
   const tube = useMemo(() => spiralTube(spiralPts), [spiralPts]);
   const ghostPts = useMemo(() => Array.from({ length: 120 }, (_, i) => ghostPoint(i / 119)), []);
@@ -176,10 +214,16 @@ export default function Trajectory() {
     // Flown path: its head is the craft.
     reveal(flown.current, p <= FLOWN.from ? 0 : 1 + (FLOWN.n - 1) * seg(p, FLOWN.from, FLOWN.to));
     reveal(lap.current, (LAP.n - 1) * seg(p, LAP.from, LAP.to));
-    // Below plan, the current lap turns amber in proportion to the residual, and returns to forest with the burn.
+    if (frame.theta !== tailHead.current) {
+      tailHead.current = frame.theta;
+      fadeTail(flown.current, flownThetas, frame.theta);
+      fadeTail(lap.current, lapThetas, frame.theta);
+    }
+    if (flown.current) flown.current.material.color.copy(INK);
+    // Below plan, the current lap turns amber in proportion to the residual, and returns to graphite with the burn.
     // (Eased, so the lap reads amber early instead of passing through a muddy olive.)
     const off = p >= 0.785 && p < 0.85 ? clamp01((R0 - frame.r) / 0.45) : 0;
-    if (lap.current) lap.current.material.color.lerpColors(FOREST, AMBER, off * off * (3 - 2 * off));
+    if (lap.current) lap.current.material.color.lerpColors(INK, AMBER, off * off * (3 - 2 * off));
     // During the close-up the trail behind the craft would cut across the copy: it recedes, then returns with the pull-back.
     const recede = 1 - windowed(p, 0.425, 0.45, 0.565, 0.6);
     // Through the correction the earlier laps step aside, so the dashed plan is the reference the current lap dips under.
@@ -193,7 +237,7 @@ export default function Trajectory() {
     const retire = 1 - seg(p, 0.87, 0.93);
     fadeTo(flown.current, earlier * retire);
     fadeTo(lap.current, retire);
-    fadeTo(plan.current, recede * retire);
+    fadeTo(plan.current, PLAN_OPACITY * recede * retire);
 
     // Spiral: the tube grows ring by ring behind the craft, a white bead at its head.
     const n = Math.floor((SPIRAL.n - 1) * seg(p, SPIRAL.from, SPIRAL.to));
@@ -232,9 +276,9 @@ export default function Trajectory() {
       <mesh ref={trail} geometry={trailGeometry} visible={false}>
         <meshStandardMaterial vertexColors transparent depthWrite={false} roughness={1} emissive="#ffffff" emissiveIntensity={0.35} />
       </mesh>
-      <Line ref={plan} points={planPts} color="#a9b3ad" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
-      <Line ref={flown} points={flownPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
-      <Line ref={lap} points={lapPts} color="#0c3b29" lineWidth={1.5} renderOrder={2} transparent />
+      <Line ref={plan} points={planPts} color="#b4bcb8" lineWidth={1} renderOrder={1} depthWrite={false} transparent dashed dashSize={0.05} gapSize={0.04} />
+      <Line ref={flown} points={flownPts} vertexColors={flownColors} lineWidth={1.25} renderOrder={2} depthWrite={false} transparent />
+      <Line ref={lap} points={lapPts} vertexColors={lapColors} lineWidth={1.25} renderOrder={2} depthWrite={false} transparent />
       <mesh ref={spiral} geometry={tube} visible={false} frustumCulled={false}>
         <meshPhysicalMaterial
           ref={(m) => {
