@@ -20,6 +20,10 @@ export class MissionFrame {
   r = 0;
   /** World positions of the four array tips (valid after the vehicle pass). */
   tips = [new Vector3(), new Vector3(), new Vector3(), new Vector3()];
+  /** World position of the downlink dish (valid after the satellite pass): contact beams start here. */
+  dish = new Vector3();
+  /** World position of the payload instrument's aperture, the head of the craft (valid after the satellite pass). */
+  head = new Vector3();
 
   update(p: number, t: number, still: boolean) {
     this.p = p;

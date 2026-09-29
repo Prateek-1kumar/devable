@@ -173,6 +173,14 @@ export const latchAt = (i: number) => 0.505 + 0.008 * i;
 /** Array i's hinge angle in radians (0 stowed → π/2 deployed). */
 export const hingeAngle = (p: number, i: number) => (Math.PI / 2) * easeOutBack(seg(p, latchAt(i) - 0.03, latchAt(i)));
 export const latched = (p: number, i: number) => p >= latchAt(i);
+/**
+ * Wing i's deployment inside its latch window L: the yoke swings out 0 → 1 (0 → 90°) over [L − .03, L − .018],
+ * then the accordion folds open 1 → 0 (±180° → 0) over [L − .02, L], settling with a small overshoot on the latch.
+ */
+export const wingDeploy = (p: number, i: number) => {
+  const L = latchAt(i);
+  return { yoke: smooth(seg(p, L - 0.03, L - 0.018)), fold: 1 - easeOutBack(seg(p, L - 0.02, L)) };
+};
 
 /** Pad units → world units: 1 on the pad, 0.18 in orbit space, 1.1 for the deployed close-ups and wides. */
 export const vehicleScale = (p: number) => (p < CUT_P ? 1 : p < 0.56 ? 0.18 : lerp(0.18, 1.1, eio(seg(p, 0.56, 0.64))));
