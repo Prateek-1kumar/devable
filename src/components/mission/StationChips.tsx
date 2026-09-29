@@ -54,16 +54,20 @@ export default function StationChips({ bind }: { bind: Bind }) {
     <div
       key={s.mark}
       ref={bind(`st${k}`)}
-      className="invisible absolute top-0 left-0 opacity-0 transition-opacity duration-300 will-change-transform [--dx:0px] [--rise:28px]"
+      data-lit="false"
+      className="group invisible absolute top-0 left-0 opacity-0 transition-opacity duration-300 will-change-transform [--dx:0px] [--rise:28px]"
     >
       <span className="absolute bottom-[5px] left-[-0.5px] h-[calc(var(--rise)-5px)] w-px bg-white/25" />
       <div
         className="absolute bottom-(--rise) left-[calc(var(--dx)-0.5px)] flex items-center gap-1.5 rounded-[6px] rounded-bl-none border border-white/12 bg-[rgba(8,12,20,0.6)] px-2 py-[5px] whitespace-nowrap backdrop-blur-[6px]"
       >
-        <BrandMark mark={s.mark} size={14} />
-        <span className={`${MONO} text-[10px] leading-3 text-white/80`}>{CHIP_NAMES[k]}</span>
-        <span className="ml-0.5 size-1 rounded-full" style={{ background: CHANNELS[s.channel].color }} />
-        <span className={`${MONO} text-[10px] leading-3 text-white/50`}>{CHANNELS[s.channel].n}</span>
+        {/* Until its first contact lights it, a station's chip shows dimmed content on the same glass. */}
+        <span className="flex items-center gap-1.5 opacity-45 transition-opacity duration-500 group-data-[lit=true]:opacity-100">
+          <BrandMark mark={s.mark} size={14} />
+          <span className={`${MONO} text-[10px] leading-3 text-white/80`}>{CHIP_NAMES[k]}</span>
+          <span className="ml-0.5 size-1 rounded-full" style={{ background: CHANNELS[s.channel].color }} />
+          <span className={`${MONO} text-[10px] leading-3 text-white/50`}>{CHANNELS[s.channel].n}</span>
+        </span>
       </div>
     </div>
   ));

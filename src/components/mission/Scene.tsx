@@ -333,7 +333,7 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
     if (!nodes) return;
     const { v, cache, widths } = scratch;
     const { width, height } = state.size;
-    const shown: { k: number; x: number; x0: number; y: number; w: number; o: number; row: number }[] = [];
+    const shown: { k: number; x: number; x0: number; y: number; w: number; lit: boolean; row: number }[] = [];
     frame.stations.forEach((st, k) => {
       const el = nodes.get(`st${k}`);
       if (!el || !st.front || !(st.lit || st.live > 0.05)) return;
@@ -346,7 +346,7 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
       }
       const x = ((v.x + 1) / 2) * width;
       w = w || 120;
-      shown.push({ k, x, x0: Math.min(x, width - CHIP_INSET - w), y: ((1 - v.y) / 2) * height, w, o: st.lit ? 1 : 0.45, row: 0 });
+      shown.push({ k, x, x0: Math.min(x, width - CHIP_INSET - w), y: ((1 - v.y) / 2) * height, w, lit: st.lit, row: 0 });
     });
     shown.sort((a, b) => b.x - a.x);
     shown.forEach((c, i) => {
@@ -359,7 +359,7 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
       if (!el) continue;
       const c = shown.find((s) => s.k === k);
       const dx = c ? c.x0 - c.x : 0;
-      const key = c ? `${c.x.toFixed(1)}|${c.y.toFixed(1)}|${c.o}|${c.row}|${dx.toFixed(1)}` : "hidden";
+      const key = c ? `${c.x.toFixed(1)}|${c.y.toFixed(1)}|${c.lit}|${c.row}|${dx.toFixed(1)}` : "hidden";
       if (cache.get(k) === key) continue;
       cache.set(k, key);
       if (!c) {
@@ -368,7 +368,8 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
         continue;
       }
       el.style.setProperty("visibility", "visible");
-      el.style.setProperty("opacity", String(c.o));
+      el.style.setProperty("opacity", "1");
+      el.setAttribute("data-lit", String(c.lit));
       el.style.setProperty("transform", `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`);
       el.style.setProperty("--rise", `${28 + c.row * CHIP_ROW}px`);
       el.style.setProperty("--dx", `${dx.toFixed(1)}px`);
