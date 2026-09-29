@@ -7,7 +7,7 @@ import { useMission } from "./frame";
 import Marker, { markerMaterial } from "./Marker";
 import { satelliteAttitude } from "./satelliteMotion";
 import { R, seg, smooth, SUN_ORBIT, windowed } from "./timeline";
-import { countUpTo, ghostPoints, ringPoints, samplePath } from "./trajectoryData";
+import { countUpTo, ENGINE, engineShare, ghostPoints, lengthAt, pointAtLength, ringPoints, samplePath } from "./trajectoryData";
 import { C, ghostImpactFrame, polar } from "./world";
 
 // The flight-dynamics line system: thin white lines, depth-tested against the opaque Earth so their
@@ -21,6 +21,8 @@ const AMBER = "#ffb547";
 const LINE = { depthTest: true, depthWrite: false, transparent: true, toneMapped: false, renderOrder: 3 } as const;
 const DASH = { dashed: true, dashSize: 0.5, gapSize: 0.35 } as const;
 const CAUTION = { from: 0.785, to: 0.83 } as const;
+/** The live tail that eases the trace onto the engine: its length and point count. */
+const TAIL = { length: 0.9, n: 16 } as const;
 
 /** RGBA per point: the colour, alpha 1 (the per-frame fades write the alphas in place). */
 const rgba = (n: number, hex: string) => {
@@ -57,6 +59,10 @@ function show(line: Line2 | Points | null, opacity: number, count?: number) {
 }
 
 const camDir = new Vector3();
+const engine = new Vector3();
+const Y = new Vector3(0, 1, 0);
+const onPath = new Vector3();
+const bend = new Vector3();
 const SUN = new Vector3(...SUN_ORBIT).normalize();
 const view = new Vector3();
 const half = new Vector3();
@@ -67,6 +73,7 @@ export default function Trajectory() {
   const frame = useMission();
   const flown = useRef<Line2>(null);
   const glow = useRef<Line2>(null);
+  const tail = useRef<Line2>(null);
   const plan = useRef<Line2>(null);
   const ring = useRef<Line2>(null);
   const caution = useRef<Line2>(null);
@@ -92,6 +99,7 @@ export default function Trajectory() {
       ring: ringPoints(),
       ringColors: rgba(721, WHITE),
       ghost: ghostPoints(),
+      tail: Array.from({ length: TAIL.n }, (_, i) => new Vector3(0, i, 0)),
       impactAt: at.clone().sub(C).setLength(R * 1.003).add(C).toArray(),
       pinAt: polar(0, R * 1.0015).toArray(),
     };
@@ -106,10 +114,31 @@ export default function Trajectory() {
 
     // Flown: revealed up to the craft; laps fade, the far side fades toward the limb; the caution
     // stretch is left to the amber line until the burn is done.
+    // During the ascent the trace ends at the engine: the path is revealed up to a body length behind the
+    // craft point, and a short live segment joins it to the bell (the vehicle points along the tangent,
+    // so its tail sits just off the curved path).
     const f = data.flown;
-    const count = Math.max(0, countUpTo(f.p, p) - 1);
+    const k = engineShare(p);
+    const sEnd = lengthAt(f, p) - ENGINE * k;
+    const count = Math.max(0, (k > 0 ? countUpTo(f.s, sEnd - TAIL.length) : countUpTo(f.p, p)) - 1);
     show(flown.current, 0.85 * on, count);
     show(glow.current, 0.07 * on, count);
+    const tl = tail.current;
+    show(tl, k > 0 ? 0.85 * on : 0);
+    if (tl?.visible) {
+      const buf = (tl.geometry.attributes.instanceStart as unknown as { data: { array: Float32Array; needsUpdate: boolean } }).data;
+      engine.copy(Y).applyQuaternion(frame.quat).multiplyScalar(-ENGINE * k).add(frame.craft);
+      // The tail follows the path from the last revealed sample and bends, eased, onto the bell.
+      const s0 = f.s[count];
+      bend.subVectors(engine, pointAtLength(f, sEnd, onPath));
+      for (let j = 0; j < TAIL.n; j++) {
+        const u = j / (TAIL.n - 1);
+        pointAtLength(f, s0 + (sEnd - s0) * u, onPath).addScaledVector(bend, smooth(u));
+        if (j > 0) onPath.toArray(buf.array, (j - 1) * 6 + 3);
+        if (j < TAIL.n - 1) onPath.toArray(buf.array, j * 6);
+      }
+      buf.needsUpdate = true;
+    }
     if (on > 0 && count > 0) {
       const th = frame.theta;
       camDir.subVectors(state.camera.position, C).normalize();
@@ -132,7 +161,10 @@ export default function Trajectory() {
 
     // Plan: the insertion arc ahead of the craft (flight-dynamics wide), and the parking ring.
     show(plan.current, 0.35 * wide1);
-    if (wide1 > 0) writeAlphas(plan.current, data.plan.pts.length, (i) => smooth(seg(data.plan.p[i], p, p + 0.004)));
+    if (wide1 > 0) {
+      // The plan starts a body length ahead of the vehicle, so no dash runs alongside it.
+      writeAlphas(plan.current, data.plan.pts.length, (i) => (data.plan.p[i] <= p ? 0 : smooth(seg(data.plan.pts[i].distanceTo(frame.craft), 0.2, 0.6))));
+    }
     show(ring.current, (p < 0.85 ? 0.35 : 0.35 - 0.1 * seg(p, 0.85, 0.87)) * on);
     if (on > 0) {
       // Plan ahead, flown behind: where the latest pass over an angle is on the ring and still bright,
@@ -151,7 +183,7 @@ export default function Trajectory() {
     show(cautionGhost.current, 0.35 * seg(p, 0.83, 0.836) * (1 - seg(p, 0.848, 0.855)) * wide2, cCount);
 
     // The launch spike and where it lands, the pin at the Cape.
-    show(ghost.current, 0.35 * windowed(p, 0.295, 0.305, 0.34, 0.35));
+    show(ghost.current, 0.45 * windowed(p, 0.295, 0.305, 0.34, 0.35));
     show(impact.current, windowed(p, 0.3, 0.31, 0.34, 0.35));
     show(pin.current, wide1);
 
@@ -184,8 +216,9 @@ export default function Trajectory() {
     <group>
       <Line ref={ring} points={data.ring} vertexColors={data.ringColors} lineWidth={1} {...DASH} {...LINE} />
       <Line ref={plan} points={data.plan.pts} vertexColors={data.planColors} lineWidth={1} {...DASH} {...LINE} />
-      <Line ref={ghost} points={data.ghost} color={WHITE} lineWidth={1} {...DASH} {...LINE} />
+      <Line ref={ghost} points={data.ghost} color={WHITE} lineWidth={1} {...DASH} dashSize={0.2} gapSize={0.14} {...LINE} />
       <Line ref={glow} points={data.flown.pts} vertexColors={data.flownColors} lineWidth={4} blending={AdditiveBlending} {...LINE} />
+      <Line ref={tail} points={data.tail} color={WHITE} lineWidth={1.25} frustumCulled={false} {...LINE} />
       <Line ref={flown} points={data.flown.pts} vertexColors={data.flownColors} lineWidth={1.25} {...LINE} />
       <Line ref={caution} points={data.caution.pts} color={AMBER} lineWidth={1.25} {...LINE} />
       <Line ref={cautionGhost} points={data.caution.pts} color={AMBER} lineWidth={1.25} {...DASH} {...LINE} />
