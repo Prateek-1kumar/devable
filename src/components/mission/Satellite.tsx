@@ -39,7 +39,7 @@ export default function Satellite() {
     return {
       core: new MeshStandardMaterial({ color: "#16171a", roughness: 0.6, metalness: 0.2 }),
       front: new MeshStandardMaterial({ map: frontTex.texture, normalMap: maps.blackCrinkle, normalScale: new Vector2(0.35, 0.35), metalness: 0.3, roughness: 0.55 }),
-      gold: new MeshStandardMaterial({ map: goldTex.texture, normalMap: maps.goldCrinkle, normalScale: new Vector2(0.6, 0.6), metalness: 1, roughness: 0.38, envMapIntensity: 2.5 }),
+      gold: new MeshStandardMaterial({ map: goldTex.texture, normalMap: maps.goldCrinkle, normalScale: new Vector2(0.8, 0.8), metalness: 0.85, roughness: 0.42, envMapIntensity: 2.5 }),
       osr: new MeshStandardMaterial({ map: osrTex.texture, metalness: 0.3, roughness: 0.1 }),
       champagne: new MeshStandardMaterial({ color: "#c9b27c", metalness: 1, roughness: 0.3, envMapIntensity: 2.5 }),
       niobium: new MeshStandardMaterial({ color: "#3b3d40", metalness: 0.9, roughness: 0.35, side: DoubleSide }),
