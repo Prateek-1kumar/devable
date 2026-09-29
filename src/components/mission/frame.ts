@@ -24,6 +24,11 @@ export class MissionFrame {
   dish = new Vector3();
   /** World position of the payload instrument's aperture, the head of the craft (valid after the satellite pass). */
   head = new Vector3();
+  /**
+   * Ground stations (valid after the stations pass): the pin's world position, whether it faces the camera
+   * (front), whether it has been lit by a first contact, and its contact envelope (0 out of contact, 1 locked).
+   */
+  stations = Array.from({ length: 5 }, () => ({ pos: new Vector3(), front: false, lit: false, live: 0 }));
 
   update(p: number, t: number, still: boolean) {
     this.p = p;

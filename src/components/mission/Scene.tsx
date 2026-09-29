@@ -96,6 +96,7 @@ function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" |
       </group>
       <Vehicle />
       {labels && <LabelWriter labels={labels} />}
+      {labels && <StationChipWriter labels={labels} />}
     </FrameContext.Provider>
   );
 }
@@ -305,6 +306,68 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
       el.style.setProperty("opacity", o.toFixed(3));
       el.style.setProperty("transform", `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`);
       if (LEADERS.has(id)) el.style.setProperty("--lead", `${Math.max(24, 0.79 * width - x).toFixed(1)}px`);
+    }
+  }, -1);
+  return null;
+}
+
+/** Keeps chips 24 px inside the panel; the leader stays on its pin. */
+const CHIP_INSET = 24;
+/** Chips closer than this (css px) stack: the later one rises a row higher on a longer leader. */
+const CHIP_GAP = 8;
+const CHIP_ROW = 26;
+
+/**
+ * Station chips: one per station that faces the camera and is lit or in contact. Chips fly right of their
+ * leaders, so they are placed right to left: a chip that would collide rises a row, and its leader runs up
+ * left of every chip already placed.
+ */
+function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }) {
+  const frame = useMission();
+  const scratch = useMemo(() => ({ v: new Vector3(), cache: new Map<number, string>(), widths: new Map<number, number>() }), []);
+
+  useFrame((state) => {
+    const nodes = labels.current;
+    if (!nodes) return;
+    const { v, cache, widths } = scratch;
+    const { width, height } = state.size;
+    const shown: { k: number; x: number; y: number; w: number; o: number; row: number }[] = [];
+    frame.stations.forEach((st, k) => {
+      const el = nodes.get(`st${k}`);
+      if (!el || !st.front || !(st.lit || st.live > 0.05)) return;
+      v.copy(st.pos).project(state.camera);
+      if (v.z >= 1) return;
+      let w = widths.get(k);
+      if (!w) {
+        w = (el.lastElementChild as HTMLElement | null)?.offsetWidth ?? 0; // fixed text: measured once
+        if (w) widths.set(k, w);
+      }
+      shown.push({ k, x: ((v.x + 1) / 2) * width, y: ((1 - v.y) / 2) * height, w: w || 120, o: st.lit ? 1 : 0.45, row: 0 });
+    });
+    shown.sort((a, b) => b.x - a.x);
+    shown.forEach((c, i) => {
+      const clash = (row: number) =>
+        shown.slice(0, i).some((d) => c.x + c.w + CHIP_GAP > d.x && Math.abs(c.y - row * CHIP_ROW - (d.y - d.row * CHIP_ROW)) < CHIP_ROW);
+      while (clash(c.row)) c.row++;
+    });
+    for (let k = 0; k < frame.stations.length; k++) {
+      const el = nodes.get(`st${k}`);
+      if (!el) continue;
+      const c = shown.find((s) => s.k === k);
+      const dx = c ? Math.min(0, width - CHIP_INSET - (c.x + c.w)) : 0;
+      const key = c ? `${c.x.toFixed(1)}|${c.y.toFixed(1)}|${c.o}|${c.row}|${dx.toFixed(1)}` : "hidden";
+      if (cache.get(k) === key) continue;
+      cache.set(k, key);
+      if (!c) {
+        el.style.setProperty("visibility", "hidden");
+        el.style.setProperty("opacity", "0");
+        continue;
+      }
+      el.style.setProperty("visibility", "visible");
+      el.style.setProperty("opacity", String(c.o));
+      el.style.setProperty("transform", `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`);
+      el.style.setProperty("--rise", `${28 + c.row * CHIP_ROW}px`);
+      el.style.setProperty("--dx", `${dx.toFixed(1)}px`);
     }
   }, -1);
   return null;

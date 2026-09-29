@@ -1,345 +1,169 @@
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
-import {
-  Color,
-  DoubleSide,
-  LatheGeometry,
-  Object3D,
-  Quaternion,
-  Vector2,
-  Vector3,
-  type Group,
-  type InstancedMesh,
-  type InterleavedBufferAttribute,
-  type Mesh,
-  type MeshBasicMaterial,
-} from "three";
+import { AdditiveBlending, Color, Vector3, type Points } from "three";
 import type { Line2 } from "three-stdlib";
 import { CHANNELS } from "../growth-engine/channels";
-import { easeOutBack, easeOutCubic } from "../growth-engine/ease";
-import { paintBadge } from "../growth-engine/marks";
-import { materials } from "../growth-engine/palette";
-import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
+import { easeOutCubic } from "../growth-engine/ease";
 import { useMission } from "./frame";
-import { contact, eio, firstLit, PEARLS, R, seg, STATIONS } from "./timeline";
-import { C, STATION_N } from "./world";
+import PointSet, { pointWriter, SOFT } from "./PointSet";
+import { contact, CONTACT_HALF, firstLit, PEARLS, R, seg, smooth, STATIONS } from "./timeline";
+import { C, STATION_N, sunDir } from "./world";
 
-// Ground stations: the platforms developers use, as porcelain pucks with the
-// real logos, a champagne rim and a seam in their channel's colour, each with
-// a small dish that tracks the craft. When the craft passes over one, its
-// channel's array links down through a translucent uplink cone
-// (distribution), and leads climb back up the link as glowing pearls, more on
-// every pass (compounding).
+// Ground stations, as a flight-dynamics display draws them: a 3 px pin in the channel's colour on the
+// real place (dim until its first contact, then ringed in white, with one pulse as it lights), and a
+// faint warm halo where the station sits on the night side, like a city light. No geometry on the
+// planet: the brand marks live in the DOM chips (frame.stations feeds them). While the craft is in
+// contact, a hairline beam in the channel colour runs from the dish down to the pin, its dashes
+// flowing out to the station, and leads come back up it as small bright pulses, more on every pass.
 
-const PUCK = { r: 1.25, h: 0.34 };
-const MAX_PEARLS = 48;
-const Y = new Vector3(0, 1, 0);
-const FOOT_R = 1.9;
+const PIN_R = R * 1.0015;
+const WHITE = new Color("#ffffff");
+const CITY = new Color("#ffd9a3");
+const COLORS = STATIONS.map((s) => new Color(CHANNELS[s.channel].color));
+/** The pulses are white, tinted by the channel. */
+const TINTS = COLORS.map((c) => WHITE.clone().lerp(c, 0.35));
+const PIN_POS = STATION_N.map((n) => n.clone().multiplyScalar(PIN_R).add(C));
+/** θ at which each station first lights (the timeline's firstLit threshold). */
+const LIT_THETA = STATIONS.map((s) => s.theta + 360 - CONTACT_HALF + 0.35 * 2 * CONTACT_HALF);
+const UNIT = [new Vector3(0, 0, 0), new Vector3(0, 0, 1)];
+const Z = new Vector3(0, 0, 1);
+/** Beam dashes in css px, and how fast they flow out to the station. */
+const DASH = { on: 7, off: 5, speed: 36 } as const;
+/** Pulses per second, as a share of the beam. */
+const PULSE_RATE = 0.4;
 
-function drawFootprint(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  // Mapped on a spherical cap: canvas top is the cap's centre, the bottom its rim.
-  ctx.save();
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, "rgba(8,40,28,0.35)");
-  g.addColorStop(0.35, "rgba(8,40,28,0.2)");
-  g.addColorStop(1, "rgba(8,40,28,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  ctx.restore();
-}
-
-/** A parabolic dish with a little thickness, opening toward +Y. */
-function dishGeometry(r: number, depth: number) {
-  const pts: Vector2[] = [];
-  for (let i = 0; i <= 12; i++) pts.push(new Vector2((r * i) / 12, depth * (i / 12) ** 2));
-  for (let i = 12; i >= 0; i--) pts.push(new Vector2((r * i) / 12, depth * (i / 12) ** 2 - 0.03));
-  return new LatheGeometry(pts, 40);
-}
-
-type StationRefs = { puck: Group | null; ring: MeshBasicMaterial | null; head: Group | null; foot: Group | null; cone: Mesh | null; coneMat: MeshBasicMaterial | null };
-type Register = <K extends keyof StationRefs>(k: number, key: K, value: StationRefs[K]) => void;
-
-function Puck({ k, register }: { k: number; register: Register }) {
-  const m = materials();
-  const station = STATIONS[k];
-  const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => paintBadge(ctx, w, h, station.mark), [station.mark]);
-  const face = useCanvasTexture(512, 512, draw);
-  const foot = useCanvasTexture(8, 128, drawFootprint);
-  const dish = useMemo(() => dishGeometry(0.32, 0.09), []);
-  const quaternion = useMemo(() => new Quaternion().setFromUnitVectors(Y, STATION_N[k]), [k]);
-  return (
-    <>
-      <group
-        ref={(g) => {
-          register(k, "foot", g);
-        }}
-        position={C}
-        quaternion={quaternion}
-        visible={false}
-      >
-        <mesh>
-          <sphereGeometry args={[R + 0.002, 64, 8, 0, Math.PI * 2, 0, FOOT_R / R]} />
-          <meshBasicMaterial map={foot.texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
-        </mesh>
-      </group>
-      <group
-        ref={(g) => {
-          register(k, "puck", g);
-        }}
-        quaternion={quaternion}
-        visible={false}
-      >
-        <mesh material={m.porcelain}>
-          <cylinderGeometry args={[PUCK.r, PUCK.r, PUCK.h, 64]} />
-        </mesh>
-        <mesh position-y={PUCK.h / 2} rotation-x={Math.PI / 2} material={m.champagne}>
-          <torusGeometry args={[PUCK.r, 0.025, 10, 96]} />
-        </mesh>
-        <mesh position-y={-PUCK.h / 2 + 0.045} material={m.seam[station.channel]}>
-          <cylinderGeometry args={[PUCK.r + 0.012, PUCK.r + 0.012, 0.09, 64]} />
-        </mesh>
-        <mesh rotation-x={-Math.PI / 2} position-y={PUCK.h / 2 + 0.002}>
-          <circleGeometry args={[PUCK.r - 0.03, 64]} />
-          <meshBasicMaterial map={face.texture} transparent toneMapped={false} />
-        </mesh>
-        <mesh rotation-x={-Math.PI / 2} position-y={PUCK.h / 2 + 0.005}>
-          <ringGeometry args={[1.08, 1.22, 64]} />
-          <meshBasicMaterial
-            ref={(mat: MeshBasicMaterial | null) => {
-              register(k, "ring", mat);
-            }}
-            color={CHANNELS[station.channel].color}
-            transparent
-            opacity={0}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-        {/* Ground-station dish, beside the puck on its east side (1.8x, so it reads as a dish at orbit distance, not a fleck). */}
-        <group position={[2.05, -0.1, 0]} scale={1.8}>
-          <mesh position-y={0.275} material={m.alu}>
-            <cylinderGeometry args={[0.05, 0.05, 0.55, 12]} />
-          </mesh>
-          <group
-            ref={(g) => {
-              register(k, "head", g);
-            }}
-            position-y={0.58}
-          >
-            <group rotation-x={Math.PI / 2}>
-              <mesh geometry={dish} material={m.porcelain} />
-              <mesh position-y={0.16} material={m.champagne}>
-                <cylinderGeometry args={[0.012, 0.012, 0.32, 8]} />
-              </mesh>
-              <mesh position-y={0.33} material={m.champagne}>
-                <cylinderGeometry args={[0.02, 0.04, 0.05, 12]} />
-              </mesh>
-            </group>
-          </group>
-        </group>
-      </group>
-      <mesh
-        ref={(el) => {
-          register(k, "cone", el);
-        }}
-        visible={false}
-        frustumCulled={false}
-        renderOrder={2}
-      >
-        <cylinderGeometry args={[0.04, 0.9, 1, 48, 1, true]} />
-        <meshBasicMaterial
-          ref={(mat: MeshBasicMaterial | null) => {
-            register(k, "coneMat", mat);
-          }}
-          color={CHANNELS[station.channel].color}
-          transparent
-          opacity={0}
-          depthWrite={false}
-          side={DoubleSide}
-          toneMapped={false}
-        />
-      </mesh>
-    </>
-  );
-}
+const v = { sun: new Vector3(), cam: new Vector3(), to: new Vector3(), end: new Vector3(), dir: new Vector3(), a: new Vector3(), b: new Vector3(), q: new Vector3() };
 
 export default function Stations() {
   const frame = useMission();
-  const refs = useRef<StationRefs[]>(STATIONS.map(() => ({ puck: null, ring: null, head: null, foot: null, cone: null, coneMat: null })));
-  const register = useCallback<Register>((k, key, value) => {
-    refs.current[k][key] = value;
-  }, []);
-  const links = useRef<(Line2 | null)[]>([]);
-  const casings = useRef<(Line2 | null)[]>([]);
-  const pearls = useRef<InstancedMesh>(null);
-  const normals = STATION_N;
-  const colors = useMemo(() => STATIONS.map((s) => new Color(CHANNELS[s.channel].color)), []);
-  const linkPts = useMemo(() => [new Vector3(), new Vector3(0, 1, 0)], []);
-  const scratch = useMemo(
-    () => ({ top: new Vector3(), end: new Vector3(), dir: new Vector3(), up: new Vector3(), w: new Vector3(), o: new Object3D(), qa: new Quaternion(), qb: new Quaternion() }),
-    [],
-  );
+  const pins = useRef<Points>(null);
+  const glows = useRef<Points>(null);
+  const beams = useRef<(Line2 | null)[]>([]);
+  const halos = useRef<(Line2 | null)[]>([]);
+  const colors = useMemo(() => STATIONS.map((s) => CHANNELS[s.channel].color), []);
 
-  useLayoutEffect(() => {
-    // Instance colours must exist before the pearl material first compiles.
-    const pl = pearls.current;
-    if (pl) for (let i = 0; i < MAX_PEARLS; i++) pl.setColorAt(i, colors[0]);
-  }, [colors]);
-
-  useFrame(() => {
+  useFrame((state) => {
     const { p, t, still } = frame;
     const th = frame.theta;
-    const { top, end, dir, up, w, o, qa, qb } = scratch;
-    let n = 0;
-    const pearl = (at: Vector3, color: Color, size: number) => {
-      const pl = pearls.current;
-      if (!pl || n >= MAX_PEARLS) return;
-      o.position.copy(at);
-      o.scale.setScalar(size);
-      o.updateMatrix();
-      pl.setMatrixAt(n, o.matrix);
-      pl.setColorAt(n, color);
-      n++;
-    };
-    const writeLine = (line: Line2 | null, a: Vector3, b: Vector3, opacity: number) => {
-      if (!line) return;
-      const attr = line.geometry.attributes.instanceStart as InterleavedBufferAttribute;
-      const arr = attr.data.array as Float32Array;
-      a.toArray(arr, 0);
-      b.toArray(arr, 3);
-      attr.data.needsUpdate = true;
-      line.material.opacity = opacity;
-    };
+    const { width, height } = state.size;
+    const cam = state.camera;
+    const on = smooth(seg(p, 0.575, 0.6));
+    const pin = pointWriter(pins.current);
+    const glow = pointWriter(glows.current);
+    sunDir(p, v.sun);
+    v.cam.copy(cam.position);
 
-    STATIONS.forEach((station, k) => {
-      const nk = normals[k];
-      const r = refs.current[k];
-      const start = 0.615 + 0.012 * k;
+    STATIONS.forEach((_, k) => {
+      const n = STATION_N[k];
+      const P = PIN_POS[k];
+      const facing = n.dot(v.to.subVectors(v.cam, P).normalize());
+      const lit = firstLit(k, th);
       const hit = contact(k, th);
-      const c = hit ? hit.c : -1;
-      const lift = hit ? 0.3 * Math.sin(Math.PI * seg(c, 0.3, 0.9)) : 0;
-      const rise = -0.6 * (1 - easeOutBack(seg(p, start, start + 0.04)));
-      const g = r.puck;
-      if (g) {
-        g.visible = p >= start;
-        g.position.copy(C).addScaledVector(nk, R - 0.08 + rise + lift);
-      }
-      if (r.foot) r.foot.visible = p >= start + 0.02; // once the puck is up, so no footprint sits on bare ground
-      top.copy(C).addScaledVector(nk, R - 0.08 + rise + lift + PUCK.h / 2 + 0.05);
-      const tip = frame.tips[station.channel];
-      const live = !!hit && p >= start;
+      const env = hit ? smooth(Math.min(seg(hit.c, 0, 0.15), 1 - seg(hit.c, 0.85, 1))) : 0;
+      const st = frame.stations[k];
+      st.pos.copy(P);
+      // ponytail: on a sphere, a surface point facing the camera is never hidden by the sphere, so this
+      // also passes the ray-sphere test.
+      st.front = on > 0.5 && facing > 0.12;
+      st.lit = lit;
+      st.live = on * env;
 
-      // The dish points at the zenith, and tracks the craft through each contact.
-      const head = r.head;
-      if (g && head && g.visible) {
-        g.updateMatrixWorld(true);
-        head.getWorldPosition(w);
-        head.lookAt(up.copy(w).add(nk));
-        qa.copy(head.quaternion);
-        head.lookAt(frame.craft);
-        qb.copy(head.quaternion);
-        const track = live ? eio(seg(c, 0, 0.12)) * (1 - eio(seg(c, 0.88, 1))) : 0;
-        head.quaternion.slerpQuaternions(qa, qb, track);
+      // Pins fade out toward the limb (the depth test hides the far side).
+      const a = on * smooth(seg(facing, 0, 0.18));
+      if (pin && glow && a > 0) {
+        pin.put(P.x, P.y, P.z, 3, COLORS[k], a * (lit ? 1 : 0.35));
+        if (lit) pin.put(P.x, P.y, P.z, 7, WHITE, 0.7 * a, 1);
+        const q = seg(th, LIT_THETA[k], LIT_THETA[k] + 9); // the one pulse as it lights
+        if (q > 0 && q < 1) pin.put(P.x, P.y, P.z, 4 + 14 * easeOutCubic(q), COLORS[k], 0.9 * (1 - q) * a, 1);
+        const night = smooth(seg(-n.dot(v.sun), -0.1, 0.05));
+        glow.put(P.x, P.y, P.z, 10, CITY, 0.25 * night * a, SOFT);
       }
 
-      // Ring: lit after the first contact, a full pulse while in contact, breathing in the final hold.
-      const ring = r.ring;
-      if (ring) {
-        const lit = firstLit(k, th);
-        const pulse = hit ? seg(c, 0.18, 0.3) * (1 - seg(c, 0.5, 0.72)) : 0;
-        const breathe = lit && p >= 0.97 && !still ? 0.1 * Math.sin(1.6 * t + k * 1.3) : 0;
-        ring.opacity = Math.max(lit ? 0.5 + breathe : 0, pulse);
+      // The contact beam: drawn out from the dish over the first 15% of the pass, faded at both ends.
+      const beam = beams.current[k];
+      const halo = halos.current[k];
+      const live = on * env;
+      for (const l of [beam, halo]) if (l) l.visible = live > 0.002;
+      if (!beam || !halo || !hit || live <= 0.002) return;
+      const reach = easeOutCubic(seg(hit.c, 0, 0.15));
+      v.end.lerpVectors(frame.dish, P, reach);
+      v.dir.subVectors(v.end, frame.dish);
+      const len = Math.max(1e-4, v.dir.length());
+      v.dir.divideScalar(len);
+      for (const l of [beam, halo]) {
+        l.position.copy(frame.dish);
+        l.quaternion.setFromUnitVectors(Z, v.dir);
+        l.scale.set(1, 1, len);
       }
+      // Dashes in screen pixels: the unit segment's line distance, scaled by its projected length.
+      v.a.copy(frame.dish).project(cam);
+      v.b.copy(v.end).project(cam);
+      const px = Math.hypot(((v.b.x - v.a.x) * width) / 2, ((v.b.y - v.a.y) * height) / 2);
+      beam.material.dashScale = Math.max(1, px);
+      beam.material.dashOffset = -DASH.speed * t;
+      beam.material.opacity = 0.9 * live;
+      halo.material.opacity = 0.1 * live;
 
-      // Uplink cone from the station up to the array tip.
-      const fade = hit ? Math.min(seg(c, 0, 0.12), 1 - seg(c, 0.88, 1)) : 0;
-      const cone = r.cone;
-      if (cone) {
-        cone.visible = live && fade > 0;
-        if (cone.visible) {
-          dir.subVectors(tip, top);
-          const len = dir.length();
-          cone.position.copy(top).addScaledVector(dir, 0.5);
-          cone.quaternion.setFromUnitVectors(Y, dir.divideScalar(len));
-          cone.scale.set(1, len, 1);
-        }
-      }
-      if (r.coneMat) r.coneMat.opacity = 0.16 * fade;
-
-      // Link from the channel's array tip down to the station, cased in white so it reads over the ocean.
-      const line = links.current[k];
-      const casing = casings.current[k];
-      if (line) line.visible = live;
-      if (casing) casing.visible = live;
-      if (live && hit) {
-        end.lerpVectors(tip, top, easeOutCubic(seg(c, 0, 0.3)));
-        writeLine(line, tip, end, 0.95 * fade);
-        writeLine(casing, tip, end, 0.9 * fade);
-
-        // The down-bead (your content going out), then the leads coming back.
-        const down = seg(c, 0.05, 0.32);
-        if (down > 0 && down < 1) pearl(end.lerpVectors(tip, top, eio(down)), colors[k], 1);
-        const count = PEARLS[Math.min(hit.pass, 2)];
-        for (let j = 0; j < count; j++) {
-          const q = p >= 0.97 ? (0.35 * t + j / count) % 1 : seg(c, 0.34 + 0.07 * j, 0.7 + 0.07 * j);
-          if (q > 0 && q < 1) pearl(end.lerpVectors(top, tip, eio(q)), colors[k], 1 + 0.375 * q);
+      // Leads coming back: pulses travelling station to satellite, a bright head with a short tail.
+      if (!glow || still) return;
+      const count = PEARLS[Math.min(hit.pass, PEARLS.length - 1)];
+      for (let j = 0; j < count; j++) {
+        const u = (PULSE_RATE * t + j / count) % 1; // 0 at the station, 1 at the dish
+        if (1 - u > reach) continue;
+        const fade = live * smooth(seg(u, 0, 0.08)) * (1 - smooth(seg(u, 0.9, 1)));
+        for (let s = 0; s < 3; s++) {
+          v.q.lerpVectors(P, frame.dish, Math.max(0, u - 0.018 * s));
+          glow.put(v.q.x, v.q.y, v.q.z, [5, 4, 3][s], TINTS[k], [0.95, 0.4, 0.18][s] * fade, SOFT);
         }
       }
     });
-
-    const pl = pearls.current;
-    if (pl) {
-      pl.count = n;
-      pl.visible = n > 0;
-      if (n > 0) {
-        pl.instanceMatrix.needsUpdate = true;
-        if (pl.instanceColor) pl.instanceColor.needsUpdate = true;
-      }
-    }
-  });
+    pin?.done();
+    glow?.done();
+  }, -1.2); // after the satellite pass (the dish), before the label writer (the chips)
 
   return (
     <group>
-      {STATIONS.map((station, k) => (
-        <Puck key={station.mark} k={k} register={register} />
-      ))}
-      {STATIONS.map((station, k) => (
-        <group key={station.mark}>
+      <PointSet ref={pins} max={16} />
+      <PointSet ref={glows} max={96} additive />
+      {STATIONS.map((s, k) => (
+        <group key={s.mark}>
           <Line
             ref={(l: Line2 | null) => {
-              casings.current[k] = l;
-              if (l) l.visible = false;
+              halos.current[k] = l;
+              if (l) l.visible = false; // not a prop: drei spreads props onto the material too
             }}
-            points={linkPts}
-            color="#ffffff"
-            lineWidth={4.5}
+            points={UNIT}
+            color={colors[k]}
+            lineWidth={5}
             transparent
             opacity={0}
+            blending={AdditiveBlending}
             depthWrite={false}
+            toneMapped={false}
             frustumCulled={false}
             renderOrder={3}
           />
           <Line
             ref={(l: Line2 | null) => {
-              links.current[k] = l;
+              beams.current[k] = l;
               if (l) l.visible = false;
             }}
-            points={linkPts}
-            color={CHANNELS[station.channel].color}
-            lineWidth={2}
+            points={UNIT}
+            color={colors[k]}
+            lineWidth={1}
+            dashed
+            dashSize={DASH.on}
+            gapSize={DASH.off}
             transparent
             opacity={0}
             depthWrite={false}
+            toneMapped={false}
             frustumCulled={false}
-            renderOrder={4}
+            renderOrder={3}
           />
         </group>
       ))}
-      <instancedMesh ref={pearls} args={[undefined, undefined, MAX_PEARLS]} visible={false} frustumCulled={false}>
-        <sphereGeometry args={[0.16, 16, 12]} />
-        <meshBasicMaterial toneMapped={false} />
-      </instancedMesh>
     </group>
   );
 }

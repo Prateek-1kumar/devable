@@ -3,6 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { channelFocus } from "../growth-engine/channelFocus";
 import { CHANNELS } from "../growth-engine/channels";
+import StationChips from "./StationChips";
 import { BEATS, scrollS, type LabelId } from "./timeline";
 
 // The mission's instrument layer: a telemetry strip under the navbar, the
@@ -68,6 +69,7 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
             </div>
           </div>
         </div>
+        <StationChips bind={bind} />
         <Plain nodeRef={label("karman")}>KÁRMÁN LINE · 100 KM</Plain>
         <Plain nodeRef={label("spike")}>SUBORBITAL · LAUNCH SPIKE</Plain>
         <Plain nodeRef={label("meco")}>MECO · STAGE SEP</Plain>
