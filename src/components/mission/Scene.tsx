@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { Color, FogExp2, NeutralToneMapping, Vector3, type DirectionalLight, type Group, type HemisphereLight, type PerspectiveCamera } from "three";
 import { channelFocus } from "../growth-engine/channelFocus";
+import DeltaV from "./DeltaV";
 import { FrameContext, MissionFrame, useMission } from "./frame";
 import LaunchSite from "./LaunchSite";
 import Planet from "./Planet";
@@ -93,6 +94,7 @@ function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" |
         <Planet still={still} />
         <Trajectory />
         <Stations />
+        <DeltaV />
       </group>
       <Vehicle />
       {labels && <LabelWriter labels={labels} />}
@@ -331,7 +333,7 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
     if (!nodes) return;
     const { v, cache, widths } = scratch;
     const { width, height } = state.size;
-    const shown: { k: number; x: number; y: number; w: number; o: number; row: number }[] = [];
+    const shown: { k: number; x: number; x0: number; y: number; w: number; o: number; row: number }[] = [];
     frame.stations.forEach((st, k) => {
       const el = nodes.get(`st${k}`);
       if (!el || !st.front || !(st.lit || st.live > 0.05)) return;
@@ -342,19 +344,21 @@ function StationChipWriter({ labels }: { labels: RefObject<Map<string, HTMLEleme
         w = (el.lastElementChild as HTMLElement | null)?.offsetWidth ?? 0; // fixed text: measured once
         if (w) widths.set(k, w);
       }
-      shown.push({ k, x: ((v.x + 1) / 2) * width, y: ((1 - v.y) / 2) * height, w: w || 120, o: st.lit ? 1 : 0.45, row: 0 });
+      const x = ((v.x + 1) / 2) * width;
+      w = w || 120;
+      shown.push({ k, x, x0: Math.min(x, width - CHIP_INSET - w), y: ((1 - v.y) / 2) * height, w, o: st.lit ? 1 : 0.45, row: 0 });
     });
     shown.sort((a, b) => b.x - a.x);
     shown.forEach((c, i) => {
       const clash = (row: number) =>
-        shown.slice(0, i).some((d) => c.x + c.w + CHIP_GAP > d.x && Math.abs(c.y - row * CHIP_ROW - (d.y - d.row * CHIP_ROW)) < CHIP_ROW);
+        shown.slice(0, i).some((d) => c.x0 < d.x0 + d.w + CHIP_GAP && d.x0 < c.x0 + c.w + CHIP_GAP && Math.abs(c.y - row * CHIP_ROW - (d.y - d.row * CHIP_ROW)) < CHIP_ROW);
       while (clash(c.row)) c.row++;
     });
     for (let k = 0; k < frame.stations.length; k++) {
       const el = nodes.get(`st${k}`);
       if (!el) continue;
       const c = shown.find((s) => s.k === k);
-      const dx = c ? Math.min(0, width - CHIP_INSET - (c.x + c.w)) : 0;
+      const dx = c ? c.x0 - c.x : 0;
       const key = c ? `${c.x.toFixed(1)}|${c.y.toFixed(1)}|${c.o}|${c.row}|${dx.toFixed(1)}` : "hidden";
       if (cache.get(k) === key) continue;
       cache.set(k, key);

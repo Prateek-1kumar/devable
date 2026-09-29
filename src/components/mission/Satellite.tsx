@@ -8,6 +8,7 @@ import { missionMaps } from "./materials";
 import SatArrays from "./SatArrays";
 import { BUS, FACE, FACE_OFF, goldGeometry, SKIN, standoffGeometry, thrusterGeometry } from "./satelliteGeometry";
 import { drawCells, drawFront, drawGold, drawOSR, drawPanelBack } from "./satelliteMaps";
+import SatBurn from "./SatBurn";
 import SatPayload, { DISH_GEO } from "./SatPayload";
 import { satelliteAttitude, dishAim } from "./satelliteMotion";
 
@@ -107,6 +108,7 @@ export default function Satellite() {
         <cylinderGeometry args={[0.078, 0.086, 0.018, 48]} />
       </mesh>
       <mesh geometry={geo.thrusters} material={mats.niobium} />
+      <SatBurn />
       <SatPayload apertureRef={aperture} y={BUS.h / 2 + t} />
       {/* Downlink dish: its boom hinges at the foot of the radiator, folded up the face until deployed. */}
       <group position={[0, -0.11, -f - 0.004]} ref={boom}>

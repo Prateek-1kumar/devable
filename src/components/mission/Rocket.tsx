@@ -345,7 +345,7 @@ const PLUME_FRAG = /* glsl */ `
   }
 `;
 
-type LayerSpec = {
+export type LayerSpec = {
   rTop: number;
   rBot: number;
   len: number;
@@ -400,7 +400,7 @@ function plumeUniforms(l: LayerSpec) {
   };
 }
 
-function PlumeLayer({ spec, order, matRef }: { spec: LayerSpec; order: number; matRef: (m: ShaderMaterial | null) => void }) {
+export function PlumeLayer({ spec, order, matRef }: { spec: LayerSpec; order: number; matRef: (m: ShaderMaterial | null) => void }) {
   const geometry = useMemo(() => new CylinderGeometry(spec.rTop, spec.rBot, spec.len, 32, 24, true).translate(0, -spec.len / 2, 0), [spec]);
   const uniforms = useMemo(() => plumeUniforms(spec), [spec]);
   return (
