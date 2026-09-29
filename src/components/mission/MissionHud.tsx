@@ -3,12 +3,11 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { channelFocus } from "../growth-engine/channelFocus";
 import { CHANNELS } from "../growth-engine/channels";
-import { BEATS, scrollS, type LabelId } from "./timeline";
+import type { LabelId } from "./timeline";
 
-// The mission's instrument layer: a telemetry strip under the navbar, the
-// clickable flight plan along the bottom and the drafting labels that the
-// scene projects onto its objects. All of it is decorative (aria-hidden) except
-// the flight-plan buttons; the loop in MissionHero writes the live values.
+// The mission's instrument layer: a telemetry strip under the navbar and the
+// drafting labels that the scene projects onto its objects. All of it is
+// decorative (aria-hidden); the loop in MissionHero writes the live values.
 
 /** Live DOM nodes by key, registered through `bind` and written by the loop in MissionHero. */
 export type DomNodes = Map<string, HTMLElement>;
@@ -20,15 +19,12 @@ const LONG = ["TECHNICAL CONTENT", "SEO + AI SEARCH", "REDDIT", "CREATOR DISTRIB
 
 type Props = {
   className?: string;
-  beat: number;
   /** The scene has rendered: the projected labels fade in with it, never ahead of it. */
   ready: boolean;
   bind: Bind;
-  /** Scroll to a progress value. */
-  onJump: (at: number) => void;
 };
 
-export default function MissionHud({ className = "", beat, ready, bind, onJump }: Props) {
+export default function MissionHud({ className = "", ready, bind }: Props) {
   const focus = useSyncExternalStore(channelFocus.subscribe, channelFocus.get, () => null);
   const node = bind;
   const label = (id: LabelId) => bind(id);
@@ -101,38 +97,6 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
         </Field>
       </dl>
 
-      {/* A soft page-white band under the rail, so the pad, the smoke or the planet passing below never collide with its labels. */}
-      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-background from-35% to-transparent" />
-      {/* Flight plan: the story's beats, clickable. */}
-      <nav aria-label="Flight plan" className="pointer-events-auto absolute inset-x-[8vw] bottom-7">
-        <div ref={node("rail")} className="relative h-px bg-foreground/12 [--p:0]">
-          <div className="absolute inset-0 origin-left bg-forest [transform:scaleX(var(--p))]" />
-          <div className="absolute top-[-4px] left-[calc(var(--p)*100%)] h-[9px] w-px bg-forest" />
-          {BEATS.map((b) => (
-            <span key={b.label} aria-hidden="true" className="absolute top-0 h-[5px] w-px bg-foreground/25" style={{ left: `${scrollS(b.start) * 100}%` }} />
-          ))}
-        </div>
-        <div className="relative mt-2.5 h-3">
-          {BEATS.map((b, i) => (
-            <button
-              key={b.label}
-              type="button"
-              aria-label={`Jump to ${b.name}`}
-              aria-current={i === beat ? "step" : undefined}
-              onClick={() => onJump(b.land)}
-              className={`absolute top-0 ${MONO} cursor-pointer text-[10px] leading-3 transition-colors hover:text-foreground/80 focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-forest ${
-                i === beat ? "text-foreground/80" : "text-foreground/55"
-              }`}
-              style={{ left: `${scrollS(b.start) * 100}%` }}
-            >
-              {b.label}
-            </button>
-          ))}
-          <span aria-hidden="true" className={`absolute top-0 right-0 ${MONO} text-[10px] leading-3 text-foreground/55`}>
-            NOT TO SCALE
-          </span>
-        </div>
-      </nav>
     </div>
   );
 }

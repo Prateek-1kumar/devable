@@ -8,7 +8,7 @@ import { clamp01, damp } from "../growth-engine/ease";
 import MissionCopy, { StillExtras } from "./MissionCopy";
 import MissionHud, { type DomNodes } from "./MissionHud";
 import type { Progress } from "./Scene";
-import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, scrollS, status, storyP, theta, velKms } from "./timeline";
+import { altKm, arrayGo, captionAt, craftR, firstLit, met, payloadGo, pipeline, status, storyP, theta, velKms } from "./timeline";
 
 // Mission DVB-01, the pinned hero: a tall section whose sticky frame holds the
 // copy, the 3D world and its instruments. One smoothed scroll progress (0..1)
@@ -28,7 +28,6 @@ const subscribe = (onChange: () => void) => {
 
 // Lenis already smooths the scroll; this only absorbs frame jitter on top of it.
 const SMOOTHING = 20;
-const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 const write = (el: HTMLElement | null | undefined, s: string) => {
   if (el && el.textContent !== s) el.textContent = s;
 };
@@ -46,7 +45,6 @@ export default function MissionHero() {
   const [onScreen, setOnScreen] = useState(true);
   const [ready, setReady] = useState(false);
   const [caption, setCaption] = useState(0);
-  const [beat, setBeat] = useState(0);
   const [padShadows, setPadShadows] = useState(true);
   const lenis = useLenis();
   const lenisRef = useRef<Lenis | undefined>(undefined);
@@ -89,11 +87,10 @@ export default function MissionHero() {
     window.addEventListener("resize", measure);
     const pr = progress.current;
     pr.shown = storyP(scrolled()); // a mid-page reload lands on its frame, never replays
-    let beatNow = -1;
     let captionNow = -2;
     let padNow: boolean | null = null;
 
-    const writeDom = (p: number, s: number) => {
+    const writeDom = (p: number) => {
       const n = dom.current;
       const h = (key: string) => n.get(key);
       const r = craftR(p);
@@ -109,7 +106,6 @@ export default function MissionHero() {
       flag(h("altField"), "data-on", p >= 0.125);
       flag(h("velField"), "data-on", p >= 0.125);
       flag(h("pipeField"), "data-on", p >= 0.685);
-      h("rail")?.style.setProperty("--p", s.toFixed(4)); // the rail tracks scroll linearly
       for (let i = 0; i < 4; i++) {
         write(h(`go${i}`), arrayGo(p, i) ? "GO" : "—");
         flag(h(`go${i}`), "data-go", arrayGo(p, i));
@@ -118,8 +114,6 @@ export default function MissionHero() {
       for (let k = 0; k < 5; k++) flag(h(`mark${k}`), "data-lit", firstLit(k, th));
       write(h("outcome"), pipe);
 
-      const b = beatAt(p, beatNow);
-      if (b !== beatNow) setBeat((beatNow = b));
       const ps = p < 0.3; // the pad's contact shadow: only while the pad is on screen (the apron is gone by 0.36)
       if (ps !== padNow) setPadShadows((padNow = ps));
       const c = captionAt(p, captionNow);
@@ -132,11 +126,10 @@ export default function MissionHero() {
       raf = requestAnimationFrame(tick);
       const dt = Math.min((now - last) / 1000, 1 / 30);
       last = now;
-      const s = scrolled();
-      pr.shown = damp(pr.shown, storyP(s), SMOOTHING, dt);
-      writeDom(pr.shown, s);
+      pr.shown = damp(pr.shown, storyP(scrolled()), SMOOTHING, dt);
+      writeDom(pr.shown);
     };
-    writeDom(pr.shown, scrolled());
+    writeDom(pr.shown);
     raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
@@ -145,14 +138,6 @@ export default function MissionHero() {
     };
   }, [still, onScreen]);
 
-  const jump = useCallback((at: number) => {
-    const { top, span: s } = span.current;
-    const to = top + scrollS(at) * s;
-    const l = lenisRef.current;
-    if (!l) return window.scrollTo({ top: to, behavior: "smooth" });
-    const ds = Math.abs(to - l.animatedScroll) / s;
-    l.scrollTo(to, { duration: 1.1 + 1.3 * Math.min(1, ds / 0.35), easing: easeInOutCubic });
-  }, []);
   const onReady = useCallback(() => setReady(true), []);
   const bind = useCallback(
     (key: string) => (el: HTMLElement | null) => {
@@ -180,7 +165,7 @@ export default function MissionHero() {
           <Scene key={String(still)} still={still} active={onScreen} progress={progress} labels={still ? undefined : dom} padShadows={padShadows} onReady={onReady} />
         </div>
         <StillExtras className="relative z-10 motion-safe:lg:hidden" />
-        {!still && <MissionHud className="hidden motion-safe:lg:block" beat={beat} ready={ready} bind={bind} onJump={jump} />}
+        {!still && <MissionHud className="hidden motion-safe:lg:block" ready={ready} bind={bind} />}
       </div>
     </section>
   );

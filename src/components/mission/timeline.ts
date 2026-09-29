@@ -23,8 +23,7 @@ export const KARMAN = 15.4; // ≙ 100 km
 export const MODULE_Y0 = 2.1; // module centre on the pad
 
 // ── Beats and captions ───────────────────────────────────────────────────
-// `land` is where the flight-plan buttons jump: inside the beat's caption window and
-// past the ±0.004 hysteresis, so the rail and the copy both switch to that beat.
+// `land` is a p inside the beat's caption window and past the ±0.004 hysteresis.
 export const BEATS = [
   { label: "INTEGRATION", name: "Integration", start: 0, land: 0 },
   { label: "LAUNCH", name: "Launch", start: 0.12, land: 0.135 },

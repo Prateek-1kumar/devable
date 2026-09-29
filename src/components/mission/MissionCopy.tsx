@@ -94,7 +94,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
       {pinned && (
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
           {/* Every caption is stacked in one grid cell and shown by a CSS state, so a fast glide through
-              several beats (a flight-plan jump, an anchor) can never leave a stale caption behind. */}
+              several beats (an anchor link) can never leave a stale caption behind. */}
           <div className="grid">
             {Object.entries(CAPTIONS).map(([id, c]) => {
               const on = caption === Number(id);
