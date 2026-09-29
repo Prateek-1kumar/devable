@@ -213,8 +213,9 @@ export const THETA_KEYS: readonly (readonly [number, number])[] = [
   [0.54, 36],
   [0.6, 170],
   [0.64, 322],
-  [0.687, 345],
-  [0.745, 455],
+  [0.687, 350],
+  [0.72, 436], // ChatGPT, Reddit and YouTube all in contact at once
+  [0.745, 460],
   [0.77, 680],
   [0.785, 695],
   [0.83, 750],
@@ -322,8 +323,9 @@ export const STATIONS = STATION_SITES.map((s) => {
   return { ...s, normal, theta: Math.atan2(normal[0], normal[1]) / DEG };
 });
 
-export const CONTACT_HALF = 16;
-/** Line-of-sight window over station k: pass index and c ∈ [0,1] across ±16°, or null. First pass is at θ_k + 360. */
+/** Half-width of a contact in degrees of track (the horizon from R0 = 1.2R is 33.6° away; a link needs elevation). */
+export const CONTACT_HALF = 24;
+/** Line-of-sight window over station k: pass index and c ∈ [0,1] across ±CONTACT_HALF, or null. First pass is at θ_k + 360. */
 export function contact(k: number, th: number) {
   const rel = th - (STATIONS[k].theta + 360);
   const pass = Math.floor((rel + CONTACT_HALF) / 360);
@@ -442,19 +444,18 @@ export const CAMERA_KEYS: readonly CameraKey[] = [
   [0.25, null, 1, 30, 24, 0, 20, 0.17, 0], // chase, level
   [0.275, null, 1, 30, 24, 0, 20, 0.17, 0], // the cut at .27 lies inside
   [0.3, null, 1, 44, 34, 14, 26, 0.18, 0], // reveal: the limb rises below
-  [0.33, [3.2, 0.6, 0], 0, 40, 20, 18, 26, 0.2, 0.3], // flight-dynamics wide
-  [0.345, [3.2, 0.6, 0], 0, 40, 20, 18, 26, 0.2, 0.3],
+  [0.33, [3.2, 0.6, 0], 0, 32, 20, 18, 26, 0.23, 0.3], // flight-dynamics wide
+  [0.345, [3.2, 0.6, 0], 0, 32, 20, 18, 26, 0.23, 0.3],
   [0.352, null, 1, 14, 150, 22, 28, 0.12, 0], // chase from ahead: MECO / SEP
   [0.39, null, 1, 14, 170, 22, 28, 0.12, 0], // fairing sep
   [0.41, null, 1, 11, -120, 24, 28, 0.14, 0], // payload sep
   [0.46, null, 1, 2.4, -70, 28, 28, 0.16, 0], // stowed close-up
-  [0.53, null, 1, 3.1, -45, 28, 28, 0.16, 0], // deployed
-  [0.56, null, 1, 3.1, -45, 28, 28, 0.16, 0],
-  [0.6, null, 0.9, 14, 20, 34, 27, 0.18, 0.6], // pull-back
+  [0.53, null, 1, 4.2, -45, 28, 28, 0.16, 0], // deployed
+  [0.56, null, 1, 4.2, -45, 28, 28, 0.16, 0], // the pull-back to .64 is a blend (world.ts)
   [0.64, [0, -14, 0], 0, 88, 112, 40, 26, 0.22, 1], // downlink wide (grazing 16.7°)
   [0.745, [0, -14, 0], 0, 88, 112, 40, 26, 0.22, 1],
-  [0.79, [1, -3, 0], 0, 58, 108, 36, 26, 0.2, 1], // correction
-  [0.84, [1, -3, 0], 0, 58, 108, 36, 26, 0.2, 1],
+  [0.79, [1, -2, 0], 0, 42, 108, 34, 26, 0.22, 1], // correction
+  [0.84, [1, -2, 0], 0, 42, 108, 34, 26, 0.22, 1],
   [0.885, [1, -13.5, 0], 0, 104, 112, 38, 26, 0.22, 1], // raising
   [0.945, [1, -13.5, 0], 0, 100, 110, 38, 26, 0.23, 1], // final hold
   [1.0, [1, -13.5, 0], 0, 100, 110, 38, 26, 0.23, 1],

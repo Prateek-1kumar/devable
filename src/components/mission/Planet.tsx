@@ -26,7 +26,7 @@ import {
   type Texture,
 } from "three";
 import { useMission } from "./frame";
-import { INK_FLIP, lerp, R, seg, STILL_QUERY } from "./timeline";
+import { CUT_P, eio, INK_FLIP, lerp, R, seg, STILL_QUERY } from "./timeline";
 import { C, EARTH_ROT, mulberry32, sunDir } from "./world";
 
 // The Earth as a photograph: NASA day and night imagery lit by one hard sun, sharp ocean glint,
@@ -103,7 +103,7 @@ const SURFACE_VERT = /* glsl */ `
 const EARTH_FRAG = /* glsl */ `
   uniform sampler2D uDay, uNight, uClouds, uWater, uHeight;
   uniform vec3 uSun, uPlaceholder, uAtmoDay, uAtmoTwilight;
-  uniform float uCloudU, uReveal, uFocusBias, uRelief, uGain;
+  uniform float uCloudU, uReveal, uFocusBias, uRelief, uGain, uFade;
   varying vec2 vUv;
   varying vec3 vN, vT, vB, vPosW;
   const vec2 TX = vec2(1.0 / 2048.0, 1.0 / 1024.0);
@@ -141,19 +141,21 @@ const EARTH_FRAG = /* glsl */ `
     gl_FragColor = vec4(mix(uPlaceholder, col, uReveal), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
+    // Out of the cut the limb comes up through the last of the blue sky: premultiplied, blending off.
+    gl_FragColor *= uFade;
   }
 `;
 
 const CLOUD_FRAG = /* glsl */ `
   uniform sampler2D uClouds;
   uniform vec3 uSun;
-  uniform float uCloudU, uReveal, uFocusBias;
+  uniform float uCloudU, uReveal, uFocusBias, uFade;
   varying vec2 vUv;
   varying vec3 vN, vT, vB, vPosW;
   void main() {
     float ndl = dot(normalize(vN), uSun);
     float c = texture2D(uClouds, vec2(vUv.x + uCloudU, vUv.y), uFocusBias).r;
-    float alpha = smoothstep(0.18, 0.85, c) * 0.92 * smoothstep(-0.25, 0.1, ndl) * uReveal;
+    float alpha = smoothstep(0.18, 0.85, c) * 0.92 * smoothstep(-0.25, 0.1, ndl) * uReveal * uFade;
     vec3 rgb = vec3(pow(clamp((ndl + 0.1) / 1.1, 0.0, 1.0), 0.6)) * mix(vec3(1.0, 0.7, 0.5), vec3(1.0), smoothstep(0.0, 0.3, ndl));
     gl_FragColor = vec4(rgb, alpha);
     #include <tonemapping_fragment>
@@ -176,7 +178,7 @@ const ATMO_VERT = /* glsl */ `
 // the wides. Pixels over the disc are behind the opaque Earth.
 const ATMO_FRAG = /* glsl */ `
   uniform vec3 uCenter, uSun, uDay, uTwilight;
-  uniform float uR, uS, uReveal, uGain, uPixelAngle, uRimPx;
+  uniform float uR, uS, uReveal, uGain, uPixelAngle, uRimPx, uFade;
   varying vec3 vPosW, vNW;
   void main() {
     vec3 rd = normalize(vPosW - cameraPosition);
@@ -191,7 +193,7 @@ const ATMO_FRAG = /* glsl */ `
     vec3 col = mix(uTwilight, uDay, smoothstep(-0.12, 0.3, ndl));
     float lit = smoothstep(-0.2, 0.2, ndl) * mix(0.55, 1.0, smoothstep(0.0, 0.3, ndl)); // the night limb fades out
     col = mix(col, vec3(0.75, 0.88, 1.0), 0.35 * pow(1.0 - t, 6.0) * smoothstep(0.1, 0.5, ndl)); // paler where the air is thickest
-    vec3 glow = col * dens * lit * uGain * uReveal;
+    vec3 glow = col * dens * lit * uGain * uReveal * uFade;
     gl_FragColor = vec4(glow, min(1.0, max(glow.r, max(glow.g, glow.b))));
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -304,6 +306,7 @@ const liveUniforms = () => ({
   uCloudU: { value: 0 },
   uReveal: { value: 0 },
   uFocusBias: { value: 0 },
+  uFade: { value: 1 },
 });
 
 /** Drops the textured Earth in over the placeholder once its maps have loaded. */
@@ -355,6 +358,7 @@ function Earth({ still }: { still: boolean }) {
     () => ({
       uSun: { value: new Vector3(0, 1, 0) },
       uReveal: { value: 0 },
+      uFade: { value: 1 },
       uCenter: { value: C.clone() },
       uR: { value: R },
       uS: { value: ATMO_S },
@@ -382,6 +386,7 @@ function Earth({ still }: { still: boolean }) {
     // Each material owns its uniform objects, so every one is written.
     const cloudU = 0.02 * p + 0.00012 * frame.t;
     const bias = focusBias(p);
+    const fade = frame.still ? 1 : eio(seg(p, CUT_P, 0.29));
     const a = atmoMat.current;
     if (a) {
       const cam = state.camera as PerspectiveCamera;
@@ -392,6 +397,7 @@ function Earth({ still }: { still: boolean }) {
       const u = mat.uniforms;
       sunDir(p, u.uSun.value);
       u.uReveal.value = reveal.current.t;
+      u.uFade.value = fade;
       if (u.uCloudU) u.uCloudU.value = cloudU;
       if (u.uFocusBias) u.uFocusBias.value = bias;
     }

@@ -165,8 +165,10 @@ export default function Trajectory() {
       // The plan starts a body length ahead of the vehicle, so no dash runs alongside it.
       writeAlphas(plan.current, data.plan.pts.length, (i) => (data.plan.p[i] <= p ? 0 : smooth(seg(data.plan.pts[i].distanceTo(frame.craft), 0.2, 0.6))));
     }
-    show(ring.current, (p < 0.85 ? 0.35 : 0.35 - 0.1 * seg(p, 0.85, 0.87)) * on);
-    if (on > 0) {
+    // The parking ring joins the wide once the reveal has pulled back: close in, its near arc sweeps the copy.
+    const ringOn = Math.max(wide1 * smooth(seg(p, 0.315, 0.33)), wide2);
+    show(ring.current, (p < 0.85 ? 0.35 : 0.35 - 0.1 * seg(p, 0.85, 0.87)) * ringOn);
+    if (ringOn > 0) {
       // Plan ahead, flown behind: where the latest pass over an angle is on the ring and still bright,
       // the dashes step aside so they never flicker over the solid line. The sag keeps its plan.
       const th = frame.theta;

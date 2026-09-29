@@ -247,9 +247,94 @@ function craftFrame(p: number) {
   craftAim.copy(craftNow).addScaledVector(axis, -aim(p) * vehicleScale(p));
 }
 
+/** One key's pose at p (its follow target and local frame use the craft at p). */
+function keyPose(key: CameraKey, p: number, out: CameraPose) {
+  craftFrame(p);
+  keyTarget(key, out.target);
+  out.fov = key[6];
+  out.shift = key[7];
+  return place(out, p, keyDist(key, vehicleScale(p)), key[4], key[5], key[2], key[8]);
+}
+
+const oA = new Vector3();
+const oB = new Vector3();
+const turnQ = new Quaternion();
+const blendQ = new Quaternion();
+const IDQ = new Quaternion();
+const upB = new Vector3();
+/**
+ * Moves pose a toward pose b without cutting through anything: the target lerps (tt), and the camera's
+ * offset from it turns by slerp and grows by log-lerp (t), so a close follow shot pulls back on a curve.
+ */
+function blendPoses(a: CameraPose, b: CameraPose, t: number, tt: number, out: CameraPose) {
+  oA.subVectors(a.position, a.target);
+  oB.subVectors(b.position, b.target);
+  const [la, lb] = [oA.length(), oB.length()];
+  turnQ.setFromUnitVectors(oA.normalize(), oB.normalize());
+  blendQ.slerpQuaternions(IDQ, turnQ, t);
+  out.target.lerpVectors(a.target, b.target, tt);
+  out.d = Math.exp(lerp(Math.log(la), Math.log(lb), t));
+  out.position.copy(oA).applyQuaternion(blendQ).multiplyScalar(out.d).add(out.target);
+  upB.copy(b.up);
+  out.up.copy(a.up).lerp(upB, t).normalize();
+  out.fov = lerp(a.fov, b.fov, t);
+  out.shift = lerp(a.shift, b.shift, t);
+  return out;
+}
+
+// ── The ground tracker (.13–.20) and its hand-off to the chase (.20–.25) ──
+// A long-lens tracking camera on the ground: it stays where the pad shot stood and pans after the rocket,
+// zooming so the rocket keeps a steady screen height, with a deterministic shake at ignition.
+const TRACK0 = 0.13;
+const HANDOFF = [0.2, 0.25] as const;
+const ROCKET_H = 4.2; // pad units
+/** The rocket's screen height (fraction of the frame) the operator holds: the pad framing, eased out to the chase's. */
+const trackHeight = (p: number) => (p < 0.17 ? lerp(0.68, 0.46, eio(seg(p, TRACK0, 0.17))) : lerp(0.46, 0.41, seg(p, 0.17, HANDOFF[1])));
+let TRACK_POS: Vector3 | null = null;
+const trackA = cameraPoseInit();
+const trackB = cameraPoseInit();
+function trackPose(p: number, out: CameraPose) {
+  TRACK_POS ??= keyPose(CAMERA_KEYS.find((k) => k[0] === TRACK0) ?? CAMERA_KEYS[3], TRACK0, cameraPoseInit()).position.clone();
+  craftFrame(p);
+  out.position.copy(TRACK_POS);
+  out.target.copy(craftAim);
+  out.d = out.position.distanceTo(out.target);
+  // Looking up at the climbing rocket foreshortens it: hold its projected height, not its length.
+  const along = dir.subVectors(out.target, out.position).normalize().dot(axis);
+  const h = ROCKET_H * Math.sqrt(Math.max(0.2, 1 - along * along));
+  out.fov = (2 * Math.atan(h / (2 * trackHeight(p) * out.d))) / D2R;
+  out.shift = lerp(0.18, 0.17, seg(p, TRACK0, HANDOFF[1]));
+  out.up.copy(Y);
+  return out;
+}
+/** Ignition and liftoff shake, a pure function of p (±0.0025 rad over .12–.16, decaying). */
+function shake(p: number, out: CameraPose) {
+  const env = seg(p, 0.12, 0.123) * (1 - seg(p, 0.125, 0.16)) ** 2;
+  if (env <= 0) return out;
+  const a = 0.0025 * env * out.d;
+  out.target.x += a * (0.6 * Math.sin(p * 4100) + 0.4 * Math.sin(p * 9300 + 1.3));
+  out.target.y += a * (0.6 * Math.sin(p * 5300 + 0.7) + 0.4 * Math.sin(p * 11900 + 2.1));
+  return out;
+}
+
+// ── The pull-back (.56–.64): from the deployed close-up to the downlink wide ──
+const PULL = [0.56, 0.64] as const;
+
 /** The camera as a pure function of p: eased between keys, targets can follow the craft. */
 export function cameraPose(p: number, out: CameraPose) {
   const keys = CAMERA_KEYS;
+  if (p >= TRACK0 && p < HANDOFF[1]) {
+    if (p < HANDOFF[0]) return shake(p, trackPose(p, out));
+    const t = eio(seg(p, HANDOFF[0], HANDOFF[1]));
+    const follow = keys.find((k) => k[0] === HANDOFF[1]) ?? keys[4];
+    return blendPoses(trackPose(p, trackA), keyPose(follow, p, trackB), t, 1, out);
+  }
+  if (p >= PULL[0] && p < PULL[1]) {
+    const t = eio(seg(p, PULL[0], PULL[1]));
+    const [k0, k1] = [keys.find((k) => k[0] === PULL[0]) ?? keys[0], keys.find((k) => k[0] === PULL[1]) ?? keys[0]];
+    // The target leaves the craft late, so the craft stays framed while the Earth grows in behind it.
+    return blendPoses(keyPose(k0, p, trackA), keyPose(k1, p, trackB), t, t * t * t, out);
+  }
   let i = 0;
   while (i < keys.length - 2 && p >= keys[i + 1][0]) i++;
   const [k0, k1] = [keys[i], keys[i + 1]];
@@ -262,18 +347,12 @@ export function cameraPose(p: number, out: CameraPose) {
   out.fov = lerp(k0[6], k1[6], t);
   out.shift = lerp(k0[7], k1[7], t);
   const d = Math.exp(lerp(Math.log(keyDist(k0, s)), Math.log(keyDist(k1, s)), t));
-  return place(out, p, d, lerp(k0[4], k1[4], t), lerp(k0[5], k1[5], t), lerp(k0[2], k1[2], t), lerp(k0[8], k1[8], t));
+  place(out, p, d, lerp(k0[4], k1[4], t), lerp(k0[5], k1[5], t), lerp(k0[2], k1[2], t), lerp(k0[8], k1[8], t));
+  return shake(p, out);
 }
 
 /** A single fixed key (the still poses). */
-export function cameraAt(key: CameraKey, out: CameraPose) {
-  const p = key[0];
-  craftFrame(p);
-  keyTarget(key, out.target);
-  out.fov = key[6];
-  out.shift = key[7];
-  return place(out, p, keyDist(key, vehicleScale(p)), key[4], key[5], key[2], key[8]);
-}
+export const cameraAt = (key: CameraKey, out: CameraPose) => keyPose(key, key[0], out);
 
 /** Seeded randomness so the smoke is the same on every visit. */
 export function mulberry32(seed: number) {
