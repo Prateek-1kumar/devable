@@ -20,7 +20,12 @@ const MONO = "font-mono uppercase tracking-[0.12em] tabular-nums";
 
 type Caption = { index: string; title: string; body?: string; extra?: "marks" | "outcome"; /** Body ink over the climbing sky, which is no longer white. */ bodyInk?: string };
 const CAPTIONS: Record<number, Caption> = {
-  1: { index: "01 / 07 · TERMINAL COUNT", title: "Integrated. Go for launch.", body: "Your product rides on top. Devable carries it, with four channel systems latched on." },
+  1: {
+    index: "01 / 07 · TERMINAL COUNT",
+    title: "Integrated. Go for launch.",
+    body: "Your product rides on top. Devable carries it, with four channel systems latched on.",
+    bodyInk: "text-foreground/78",
+  },
   2: {
     index: "02 / 07 · LAUNCH",
     title: "A launch is a burst.",
@@ -84,7 +89,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
         {/* Once the intro has faded, its channel words and buttons leave the tab order (the H1 stays readable). */}
         <div inert={!intro}>
           <ChannelParagraph
-            className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/60 sm:text-xl ${rise}`}
+            className={`mt-6 max-w-[30rem] text-lg leading-relaxed tracking-[-0.01em] text-foreground/70 sm:text-xl ${rise}`}
             style={{ animationDelay: "0.25s" }}
           />
           <div className={`mt-10 ${rise}`} style={{ animationDelay: "0.4s" }}>

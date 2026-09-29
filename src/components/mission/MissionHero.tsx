@@ -8,7 +8,7 @@ import { clamp01, damp } from "../growth-engine/ease";
 import MissionCopy, { StillExtras } from "./MissionCopy";
 import MissionHud, { type DomNodes } from "./MissionHud";
 import type { Progress } from "./Scene";
-import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, R0, scrimOpacity, scrollS, skyAt, status, STILL_QUERY, storyP, theta, velKms } from "./timeline";
+import { altKm, arrayGo, beatAt, captionAt, craftR, firstLit, met, payloadGo, pipeline, R0, scrimOpacity, scrollS, spaceAt, skyAt, status, STILL_QUERY, storyP, theta, velKms } from "./timeline";
 
 // Mission DVB-01, the pinned hero: a tall section whose sticky frame holds the
 // copy, the 3D world and its instruments. One smoothed scroll progress (0..1)
@@ -121,6 +121,7 @@ export default function MissionHero() {
       write(h("nowVal"), String(alt));
       write(h("residualVal"), `−${Math.max(0, (100 * (R0 - r)) / R0).toFixed(1)}%`);
       h("scrim")?.style.setProperty("opacity", scrimOpacity(p).toFixed(3));
+      panel.current?.style.setProperty("--space", spaceAt(p).toFixed(3));
       write(h("vel"), `${velKms(p, r).toFixed(2)} KM/S`);
       const pipe = `+${Math.round(pipeline(p))}%`;
       write(h("pipe"), pipe);

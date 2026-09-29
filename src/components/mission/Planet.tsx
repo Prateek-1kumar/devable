@@ -6,7 +6,7 @@
 //  water_2048.webp  three.js r186 examples/textures/planets/earth_specular_2048.jpg, MIT (c) 2010-2026 three.js authors.
 // No NASA endorsement implied; no NASA insignia used.
 
-import { Suspense, useCallback, useMemo, useRef } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import {
@@ -335,6 +335,23 @@ function Earth({ still }: { still: boolean }) {
     [gl],
   );
   const maps = useTexture(still ? STILL : DESKTOP, onLoad);
+
+  // Warm-up: with the maps in, compile every material once (all sets, plumes, fairing and booster shown for the
+  // call, then restored), so the cut, staging and the first beam never stall on a shader compile.
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    const shown: { visible: boolean }[] = [];
+    scene.traverse((o) => {
+      if (!o.visible) {
+        o.visible = true;
+        shown.push(o);
+      }
+    });
+    // compileAsync collects and starts every program synchronously, so visibility is restored before any frame.
+    gl.compileAsync(scene, camera).catch(() => {});
+    for (const o of shown) o.visible = false;
+  }, [gl, scene, camera, maps]);
 
   const earthUniforms = useMemo(
     () => ({

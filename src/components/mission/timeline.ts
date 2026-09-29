@@ -141,7 +141,9 @@ export function skyAt(p: number, prevInk?: "light" | "dark") {
  * The copy scrim behind the caption column (and the stars' dimming there): none while the ink is dark-on-sky,
  * full over .27–.56 where the Earth's limb spans the frame, half in the orbital wides.
  */
-export const scrimOpacity = (p: number) => (p < INK_FLIP ? 0 : Math.max(seg(p, INK_FLIP, 0.27), 0) * (1 - 0.5 * seg(p, 0.56, 0.6)));
+export const scrimOpacity = (p: number) => spaceAt(p) * (1 - 0.5 * seg(p, 0.56, 0.6));
+/** How far the panel's sky has gone to space (0 blue, 1 black): the dark footings follow it, not the ink flip. */
+export const spaceAt = (p: number) => smooth(seg(p, 0.266, 0.285));
 /** The horizon colour in linear RGB (the pad set's fog and ground haze match the CSS sky). */
 export const skyHorizonLinear = (p: number) => skyLin(p, 2);
 

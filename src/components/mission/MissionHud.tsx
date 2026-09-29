@@ -91,7 +91,10 @@ export default function MissionHud({ className = "", beat, ready, bind, onJump }
 
       {/* The rail's footing: pale haze over the sky, deep shade over space (crossfaded with the ink). */}
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[120px] bg-[linear-gradient(0deg,rgb(230_238_246/0.7),transparent)] transition-opacity duration-300 in-data-[ink=dark]:opacity-0" />
-      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,rgb(3_6_13/0.85),transparent)] opacity-0 transition-opacity duration-300 in-data-[ink=dark]:opacity-100" />
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,rgb(3_6_13/0.85),transparent)] opacity-[var(--space,0)]" />
+
+      {/* The telemetry's footing: the sky's own zenith, so masts, wires and the Earth fade out under the strip. */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[72px] bg-[linear-gradient(180deg,var(--sky-z)_35%,transparent)]" />
 
       {/* Telemetry. */}
       <dl

@@ -55,15 +55,14 @@ export default function Scene({ still, active, progress, labels, padShadows = fa
       onCreated={(state) => {
         // Dev-only perf hook for the screenshot runs: draw calls and triangles of the last frame.
         if (process.env.NODE_ENV !== "production") (window as unknown as { __missionGl?: unknown }).__missionGl = state.gl;
-        onReady?.();
       }}
     >
-      <Mission still={still} progress={progress} labels={labels} padShadows={padShadows} />
+      <Mission still={still} progress={progress} labels={labels} padShadows={padShadows} onReady={onReady} />
     </Canvas>
   );
 }
 
-function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" | "onReady">) {
+function Mission({ still, progress, labels, padShadows, onReady }: Omit<Props, "active">) {
   const [frame] = useState(() => new MissionFrame());
   const padSet = useRef<Group>(null);
   const orbitSet = useRef<Group>(null);
@@ -75,7 +74,7 @@ function Mission({ still, progress, labels, padShadows }: Omit<Props, "active" |
   }, -2);
   return (
     <FrameContext.Provider value={frame}>
-      <FramePass still={still} progress={progress} />
+      <FramePass still={still} progress={progress} onReady={onReady} />
       <CameraRig />
       {still && <FocusInvalidate />}
       <Lighting />
@@ -176,12 +175,28 @@ function Lighting() {
   );
 }
 
-/** Advances the shared frame before any part reads it. */
-function FramePass({ still, progress }: { still: boolean; progress: RefObject<Progress> }) {
+/** Advances the shared frame before any part reads it; reports ready once the first frame is on screen. */
+function FramePass({ still, progress, onReady }: { still: boolean; progress: RefObject<Progress>; onReady?: () => void }) {
   const frame = useMission();
+  const first = useRef(true);
+  const last = useRef(0);
   useFrame((state) => {
     const p = still ? 1 : (progress.current?.shown ?? 0);
     frame.update(p, still ? 0 : state.clock.elapsedTime, still);
+    if (first.current) {
+      first.current = false;
+      requestAnimationFrame(() => onReady?.()); // after this frame has rendered: the canvas never fades in empty
+    }
+    if (process.env.NODE_ENV !== "production") {
+      // Dev probe for hitches (the budget is 50 ms at the cut, staging and the first beam): window.__missionSlow.
+      const now = performance.now();
+      if (last.current && now - last.current > 50) {
+        const w = window as unknown as { __missionSlow?: string[] };
+        (w.__missionSlow ??= []).push(`${p.toFixed(3)}:${Math.round(now - last.current)}ms`);
+        if (w.__missionSlow.length > 200) w.__missionSlow.shift();
+      }
+      last.current = now;
+    }
   }, -3);
   return null;
 }
@@ -253,7 +268,6 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
     () => ({
       pad: polar(0, R * 1.0015),
       spike: ghostPoint(0.5).add(new Vector3(0, 0.3, 0)),
-      orbit: polar(48, R0),
       parking: polar(-24, R0), // on the ring's front arc, left of the spiral head
     }),
     [],
@@ -288,7 +302,7 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
           boosterPose(p, v, q);
           v.add(bc.set(0, -2.16 * frame.scale, 0).applyQuaternion(q));
         }
-        else if (id === "residual" || id === "dv" || id === "now") v.copy(frame.craft);
+        else if (id === "residual" || id === "dv" || id === "now" || id === "orbit") v.copy(frame.craft);
         else if (id in ARRAY_LABELS) v.copy(frame.tips[ARRAY_LABELS[id] ?? 0]);
         else v.copy(fixed[id as keyof typeof fixed]);
         // An anchor behind the Earth (orbit set) has no chip.
@@ -302,6 +316,7 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
           x += 26;
           y += id === "dv" ? -34 : 30; // Δv above the craft, the residual below it (they overlap in time)
         } else if (id === "now") y -= 28;
+        else if (id === "orbit" || id === "meco") y += 36; // below the craft / the falling booster, never over it
         if (id in ARRAY_LABELS) {
           // Labels sit outboard of their tip, so they never run back across the craft. A left-hand
           // label that would reach into the copy column runs right instead, moved off its tip
@@ -331,7 +346,8 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
           w = ((el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0) + 14;
           if (w > 14) widths.set(id, w);
         }
-        if (!left) x = Math.min(x, width - 24 - w);
+        // Never into the caption column (plus 32 px) or past the panel's right edge.
+        if (!left) x = Math.min(Math.max(x, COPY_LEFT * width + COPY_MAX + 32), width - 24 - w);
         else x = Math.max(x, 24 + w);
         y = Math.min(Math.max(y, 36), height - 64);
       }
