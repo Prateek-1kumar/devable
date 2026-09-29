@@ -1,7 +1,7 @@
 import { MathUtils, Quaternion, Vector3 } from "three";
 import {
   CAMERA_KEYS,
-  explodeModule,
+  fairingOpen,
   lerp,
   MODULE_Y0,
   R,
@@ -9,10 +9,12 @@ import {
   riseY,
   seg,
   eio,
+  smooth,
   STATION_LAT,
   STATIONS,
   theta,
   turn,
+  vehicleScale,
   type CameraKey,
 } from "./timeline";
 
@@ -22,7 +24,10 @@ import {
 export const C = new Vector3(0, -R, 0);
 export const PAD_TOP = 0.03;
 export const BELL_Y = 0.09;
-export const PSI = 22.5; // vehicle yaw on the pad: the D faces 7.5° left of the camera
+export const PSI = 22.5; // vehicle yaw on the pad: the livery column turns toward the camera
+/** The launcher in craft-local units: rocket units × ROCKET_K, its engine exit ROCKET_BASE below the craft point (the satellite's seat). */
+export const ROCKET_K = 0.526;
+export const ROCKET_BASE = -(MODULE_Y0 - BELL_Y);
 /** Graticule axis: the pole sits 50° from the pad, away from the camera. */
 export const AXIS = new Vector3(0, 0.64, -0.77).normalize();
 export const TOWER = new Vector3(-1.4, 0, -0.25);
@@ -37,7 +42,7 @@ export function polar(deg: number, r: number, out = new Vector3()) {
 
 /** The module centre at p (no idle bob). */
 export function craftPosition(p: number, out = new Vector3()) {
-  if (p < 0.125) return out.set(0, MODULE_Y0 + 0.16 * explodeModule(p), 0);
+  if (p < 0.125) return out.set(0, MODULE_Y0, 0);
   if (p < 0.26) return out.set(0, MODULE_Y0 + riseY(p), 0);
   if (p < 0.4) {
     const t = turn(p);
@@ -74,28 +79,60 @@ export function craftQuaternion(p: number, out = new Quaternion()): Quaternion {
   return yaw(lerp(-55, 14, eio(seg(p, 0.56, 0.66))), out);
 }
 
+// ── Staging ──────────────────────────────────────────────────────────────
+// Every pose is the stack's craft-point pose, so the parts keep their stacked local coordinates.
 export const SEP = 0.355;
-const sepPos = new Vector3();
-const sepTan = new Vector3();
-const sepQuat = new Quaternion();
-const down = new Vector3();
-const tumble = new Quaternion();
+const BOOSTER_C = new Vector3(0, ROCKET_BASE + 1.43 * ROCKET_K, 0); // the booster's middle, craft-local
 const X = new Vector3(1, 0, 0);
-/** The launch stage: rides with the craft until MECO, then falls back and tumbles. Returns false once gone. */
+const sepQ = new Quaternion();
+const pitchQ = new Quaternion();
+const ax = new Vector3();
+const down = new Vector3();
+const cA = new Vector3();
+const cB = new Vector3();
+/**
+ * The first stage (engines, tank, interstage): stacked until MECO; the interstage gap opens over .355–.358,
+ * then it falls behind and toward the planet, pitching 0 → 35° about its own middle. Returns false once gone (.44).
+ */
 export function boosterPose(p: number, pos: Vector3, quat: Quaternion) {
+  craftPosition(p, pos);
   if (p < SEP) {
-    craftPosition(p, pos);
     craftQuaternion(p, quat);
     return true;
   }
-  const d = (p - SEP) / 0.1;
-  craftPosition(SEP, sepPos);
-  craftTangent(SEP, sepTan);
-  down.subVectors(C, sepPos).normalize();
-  pos.copy(sepPos).addScaledVector(sepTan, -2.5 * d).addScaledVector(down, 8 * d * d);
-  craftQuaternion(SEP, sepQuat);
-  quat.copy(sepQuat).multiply(tumble.setFromAxisAngle(X, 55 * D2R * d));
+  const s = vehicleScale(p);
+  craftQuaternion(SEP, sepQ);
+  ax.copy(Y).applyQuaternion(sepQ);
+  down.subVectors(C, pos).normalize();
+  const q = seg(p, 0.358, 0.44);
+  const back = 0.13 * seg(p, SEP, 0.358) + 3.7 * q * q;
+  quat.copy(sepQ).multiply(pitchQ.setFromAxisAngle(X, 35 * D2R * smooth(q)));
+  // Rotate about the booster's middle, not the craft point above it.
+  cA.copy(BOOSTER_C).multiplyScalar(s).applyQuaternion(sepQ);
+  cB.copy(BOOSTER_C).multiplyScalar(s).applyQuaternion(quat);
+  pos.add(cA).sub(cB).addScaledVector(ax, -back * s).addScaledVector(down, 1.3 * q * q * s);
   return p < 0.44;
+}
+
+/** The second stage and payload adapter: stacked until payload separation at .41, then drifting back along its axis. Gone at .46. */
+export function stage2Pose(p: number, pos: Vector3, quat: Quaternion) {
+  craftPosition(p, pos);
+  craftQuaternion(Math.min(p, 0.41), quat);
+  if (p < 0.41) return true;
+  ax.copy(Y).applyQuaternion(quat);
+  const back = 0.08 * seg(p, 0.41, 0.415) + 0.85 * seg(p, 0.415, 0.46) ** 2;
+  pos.addScaledVector(ax, -back * vehicleScale(p));
+  return p < 0.46;
+}
+
+/**
+ * One fairing half relative to its hinge on the base ring: the clamshell at integration, the opening at .385,
+ * then the detached half drifting out and back while it tumbles. Degrees and rocket units; gone at .43.
+ */
+export function fairingPose(p: number) {
+  if (p < 0.2) return { open: fairingOpen(p), out: 0, back: 0, visible: true };
+  const q = seg(p, 0.392, 0.43);
+  return { open: 25 * seg(p, 0.385, 0.392) ** 2 + 40 * q, out: 1.4 * q * q + 0.1 * q, back: 1.0 * q * q, visible: p < 0.43 };
 }
 
 // ── Stations ─────────────────────────────────────────────────────────────

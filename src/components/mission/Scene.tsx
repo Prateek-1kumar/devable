@@ -7,10 +7,10 @@ import { FrameContext, MissionFrame, useMission } from "./frame";
 import LaunchSite from "./LaunchSite";
 import Planet from "./Planet";
 import Stations from "./Stations";
-import { CAMERA_KEYS, explodeCapsule, KARMAN, LABEL_IDS, labelOpacity, R0, STILL_SQUARE, type LabelId } from "./timeline";
+import { CAMERA_KEYS, KARMAN, LABEL_IDS, labelOpacity, R0, SAT_STOWED, STILL_SQUARE, type LabelId } from "./timeline";
 import Trajectory from "./Trajectory";
 import Vehicle from "./Vehicle";
-import { cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar } from "./world";
+import { cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, PAD_TOP, polar, ROCKET_BASE, ROCKET_K } from "./world";
 
 export type Progress = { shown: number };
 
@@ -190,8 +190,8 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
       let y = 0;
       let left = false;
       if (visible) {
-        if (id === "payload") local(0.19, 0.26 + 0.34 * explodeCapsule(p), 0);
-        else if (id === "devable") local(0.25, 0, 0);
+        if (id === "payload") local(0.12 * SAT_STOWED, 0.34 * SAT_STOWED, 0.1 * SAT_STOWED); // the capsule, in the open fairing
+        else if (id === "devable") local(0.15 * ROCKET_K, ROCKET_BASE + 1.6 * ROCKET_K, 0.03 * ROCKET_K); // the launcher's first stage
         else if (id === "channels") v.copy(frame.tips[1]);
         else if (id in ARRAY_LABELS) v.copy(frame.tips[ARRAY_LABELS[id] ?? 0]);
         else v.copy(fixed[id as keyof typeof fixed]);

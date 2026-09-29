@@ -98,13 +98,32 @@ export const storyP = (s: number) => piecewise(s, 0);
 /** The section scroll fraction s where the story reaches p. */
 export const scrollS = (p: number) => piecewise(p, 1);
 
+// ── Launcher events ──────────────────────────────────────────────────────
+/** Fairing clamshell at integration, degrees per half: open 22° to .075, closes by .1, then a 1° latch bounce. */
+export const fairingOpen = (p: number) =>
+  22 * (1 - easeOutCubic(seg(p, 0.075, 0.1))) + 1 * Math.sin(Math.PI * seg(p, 0.1, 0.108));
+/** Stage 1 throttle: ignition over .1175–.1235, MECO over .355–.359. */
+export const throttle1 = (p: number) => seg(p, 0.1175, 0.1235) * (1 - seg(p, 0.355, 0.359));
+/** TEA-TEB: the green share of the ignition light, held through the first .004 and gone as the engines reach full thrust. */
+export const igniterFlash = (p: number) => (p < 0.1175 ? 0 : 0.4 * (1 - seg(p, 0.1215, 0.1245)));
+/** Plume altitude factor: 0 at the pad, 1 in thin air. */
+export const plumeAlt = (p: number) => seg(p, 0.13, 0.3);
+/** MVac bell heat (emissive intensity, 0..2.5) and its colour mix (1 hot, 0 cherry). */
+export const mvacHeat = (p: number) => {
+  const cool = seg(p, 0.4, 0.46);
+  return { i: 2.5 * seg(p, 0.37, 0.38) * (1 - cool), hot: 1 - cool };
+};
+/** MVac vacuum plume (orbit insertion): on over .37–.375, SECO over .40–.405. */
+export const mvacThrottle = (p: number) => seg(p, 0.37, 0.375) * (1 - seg(p, 0.4, 0.405));
+/** Grid fins: stowed → 90° out over .362–.372 (radians). */
+export const gridFin = (p: number) => (Math.PI / 2) * smooth(seg(p, 0.362, 0.372));
+/** Frost band opacity: .85 on the pad, sublimating over .13–.22. */
+export const frost = (p: number) => 0.85 * (1 - seg(p, 0.13, 0.22));
+/** The satellite rides in the fairing at this scale; it opens out to full size after payload separation (not to scale). */
+export const SAT_STOWED = 0.165;
+export const satScale = (p: number) => lerp(SAT_STOWED, 1, eio(seg(p, 0.41, 0.46)));
+
 // ── Craft kinematics ─────────────────────────────────────────────────────
-/** Exploded lift of module + arrays on the pad (1 → 0). */
-export const explodeModule = (p: number) => 1 - easeOutCubic(seg(p, 0.02, 0.05));
-/** Capsule lift above its seat (1 → 0, with a small seat overshoot). */
-export const explodeCapsule = (p: number) => 1 - easeOutBack(seg(p, 0.075, 0.1));
-/** Array i's radial pull-out (1 → 0). */
-export const explodeArray = (p: number, i: number) => 1 - easeOutBack(seg(p, 0.04 + 0.012 * i, 0.065 + 0.012 * i));
 /** When array i latches open (staggered so all four share the screen with the deploy caption). */
 export const latchAt = (i: number) => 0.505 + 0.008 * i;
 /** Array i's hinge angle in radians (0 stowed → π/2 deployed). */

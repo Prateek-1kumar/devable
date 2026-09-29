@@ -7,9 +7,7 @@ import {
   Color,
   DoubleSide,
   LatheGeometry,
-  Quaternion,
   Vector2,
-  Vector3,
   type Group,
   type Mesh,
   type MeshBasicMaterial,
@@ -26,13 +24,13 @@ import { glowFromWithin, materials, paintFade, palette, TONES } from "../growth-
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
 import { flameRamp, missionMaterials } from "./materials";
-import { explodeArray, explodeCapsule, explodeModule, hingeAngle, latchAt, latched, seg } from "./timeline";
-import { boosterPose, PAD_TOP } from "./world";
+import Rocket from "./Rocket";
+import { hingeAngle, latchAt, latched, satScale, seg } from "./timeline";
 
 // DVB-01. The Devable service module (black gloss, gold foil, the striped D on
 // a glass plate) carries your devtool (the porcelain capsule) the whole way;
-// four channel arrays hinge off its lower corners; the black launch stage with
-// its emerald livery drops away at MECO.
+// four channel arrays hinge off its lower corners. It rides to orbit in the
+// launcher's fairing (Rocket.tsx), whose stages carry their own separation poses.
 // Units: module-local, origin at the module centre, +Y is the nose.
 
 export const MONO = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -101,30 +99,6 @@ function Flame({ flameRef, y }: { flameRef: (g: Group | null) => void; y: number
 }
 
 // ── Canvas faces ─────────────────────────────────────────────────────────
-function drawStencil(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  ctx.save();
-  ctx.translate(w / 2, h / 2);
-  ctx.rotate(Math.PI / 2); // reads top to bottom, like a stage stencil
-  ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 3;
-  ctx.textBaseline = "middle";
-  ctx.font = `600 ${w * 0.42}px ${MONO}`;
-  ctx.textAlign = "left";
-  ctx.fillText("DVB‑01", -h * 0.44, 0);
-  ctx.font = `500 ${w * 0.2}px ${MONO}`;
-  ctx.textAlign = "right";
-  ctx.fillText("LAUNCH STAGE", h * 0.44, 0);
-  for (let i = 0; i < 9; i++) {
-    const x = -h * 0.06 + i * h * 0.03;
-    ctx.beginPath();
-    ctx.moveTo(x, -w * (i % 4 === 0 ? 0.2 : 0.1));
-    ctx.lineTo(x, w * (i % 4 === 0 ? 0.2 : 0.1));
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
 /** Capsule panel lines: four seams, a ring seam above the window and the payload stencil on the back. */
 function drawCapsuleSkin(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.save();
@@ -218,15 +192,11 @@ export default function Vehicle() {
   const ink = palette().ink;
   const craft = useRef<Group>(null);
   const capsule = useRef<Group>(null);
-  const booster = useRef<Group>(null);
-  const seat = useRef<Group>(null);
   const status = useRef<MeshBasicMaterial>(null);
   const sheen = useRef<Mesh>(null);
   const sheenMat = useRef<MeshBasicMaterial>(null);
   const beacon = useRef<MeshStandardMaterial>(null);
-  const stageFlame = useRef<Group | null>(null);
   const orbitFlame = useRef<Group | null>(null);
-  const stageLight = useRef<PointLight>(null);
   const orbitLight = useRef<PointLight>(null);
   const hinges = useRef<(Group | null)[]>([]);
   const swings = useRef<(Group | null)[]>([]);
@@ -240,11 +210,10 @@ export default function Vehicle() {
   const lift = useRef([0, 0, 0, 0]);
   const glow = useRef([0, 0, 0, 0]);
   const cursorOn = useRef(true);
-  const scratch = useMemo(() => ({ q: new Quaternion(), v: new Vector3(), on: new Color("#34d399") }), []);
+  const scratch = useMemo(() => ({ on: new Color("#34d399") }), []);
   const dish = useMemo(() => dishGeometry(0.085, 0.025), []);
 
   const mark = useCanvasTexture(1024, 1024, drawMark);
-  const stencil = useCanvasTexture(128, 1024, drawStencil);
   const skin = useCanvasTexture(1024, 256, drawCapsuleSkin);
   const drawWindow = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     ctx.save();
@@ -271,54 +240,23 @@ export default function Vehicle() {
   useFrame((_, delta) => {
     const { p, t, still } = frame;
     const dt = Math.min(delta, 1 / 20);
-    const em = explodeModule(p);
-    const ec = explodeCapsule(p);
     const focus = channelFocus.get();
 
     const g = craft.current;
     if (g) {
-      const bob = 0.012 * frame.scale * Math.sin(1.1 * t) * (p < 0.125 ? em : 1);
+      // Seated in the fairing until payload separation, then free: the idle bob fades in.
+      const bob = 0.012 * frame.scale * Math.sin(1.1 * t) * seg(p, 0.41, 0.46);
       g.position.copy(frame.craft).setY(frame.craft.y + bob);
       g.quaternion.copy(frame.quat);
-      g.scale.setScalar(frame.scale);
+      g.scale.setScalar(frame.scale * satScale(p));
     }
-    if (capsule.current) capsule.current.position.y = 0.34 * ec + 0.012 * ec * Math.sin(1.1 * t + 2.1);
     if (beacon.current) beacon.current.emissiveIntensity = still || t % 1 < 0.5 ? 1.6 : 0.15;
 
-    // Launch stage: seated while the module floats, then falls away at MECO.
-    const b = booster.current;
-    if (b) {
-      const { v, q } = scratch;
-      b.visible = boosterPose(p, v, q);
-      if (b.visible) {
-        const flying = p >= 0.125 && p < 0.355;
-        b.position.copy(v).setY(v.y + (flying ? 0.012 * frame.scale * Math.sin(1.1 * t) : 0));
-        b.quaternion.copy(q);
-        b.scale.setScalar(p < 0.355 ? frame.scale : 0.6);
-      }
-    }
-    if (seat.current) seat.current.position.y = -0.16 * em;
-
-    // Engines, and the warm light they throw.
+    // The orbital engine, and the warm light it throws.
     const flicker = 1 + 0.05 * Math.sin(31 * t) + 0.03 * Math.sin(17.3 * t);
     const flare = 1 + 0.03 * Math.sin(23 * t);
-    const sf = stageFlame.current;
-    const stageOn = p >= 0.1175 && p < 0.355;
-    const grow = 0.2 + 0.8 * seg(p, 0.1175, 0.125);
-    if (sf) {
-      sf.visible = stageOn;
-      const k = seg(p, 0.26, 0.34); // the plume widens in vacuum
-      // Near the pad the plume is squashed to the gap (its full colour ramp stays in view), then stretches out.
-      const gap = (frame.craft.y - 2.01 * frame.scale - PAD_TOP) / frame.scale;
-      const len = p < 0.26 ? Math.min(1, Math.max(0.35, (gap + 0.3) / 1.16)) : 1;
-      sf.scale.set(grow * flare * (1 + 1.2 * k), grow * flicker * len * (1 + 0.5 * k), grow * flare * (1 + 1.2 * k));
-    }
-    if (stageLight.current) {
-      // Intensity 0 rather than hidden: toggling a light's visibility recompiles every material.
-      stageLight.current.intensity = stageOn ? 1.6 * grow * flicker : 0;
-    }
     const of = orbitFlame.current;
-    const orbitOn = (p >= 0.37 && p < 0.4) || (p >= 0.826 && p < 0.84);
+    const orbitOn = p >= 0.826 && p < 0.84; // the correction burn (orbit insertion is the launcher's second stage)
     if (of) {
       of.visible = orbitOn;
       of.scale.set(0.3 * flare, 0.3 * flicker, 0.3 * flare);
@@ -344,7 +282,6 @@ export default function Vehicle() {
     for (let i = 0; i < 4; i++) {
       const h = hinges.current[i];
       const sw = swings.current[i];
-      const ex = explodeArray(p, i);
       const focused = focus === i;
       lift.current[i] = still ? (focused ? 0.06 : 0) : damp(lift.current[i], focused ? 0.06 : 0, 10, dt);
       const at = latchAt(i);
@@ -353,8 +290,7 @@ export default function Vehicle() {
       glow.current[i] = still ? target : damp(glow.current[i], target, 10, dt);
       if (h) {
         const a = (-45 + 90 * i) * D2R;
-        const r = 0.304 + 0.26 * ex;
-        h.position.set(Math.sin(a) * r, -0.17 + 0.012 * ex * Math.sin(1.3 * t + 1.7 * i) + lift.current[i], Math.cos(a) * r);
+        h.position.set(Math.sin(a) * 0.304, -0.17 + lift.current[i], Math.cos(a) * 0.304);
       }
       if (sw) sw.rotation.x = -hingeAngle(p, i);
       const mat = mats.current[i];
@@ -476,7 +412,7 @@ export default function Vehicle() {
             <sphereGeometry args={[0.018, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
           </mesh>
         </group>
-        {/* Orbital engine, hidden inside the stage adapter until separation. */}
+        {/* Orbital engine, for the correction burn. */}
         <group position-y={-0.21}>
           <mesh material={m.champagne}>
             <cylinderGeometry args={[0.035, 0.065, 0.08, 24, 1, true]} />
@@ -631,68 +567,7 @@ export default function Vehicle() {
           </group>
         ))}
       </group>
-
-      {/* Launch stage: a sibling, so separation never re-parents anything. */}
-      <group ref={booster}>
-        <group ref={seat}>
-          <mesh position-y={-0.21} material={m.champagne} castShadow>
-            <cylinderGeometry args={[0.24, 0.17, 0.08, 64]} />
-          </mesh>
-          <mesh position-y={-1.0} material={mm.blackGloss} castShadow>
-            <cylinderGeometry args={[0.17, 0.17, 1.5, 64]} />
-          </mesh>
-          <mesh position-y={-0.32} material={mm.livery}>
-            <cylinderGeometry args={[0.172, 0.172, 0.03, 64]} />
-          </mesh>
-          {[-0.55, -1.45].map((y) => (
-            <mesh key={y} position-y={y} material={mm.graphite}>
-              <cylinderGeometry args={[0.1715, 0.1715, 0.006, 64]} />
-            </mesh>
-          ))}
-          <mesh position-y={-0.395}>
-            <cylinderGeometry args={[0.1735, 0.1735, 0.09, 16, 1, true, -0.27, 0.54]} />
-            <meshBasicMaterial map={mark.texture} transparent depthWrite={false} toneMapped={false} />
-          </mesh>
-          <mesh position-y={-1.0}>
-            <cylinderGeometry args={[0.173, 0.173, 1.2, 24, 1, true, -0.45, 0.9]} />
-            <meshBasicMaterial map={stencil.texture} transparent depthWrite={false} toneMapped={false} />
-          </mesh>
-          <mesh position={[-0.172, -1.0, 0]} material={mm.graphite}>
-            <boxGeometry args={[0.014, 1.25, 0.018]} />
-          </mesh>
-          {/* Folded landing legs. */}
-          {[45, 135, 225, 315].map((az) => (
-            <group key={az} rotation-y={az * D2R}>
-              <mesh position={[0, -1.55, 0.176]} material={mm.graphite} castShadow>
-                <boxGeometry args={[0.02, 0.5, 0.012]} />
-              </mesh>
-              <mesh position={[0, -1.805, 0.185]} material={m.champagne}>
-                <boxGeometry args={[0.05, 0.01, 0.03]} />
-              </mesh>
-            </group>
-          ))}
-          <mesh position-y={-1.81} material={mm.blackGloss} castShadow>
-            <cylinderGeometry args={[0.17, 0.2, 0.12, 64]} />
-          </mesh>
-          <mesh position-y={-1.875} material={m.alu}>
-            <cylinderGeometry args={[0.2, 0.2, 0.012, 64]} />
-          </mesh>
-          <mesh position-y={-1.94} material={m.champagne}>
-            <cylinderGeometry args={[0.05, 0.11, 0.14, 32, 1, true]} />
-          </mesh>
-          <mesh position-y={-1.94}>
-            <cylinderGeometry args={[0.05, 0.11, 0.14, 32, 1, true]} />
-            <meshStandardMaterial color={CAVITY} roughness={0.6} side={BackSide} />
-          </mesh>
-          <Flame
-            y={-2.01}
-            flameRef={(el) => {
-              stageFlame.current = el;
-            }}
-          />
-          <pointLight ref={stageLight} position-y={-2.06} color="#ff9d4d" distance={2.5} decay={2} intensity={0} />
-        </group>
-      </group>
+      <Rocket />
     </group>
   );
 }

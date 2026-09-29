@@ -25,7 +25,7 @@ import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { useMission } from "./frame";
 import { flameRamp, missionMaterials } from "./materials";
 import { eio, R, seg, smooth } from "./timeline";
-import { C, mulberry32, PAD_TOP, TOWER } from "./world";
+import { C, mulberry32, PAD_TOP, ROCKET_K, TOWER } from "./world";
 
 // Pad 01: a concrete apron with flame trenches and hazard chevrons, the pad
 // with its hazard band, flame hole and mint rim lights, the hold-down clamps,
@@ -40,7 +40,9 @@ const POOL = 10;
 const POST = { h: 3.0, half: 0.14, base: -0.08 };
 const BAYS = 10;
 const BAY = (POST.h - 0.1) / BAYS;
-const ARM = { y: 1.72, len: 1.08 };
+const ARM = { y: 1.72, len: 1.17 };
+/** The launcher's body radius on the pad. */
+const BODY_R = 0.145 * ROCKET_K;
 // The arm hinges on the tower's inner corner and points at the booster's axis.
 const ARM_PIVOT = new Vector3(POST.half, ARM.y, POST.half);
 const ARM_YAW = -Math.atan2(-(TOWER.z + POST.half), -(TOWER.x + POST.half));
@@ -278,7 +280,7 @@ function bracingMatrices(mesh: InstancedMesh) {
 
 /** The umbilical hose, in arm space: from under the arm near its tip, sagging, to the stage wall. */
 function hoseGeometry() {
-  const wall = ARM_REACH - 0.172;
+  const wall = ARM_REACH - BODY_R;
   const start = new Vector3(ARM.len - 0.16, -0.016, 0);
   const end = new Vector3(wall, -0.07, 0); // plugs in just under the arm, so once swung clear it hangs as a loop
   const mid = start.clone().add(end).multiplyScalar(0.5).add(new Vector3(-0.02, -0.12, 0));
@@ -415,11 +417,12 @@ export default function LaunchSite() {
         pl.setMatrixAt(n++, o.matrix);
       };
       if (p >= 0.355 && p < 0.37) {
+        // Out of the interstage gap between the launcher's stages.
         const a = seg(p, 0.355, 0.37);
         for (let j = 0; j < 4; j++) {
           const az = (45 + 90 * j) * D2R;
-          const r = 0.26 + 0.25 * a;
-          put(w.set(Math.sin(az) * r, -0.21 - 0.1 * a, Math.cos(az) * r), 0.13 * Math.sin(Math.PI * a));
+          const r = BODY_R + 0.02 + 0.14 * a;
+          put(w.set(Math.sin(az) * r, -0.6 - 0.06 * a, Math.cos(az) * r), 0.08 * Math.sin(Math.PI * a));
         }
       }
       if (p >= 0.825 && p < 0.84) {
@@ -508,17 +511,17 @@ export default function LaunchSite() {
           </mesh>
         );
       })}
-      {/* Hold-down clamps: they tip outward as the booster lifts. */}
+      {/* Hold-down clamps on the launcher's skirt: they tip outward as it lifts. */}
       {[0, 1, 2, 3].map((k) => (
         <group key={k} rotation-y={(45 + 90 * k) * D2R}>
           <group
             ref={(g) => {
               clamps.current[k] = g;
             }}
-            position={[0, PAD_TOP, 0.23]}
+            position={[0, PAD_TOP, BODY_R + 0.04]}
           >
-            <mesh position-y={0.1} material={m.champagne} castShadow>
-              <boxGeometry args={[0.07, 0.2, 0.05]} />
+            <mesh position-y={0.07} material={m.champagne} castShadow>
+              <boxGeometry args={[0.05, 0.14, 0.04]} />
             </mesh>
             <mesh position-y={0.025} rotation-z={Math.PI / 2} material={mm.graphite}>
               <cylinderGeometry args={[0.012, 0.012, 0.09, 16]} />
