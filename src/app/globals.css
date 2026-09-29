@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* How we work: the pinned 3D story only on wide, tall-enough landscape screens with motion; else the still layout. */
+@custom-variant hww-pinned {
+  @media (min-width: 64rem) and (orientation: landscape) and (prefers-reduced-motion: no-preference) and (min-height: 40rem) {
+    &:where(#how-we-work *) {
+      @slot;
+    }
+  }
+}
+
 :root {
   /* Green brand, light theme. 60 · 30 · 10: pure white page, forest anchor,
      emerald brand. Lime and amber are sparks only: hover sweeps and the
