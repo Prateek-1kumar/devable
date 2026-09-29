@@ -15,6 +15,13 @@ const TONES = {
     wave: "text-forest",
     ink: "group-hover:text-white group-focus-visible:text-white",
   },
+  // On a dark field (the hero's space panel): a white face flooded by lime, and a hairline ghost flooded by white.
+  onDark: { face: "bg-white text-forest", wave: "text-lime", ink: "group-hover:text-forest group-focus-visible:text-forest" },
+  onDarkSecondary: {
+    face: "bg-transparent text-white ring-1 ring-white/25 ring-inset",
+    wave: "text-white",
+    ink: "group-hover:text-forest group-focus-visible:text-forest",
+  },
 };
 
 const SIZES = {

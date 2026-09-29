@@ -137,6 +137,11 @@ export function skyAt(p: number, prevInk?: "light" | "dark") {
   const flip = prevInk === "dark" ? INK_FLIP - HYST : INK_FLIP;
   return { z: cssRgb(skyLin(p, 1)), h: cssRgb(skyLin(p, 2)), ink: (p >= flip ? "dark" : "light") as "light" | "dark" };
 }
+/**
+ * The copy scrim behind the caption column (and the stars' dimming there): none while the ink is dark-on-sky,
+ * full over .27–.56 where the Earth's limb spans the frame, half in the orbital wides.
+ */
+export const scrimOpacity = (p: number) => (p < INK_FLIP ? 0 : Math.max(seg(p, INK_FLIP, 0.27), 0) * (1 - 0.5 * seg(p, 0.56, 0.6)));
 /** The horizon colour in linear RGB (the pad set's fog and ground haze match the CSS sky). */
 export const skyHorizonLinear = (p: number) => skyLin(p, 2);
 
@@ -454,21 +459,20 @@ export const CAMERA_KEYS: readonly CameraKey[] = [
   [0.56, null, 1, 4.2, -45, 28, 28, 0.16, 0], // the pull-back to .64 is a blend (world.ts)
   [0.64, [0, -14, 0], 0, 88, 112, 40, 26, 0.22, 1], // downlink wide (grazing 16.7°)
   [0.745, [0, -14, 0], 0, 88, 112, 40, 26, 0.22, 1],
-  [0.79, [1, -2, 0], 0, 42, 108, 34, 26, 0.22, 1], // correction
-  [0.84, [1, -2, 0], 0, 42, 108, 34, 26, 0.22, 1],
+  [0.79, [1, -1.5, -4.5], 0, 44, 108, 34, 26, 0.22, 1], // correction
+  [0.84, [1, -1.5, -4.5], 0, 44, 108, 34, 26, 0.22, 1],
   [0.885, [1, -13.5, 0], 0, 104, 112, 38, 26, 0.22, 1], // raising
   [0.945, [1, -13.5, 0], 0, 100, 110, 38, 26, 0.23, 1], // final hold
   [1.0, [1, -13.5, 0], 0, 100, 110, 38, 26, 0.23, 1],
 ];
 /** Phone still: a square canvas, the Earth low, the craft above it. */
-export const STILL_SQUARE: CameraKey = [1, [0, -11, 0], 0, 92, 110, 36, 30, 0, 1];
+export const STILL_SQUARE: CameraKey = [1, [1, -12.5, -5.5], 0, 74, 110, 36, 30, 0, 1];
 
 // ── Projected labels ─────────────────────────────────────────────────────
 export type LabelId =
   | "payload"
   | "devable"
   | "channels"
-  | "karman"
   | "spike"
   | "meco"
   | "fairing"
@@ -487,7 +491,6 @@ export const LABEL_WINDOWS: Record<LabelId, readonly [number, number, number, nu
   payload: [-1, -0.5, 0.1, 0.115],
   devable: [-1, -0.5, 0.1, 0.115],
   channels: [-1, -0.5, 0.1, 0.115],
-  karman: [0.275, 0.29, 0.42, 0.44], // becomes a HUD toast (WS4)
   spike: [0.305, 0.315, 0.34, 0.35],
   meco: [0.355, 0.36, 0.395, 0.41],
   fairing: [0.385, 0.39, 0.405, 0.415],

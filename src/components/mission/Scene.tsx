@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
-import { Color, FogExp2, NeutralToneMapping, Vector3, type DirectionalLight, type Group, type HemisphereLight, type PerspectiveCamera } from "three";
+import { Color, FogExp2, NeutralToneMapping, Quaternion, Vector3, type DirectionalLight, type Group, type HemisphereLight, type PerspectiveCamera } from "three";
 import { channelFocus } from "../growth-engine/channelFocus";
 import DeltaV from "./DeltaV";
 import { FrameContext, MissionFrame, useMission } from "./frame";
@@ -25,7 +25,7 @@ import {
 } from "./timeline";
 import Trajectory from "./Trajectory";
 import Vehicle from "./Vehicle";
-import { C, cameraAt, cameraPose, cameraPoseInit, craftPosition, ghostPoint, polar, sunDir } from "./world";
+import { boosterPose, C, cameraAt, cameraPose, cameraPoseInit, ghostPoint, polar, sunDir } from "./world";
 
 export type Progress = { shown: number };
 
@@ -228,6 +228,19 @@ function CameraRig() {
 }
 
 const LEADERS = new Set<LabelId>(["payload", "devable", "channels"]);
+const toP = new Vector3();
+/** Analytic ray–sphere test: is the segment from the camera to P blocked by the Earth? */
+function hidden(P: Vector3, cam: Vector3) {
+  toP.subVectors(P, cam);
+  const len = toP.length();
+  toP.divideScalar(len);
+  const tca = toP.x * (C.x - cam.x) + toP.y * (C.y - cam.y) + toP.z * (C.z - cam.z);
+  if (tca < 0) return false;
+  const d2 = cam.distanceToSquared(C) - tca * tca;
+  const r2 = (R * 0.999) ** 2;
+  if (d2 > r2) return false;
+  return tca - Math.sqrt(r2 - d2) < len;
+}
 /** The caption column: it starts at 8vw and its titles are capped at 30rem (MissionCopy). */
 const COPY_LEFT = 0.08;
 const COPY_MAX = 480;
@@ -238,22 +251,22 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
   const frame = useMission();
   const fixed = useMemo(
     () => ({
-      karman: polar(18, R + ((R0 - R) * 100) / 412),
+      pad: polar(0, R * 1.0015),
       spike: ghostPoint(0.5).add(new Vector3(0, 0.3, 0)),
-      meco: craftPosition(0.355).add(new Vector3(0, 0.8, 0)), // above the path, clear of the craft flying on past it
       orbit: polar(48, R0),
+      parking: polar(-24, R0), // on the ring's front arc, left of the spiral head
     }),
     [],
   );
   const scratch = useMemo(
-    () => ({ v: new Vector3(), craftNdc: new Vector3(), cache: new Map<LabelId, string>(), widths: new Map<LabelId, number>() }),
+    () => ({ v: new Vector3(), bc: new Vector3(), q: new Quaternion(), craftNdc: new Vector3(), cache: new Map<LabelId, string>(), widths: new Map<LabelId, number>() }),
     [],
   );
 
   useFrame((state) => {
     const nodes = labels.current;
     if (!nodes) return;
-    const { v, cache, craftNdc, widths } = scratch;
+    const { v, bc, q, cache, craftNdc, widths } = scratch;
     const { width, height } = state.size;
     const p = frame.p;
     const local = (x: number, y: number, z: number) => v.set(x, y, z).multiplyScalar(frame.scale).applyQuaternion(frame.quat).add(frame.craft);
@@ -268,13 +281,27 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
       if (visible) {
         if (id === "payload") local(0.1, 0.06, 0.08); // the satellite in the open fairing
         else if (id === "devable") local(0.15, -1.9, 0.03); // the launcher's first stage
-        else if (id === "channels") v.copy(frame.tips[1]);
+        else if (id === "channels") local(0.15, -0.62, 0.03); // the stage below the payload: the rows hang clear of its chip
+        else if (id === "fairing") local(0.32, 0.1, 0);
+        else if (id === "meco") {
+          // On the spent booster's middle as it falls away.
+          boosterPose(p, v, q);
+          v.add(bc.set(0, -2.16 * frame.scale, 0).applyQuaternion(q));
+        }
+        else if (id === "residual" || id === "dv" || id === "now") v.copy(frame.craft);
         else if (id in ARRAY_LABELS) v.copy(frame.tips[ARRAY_LABELS[id] ?? 0]);
         else v.copy(fixed[id as keyof typeof fixed]);
+        // An anchor behind the Earth (orbit set) has no chip.
+        visible = frame.p < CUT_P || !hidden(v, state.camera.position);
         v.project(state.camera);
-        visible = v.z < 1 && v.z > -1;
+        visible &&= v.z < 1 && v.z > -1;
         x = ((v.x + 1) / 2) * width;
         y = ((1 - v.y) / 2) * height;
+        if (id === "residual" || id === "dv") {
+          left = false;
+          x += 26;
+          y += id === "dv" ? -34 : 30; // Δv above the craft, the residual below it (they overlap in time)
+        } else if (id === "now") y -= 28;
         if (id in ARRAY_LABELS) {
           // Labels sit outboard of their tip, so they never run back across the craft. A left-hand
           // label that would reach into the copy column runs right instead, moved off its tip
@@ -296,6 +323,17 @@ function LabelWriter({ labels }: { labels: RefObject<Map<string, HTMLElement>> }
       if (id in ARRAY_LABELS) {
         const side = left ? "left" : "right";
         if (el.dataset.side !== side) el.setAttribute("data-side", side);
+      }
+      if (visible && !LEADERS.has(id)) {
+        // Keep the chip 24 px inside the panel: measured once (fixed text; live ones are about as wide).
+        let w = widths.get(id);
+        if (!w) {
+          w = ((el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0) + 14;
+          if (w > 14) widths.set(id, w);
+        }
+        if (!left) x = Math.min(x, width - 24 - w);
+        else x = Math.max(x, 24 + w);
+        y = Math.min(Math.max(y, 36), height - 64);
       }
       const key = visible ? `${x.toFixed(1)}|${y.toFixed(1)}|${o.toFixed(3)}|${width}` : "hidden";
       if (cache.get(id) === key) continue;

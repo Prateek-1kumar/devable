@@ -26,7 +26,7 @@ import {
   type Texture,
 } from "three";
 import { useMission } from "./frame";
-import { CUT_P, eio, INK_FLIP, lerp, R, seg, STILL_QUERY } from "./timeline";
+import { CUT_P, eio, lerp, R, scrimOpacity, seg, STILL_QUERY } from "./timeline";
 import { C, EARTH_ROT, mulberry32, sunDir } from "./world";
 
 // The Earth as a photograph: NASA day and night imagery lit by one hard sun, sharp ocean glint,
@@ -253,9 +253,6 @@ function starGeometry() {
   return g;
 }
 
-/** The copy scrim's opacity (WS4 draws it); the stars dim behind the copy column by the same amount. */
-const scrimOpacity = (p: number) => (p < INK_FLIP ? 0 : p >= 0.27 && p < 0.56 ? 1 : 0.5);
-
 function Stars() {
   const frame = useMission();
   const group = useRef<Group>(null);
@@ -286,10 +283,12 @@ function Stars() {
     u.uEarthAng.value = Math.asin(Math.min(1, R / dist));
     u.uDpr.value = state.gl.getPixelRatio();
     u.uOpacity.value = seg(p, 0.265, 0.29) * (p >= 0.345 && p < 0.56 ? 0.5 : 1);
+    // The phone card is a clean diagram of the orbit: no stars.
+    g.visible = !(frame.still && state.size.width / state.size.height < 1.2);
     // The copy column's right edge in NDC: it starts at 8vw (12px panel inset) and is at most 38rem wide.
     const vw = typeof window === "undefined" ? state.size.width : window.innerWidth;
     u.uCopyX.value = -1 + (2 * (0.08 * vw - 12 + 608)) / state.size.width;
-    u.uCopyFade.value = 0.8 * scrimOpacity(p);
+    u.uCopyFade.value = 0.8 * (frame.still ? 0.5 : scrimOpacity(p)); // the copy scrim's opacity: the stars dim behind the copy column
   });
   return (
     <group ref={group}>

@@ -18,10 +18,15 @@ const rise = "animate-fade-up motion-reduce:animate-none";
 const EASE = [0.22, 1, 0.36, 1] as const;
 const MONO = "font-mono uppercase tracking-[0.12em] tabular-nums";
 
-type Caption = { index: string; title: string; body?: string; extra?: "marks" | "outcome" };
+type Caption = { index: string; title: string; body?: string; extra?: "marks" | "outcome"; /** Body ink over the climbing sky, which is no longer white. */ bodyInk?: string };
 const CAPTIONS: Record<number, Caption> = {
   1: { index: "01 / 07 · TERMINAL COUNT", title: "Integrated. Go for launch.", body: "Your product rides on top. Devable carries it, with four channel systems latched on." },
-  2: { index: "02 / 07 · LAUNCH", title: "A launch is a burst.", body: "Show HN, the creator drop, the announcement, sequenced to the hour. It gets you off the pad." },
+  2: {
+    index: "02 / 07 · LAUNCH",
+    title: "A launch is a burst.",
+    body: "Show HN, the creator drop, the announcement, sequenced to the hour. It gets you off the pad.",
+    bodyInk: "text-foreground/78",
+  },
   3: { index: "03 / 07 · TRAJECTORY", title: "Most launches are suborbital.", body: "A spike, then gravity. We plan the path to orbit before anything lights." },
   4: {
     index: "04 / 07 · DEPLOY",
@@ -45,11 +50,14 @@ function Mark({ mark, size }: { mark: keyof typeof MARKS; size: number }) {
   );
 }
 
-function Ctas() {
+/** The two CTAs; `dark` for the space panel (caption 7, the reduced-motion desktop still). */
+function Ctas({ dark = false, className = "flex" }: { dark?: boolean; className?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-4">
-      <WaveButton href="#contact">Speak with the team</WaveButton>
-      <WaveButton href="#case-studies" tone="secondary">
+    <div className={`flex-wrap items-center gap-4 ${className}`}>
+      <WaveButton href="#contact" tone={dark ? "onDark" : "primary"}>
+        Speak with the team
+      </WaveButton>
+      <WaveButton href="#case-studies" tone={dark ? "onDarkSecondary" : "secondary"}>
         View case studies
       </WaveButton>
     </div>
@@ -67,7 +75,7 @@ type Props = {
 export default function MissionCopy({ caption, pinned, bind }: Props) {
   const intro = !pinned || caption === 0;
   return (
-    <div className="relative z-10 max-w-[38rem] text-foreground">
+    <div className="mission-copy relative z-10 max-w-[38rem] text-foreground">
       <motion.div initial={false} animate={{ opacity: intro ? 1 : 0, y: intro ? 0 : -16 }} transition={{ duration: 0.45, ease: EASE }}>
         {/* Light, precise type: the weight comes from size and tracking, not boldness. */}
         <h1 id="hero-title" className={`text-[clamp(2.6rem,4.6vw,4.4rem)] leading-[1.02] font-normal tracking-[-0.045em] ${rise}`} style={{ animationDelay: "0.1s" }}>
@@ -80,7 +88,15 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
             style={{ animationDelay: "0.25s" }}
           />
           <div className={`mt-10 ${rise}`} style={{ animationDelay: "0.4s" }}>
-            <Ctas />
+            {pinned ? (
+              <Ctas />
+            ) : (
+              // The still: phones keep the page's tones on white; the reduced-motion desktop still sits on space.
+              <>
+                <Ctas className="flex lg:hidden" />
+                <Ctas dark className="hidden lg:flex" />
+              </>
+            )}
           </div>
           <p aria-hidden="true" className={`mt-8 hidden items-center gap-2.5 ${MONO} text-[11px] text-foreground/45 motion-safe:lg:flex ${rise}`} style={{ animationDelay: "0.55s" }}>
             <svg viewBox="0 0 8 12" width="8" height="12" fill="none" stroke="currentColor" strokeWidth="1">
@@ -108,7 +124,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
                   <div aria-hidden="true">
                     <p className={`${MONO} text-[11px] text-foreground/45`}>{c.index}</p>
                     <p className="mt-5 max-w-[30rem] text-[clamp(2rem,3.4vw,3.2rem)] leading-[1.05] font-normal tracking-[-0.035em] text-balance">{c.title}</p>
-                    {c.body && <p className="mt-4 max-w-[26rem] text-lg leading-relaxed text-foreground/60">{c.body}</p>}
+                    {c.body && <p className={`mt-4 max-w-[26rem] text-lg leading-relaxed ${c.bodyInk ?? "text-foreground/60"}`}>{c.body}</p>}
                     {c.extra === "marks" && <MarksRow bind={bind} />}
                   </div>
                   {c.extra === "outcome" && (
@@ -120,7 +136,7 @@ export default function MissionCopy({ caption, pinned, bind }: Props) {
                         <span className={`${MONO} text-[12px] text-foreground/50`}>pipeline growth · illustrative</span>
                       </p>
                       <div className="mt-9">
-                        <Ctas />
+                        <Ctas dark />
                       </div>
                     </div>
                   )}
@@ -169,7 +185,7 @@ function MarksRow({ bind }: { bind: Bind }) {
 /** Phones and reduced motion: the channel key, the platforms and the outcome, under the still frame. */
 export function StillExtras({ className = "" }: { className?: string }) {
   return (
-    <div className={`max-w-[38rem] ${className}`}>
+    <div className={`max-w-[38rem] text-foreground ${className}`}>
       <ul className={`grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 ${MONO} text-[11px] text-foreground/60`}>
         {CHANNELS.map((c) => (
           <li key={c.n} className="flex items-center gap-2.5">
