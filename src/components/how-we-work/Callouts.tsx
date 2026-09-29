@@ -63,8 +63,9 @@ const LEGS = ["L0", "L1", "L2", "L3", "L4", "L5"] as const;
 const near = (k: number, p: number) => p >= W.at(LEGS[k - 1], 0.85) && p <= W.at(LEGS[k], 0.15);
 
 const v = new THREE.Vector3();
-/** Safe zone, as fractions of the stage: the world area minus the bottom-right step card (x > 0.66 and y > 0.62). */
-const SAFE = { x0: 0.06, x1: 0.94, y0: 0.13, y1: 0.88, cardX: 0.66, cardY: 0.62 };
+/** Safe zone, as fractions of the stage; the step card's live rectangle (plus CARD_PAD) is cut out of it. */
+const SAFE = { x0: 0.06, x1: 0.94, y0: 0.13, y1: 0.88 };
+const CARD_PAD = 16;
 const GAP = 28; // px from the dot to the pill's near corner (the leader runs the diagonal)
 /** Pill placements in preference order: up-right, up-left, down-right, down-left ([sx, sy] of the pill's offset). */
 const PLACES = [[1, -1], [-1, -1], [1, 1], [-1, 1]] as const;
@@ -118,11 +119,15 @@ export default function Callouts() {
       v.set(...(ANCHORS[k - 1][b] as [number, number, number])).project(camera);
       const W_ = size.width, H = size.height, x = ((v.x + 1) / 2) * W_, y = ((1 - v.y) / 2) * H;
       const pw = u.pill.offsetWidth, ph = u.pill.offsetHeight;
-      const inCard = (bx: number, by: number) => bx > SAFE.cardX * W_ && by > SAFE.cardY * H;
-      const fits = (x0: number, y0: number) =>
-        x0 >= SAFE.x0 * W_ && x0 + pw <= SAFE.x1 * W_ && y0 >= SAFE.y0 * H && y0 + ph <= SAFE.y1 * H && !inCard(x0 + pw, y0 + ph);
+      // The card is measured, not hard-coded, so the label steers clear of it wherever the layout puts it.
+      const cr = document.querySelector("[data-hww-card]")?.getBoundingClientRect();
+      const gr = gl.domElement.getBoundingClientRect();
+      const inCard = (x0: number, y0: number, w: number, h: number) =>
+        !!cr && x0 < cr.right - gr.left + CARD_PAD && x0 + w > cr.left - gr.left - CARD_PAD && y0 < cr.bottom - gr.top + CARD_PAD && y0 + h > cr.top - gr.top - CARD_PAD;
+      const fits = (x0: number, y0: number, w = pw, h = ph) =>
+        x0 >= SAFE.x0 * W_ && x0 + w <= SAFE.x1 * W_ && y0 >= SAFE.y0 * H && y0 + h <= SAFE.y1 * H && !inCard(x0, y0, w, h);
       const place = PLACES.find(([sx, sy]) => fits(x + (sx > 0 ? GAP : -GAP - pw), y + (sy > 0 ? GAP : -GAP - ph)));
-      show = v.z < 1 && fits(x, y) && !!place; // the dot itself must sit in the safe zone too (a 0×0 box at the dot)
+      show = v.z < 1 && fits(x, y, 0, 0) && !!place; // the dot itself must sit in the safe zone too (a 0×0 box at the dot)
       if (show && place) {
         const [sx, sy] = place;
         u.root.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;

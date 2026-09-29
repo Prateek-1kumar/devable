@@ -52,7 +52,8 @@ export default function StepCard({ entered, className = "" }: { entered: boolean
 
   return (
     <div
-      className={`relative z-10 mx-auto max-w-2xl px-6 py-24 sm:px-12 hww-pinned:absolute hww-pinned:right-[max(24px,2vw)] hww-pinned:bottom-[max(24px,3vh)] hww-pinned:mx-0 hww-pinned:w-[clamp(340px,26vw,420px)] hww-pinned:max-w-none hww-pinned:rounded-2xl hww-pinned:border hww-pinned:border-foreground/[0.08] hww-pinned:bg-white hww-pinned:p-6 hww-pinned:shadow-[0_1px_2px_rgb(15_26_20/0.06),0_16px_40px_-16px_rgb(15_26_20/0.22)] ${entered ? "hww-pinned:animate-fade-up" : ""} ${className}`}
+      data-hww-card
+      className={`relative z-10 mx-auto max-w-2xl px-6 py-24 sm:px-12 hww-pinned:absolute hww-pinned:left-[8vw] hww-pinned:top-[112px] hww-pinned:mx-0 hww-pinned:w-[clamp(340px,26vw,420px)] hww-pinned:max-w-none hww-pinned:rounded-2xl hww-pinned:border hww-pinned:border-foreground/[0.08] hww-pinned:bg-white hww-pinned:p-6 hww-pinned:shadow-[0_1px_2px_rgb(15_26_20/0.06),0_16px_40px_-16px_rgb(15_26_20/0.22)] ${entered ? "hww-pinned:animate-fade-up" : ""} ${className}`}
     >
       <p className="sr-only">{EYEBROWS.join(", ")}</p>
 

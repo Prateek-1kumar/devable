@@ -67,9 +67,9 @@ float mistAmt(vec3 wpos) {
   return 1.0 - (1.0 - haze) * (1.0 - sea) * (1.0 - bank);
 }
 vec3 mistApply(vec3 col, vec3 wpos) { return mix(col, uMistColor, mistAmt(wpos)); }
-/** 1 in the world area, 0 under the bottom-right step card (x > 0.68, y > 0.64 from the top). */
+/** 1 in the world area, 0 under the top-left step card (x < ~0.38, y < ~0.44 from the top). */
 float copySafe() { vec2 q = vec2(gl_FragCoord.x / uView.x, 1.0 - gl_FragCoord.y / uView.y);
-  return 1.0 - smoothstep(0.66, 0.70, q.x) * smoothstep(0.62, 0.66, q.y); }
+  return 1.0 - (1.0 - smoothstep(0.36, 0.40, q.x)) * (1.0 - smoothstep(0.42, 0.46, q.y)); }
 `;
 
 type Compile = (shader: THREE.WebGLProgramParametersWithUniforms, renderer: THREE.WebGLRenderer) => void;
