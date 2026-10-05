@@ -1,11 +1,13 @@
 "use client";
 
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform, type Variants } from "motion/react";
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, type Variants } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
+import StatusIndicator, { type StatusItem } from "@/components/ui/status-indicator";
 
-// Client proof: one quiet card with fluid directional transitions, and a
-// minimal, premium progress track at the bottom.
+// Client proof: a self-contained, luxury card with zero height shift,
+// fluid directional cross-fade, and the morphing status indicator integrated
+// directly into the card footer. Autoplays every 6 seconds.
 
 type Service = "Social Media" | "GEO" | "Influencer Marketing" | "Reddit";
 const SERVICE_COLOR: Record<Service, string> = {
@@ -17,7 +19,6 @@ const SERVICE_COLOR: Record<Service, string> = {
 
 type Client = {
   company: string;
-  /** Logo file in /public; without one the company name is set as a wordmark. */
   logo?: string;
   services: Service[];
   quote: string;
@@ -65,36 +66,42 @@ const CLIENTS: Client[] = [
   },
 ];
 
-const HOLD = 7; // seconds each quote plays before the next
+const CLIENT_STATUSES: StatusItem[] = CLIENTS.map((c, i) => ({
+  id: String(i),
+  label: c.company,
+  color: "#1f4d3a", // deep green
+  icon: "circle-check",
+}));
 
-// Directional slide and soft fade for card transitions.
+const HOLD = 6; // auto-advance every 6 seconds
+
 const cardVariants: Variants = {
   enter: (dir: number) => ({
     opacity: 0,
-    x: dir * 18,
+    x: dir * 14,
   }),
   center: {
     opacity: 1,
     x: 0,
     transition: {
-      x: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
-      opacity: { duration: 0.3, ease: "easeOut" },
+      x: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.26, ease: "easeOut" },
     },
   },
   exit: (dir: number) => ({
     opacity: 0,
-    x: dir * -18,
+    x: dir * -14,
     transition: {
-      x: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-      opacity: { duration: 0.18, ease: "easeIn" },
+      x: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.14, ease: "easeIn" },
     },
   }),
 };
 
 const reducedVariants: Variants = {
   enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: 0.3 } },
-  exit: { opacity: 0, transition: { duration: 0.2 } },
+  center: { opacity: 1, transition: { duration: 0.25 } },
+  exit: { opacity: 0, transition: { duration: 0.18 } },
 };
 
 function Logo({ client, area }: { client: Client; area: number }) {
@@ -111,7 +118,7 @@ function Logo({ client, area }: { client: Client; area: number }) {
   if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-ink">{client.company}</span>;
   const height = ratio ? Math.sqrt(area / ratio) : 26;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- sized from natural aspect
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={img}
       src={client.logo}
@@ -124,18 +131,6 @@ function Logo({ client, area }: { client: Client; area: number }) {
   );
 }
 
-function Arrow({ flip = false }: { flip?: boolean }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className={`size-3.5 ${flip ? "rotate-180" : ""}`}>
-      <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-const control =
-  "grid size-9 place-items-center rounded-full border border-line bg-card/80 text-ink/70 transition-colors hover:border-ink/25 hover:bg-card hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
-const mono = "font-mono text-[0.68rem] tracking-[0.14em] uppercase";
-
 export default function ClientProof() {
   const [active, setActive] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -143,7 +138,6 @@ export default function ClientProof() {
   const reduced = useReducedMotion();
   const client = CLIENTS[active];
   const progress = useMotionValue(0);
-  const fill = useTransform(progress, (v) => `${v * 100}%`);
 
   const go = (i: number) => {
     const next = (i + CLIENTS.length) % CLIENTS.length;
@@ -159,6 +153,7 @@ export default function ClientProof() {
     progress.set(0);
   }, [active, reduced, progress]);
 
+  // Auto-advance every 6 seconds
   useEffect(() => {
     if (reduced || paused) return;
     const remaining = HOLD * (1 - progress.get());
@@ -176,15 +171,16 @@ export default function ClientProof() {
 
   return (
     <div
-      className="w-full max-w-[38rem] justify-self-end"
+      className="w-full max-w-[39rem] justify-self-end"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
+      {/* Locked height figure: stable across all quotes, never resizes */}
       <figure
         aria-roledescription="carousel"
-        className="rounded-[16px] border border-line bg-card px-8 pt-8 pb-7 shadow-[0_1px_3px_rgb(15_26_20/0.04)] sm:px-10 sm:pt-10"
+        className="relative flex h-[26rem] flex-col justify-between overflow-hidden rounded-[20px] border border-line bg-card p-7 sm:h-[22.5rem] sm:p-9 shadow-[0_2px_8px_rgb(15_26_20/0.04),0_1px_2px_rgb(15_26_20/0.02)]"
       >
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
@@ -194,93 +190,62 @@ export default function ClientProof() {
             initial="enter"
             animate="center"
             exit="exit"
+            className="flex h-full flex-col justify-between"
           >
-            <div className="flex min-h-9 items-center justify-between gap-6">
-              <Logo client={client} area={1600} />
-              <ul className="flex flex-wrap justify-end gap-x-5 gap-y-1">
+            {/* Top row: Brand Logo and Service Badge */}
+            <div className="flex min-h-8 items-center justify-between gap-6">
+              <Logo client={client} area={1500} />
+              <div className="flex flex-wrap justify-end gap-1.5">
                 {client.services.map((service) => (
-                  <li key={service} className={`flex items-center gap-2 text-muted ${mono}`}>
-                    <span className="size-[7px] rounded-[1.5px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
+                  <span
+                    key={service}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-ink/[0.08] bg-paper/70 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.06em] text-muted uppercase"
+                  >
+                    <span className="size-[5.5px] rounded-full" style={{ backgroundColor: SERVICE_COLOR[service] }} />
                     {service}
-                  </li>
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
 
-            <div className="mt-8 flex min-h-[7.5rem] items-center sm:min-h-[8.5rem]">
-              <blockquote className="text-[1.3rem] leading-[1.42] font-normal tracking-[-0.025em] text-ink sm:text-[1.58rem]">
+            {/* Middle row: Editorial Quote (centered vertically in available space) */}
+            <div className="my-auto flex items-center py-2">
+              <blockquote className="text-[1.32rem] leading-[1.4] font-normal tracking-[-0.025em] text-ink sm:text-[1.54rem]">
                 “{client.quote}”
               </blockquote>
             </div>
 
-            <figcaption className="mt-8 flex items-center gap-3.5 border-t border-line pt-6 pr-24">
-              {/* pr-24 keeps the person clear of the prev/next controls on the same line */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={client.person.photo} alt="" className="size-11 rounded-[8px] object-cover grayscale-[25%]" />
-              <span className="text-[0.95rem] leading-snug">
-                <span className="block font-medium text-ink">{client.person.name}</span>
-                <span className="block text-xs text-muted mt-0.5">
-                  {client.person.role}, {client.company}
+            {/* Bottom footer: Person info on left, StatusIndicator on right */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line/80 pt-5">
+              <figcaption className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={client.person.photo}
+                  alt=""
+                  className="size-10.5 rounded-[9px] object-cover ring-1 ring-black/[0.06] grayscale-[20%]"
+                />
+                <span className="text-[0.92rem] leading-snug">
+                  <span className="block font-medium text-ink">{client.person.name}</span>
+                  <span className="block text-xs text-muted mt-0.5">
+                    {client.person.role}, {client.company}
+                  </span>
                 </span>
-              </span>
-            </figcaption>
+              </figcaption>
+
+              {/* Status indicator: minimal dots morphing into active pill */}
+              <div className="flex items-center">
+                <StatusIndicator
+                  value={String(active)}
+                  statuses={CLIENT_STATUSES}
+                  ariaLabel="Client testimonials"
+                  onChange={(_, idx) => go(idx)}
+                  className="[--si-pill-bg:var(--primary-soft)] [--si-label:var(--ink)] [--si-dot:#cfdad1] [--si-dot-hover-bg:rgba(31,77,58,0.08)]"
+                />
+              </div>
+            </div>
           </motion.div>
         </AnimatePresence>
-
-        {/* Controls sit outside the transition, on the attribution line */}
-        <div className="relative">
-          <div className="absolute right-0 bottom-1 flex items-center gap-2">
-            <button type="button" aria-label="Previous client" onClick={() => go(active - 1)} className={control}>
-              <Arrow flip />
-            </button>
-            <button type="button" aria-label="Next client" onClick={() => go(active + 1)} className={control}>
-              <Arrow />
-            </button>
-          </div>
-        </div>
       </figure>
-
-      {/* The index: every client by name, the active one's refined hairline filling smoothly */}
-      <div role="tablist" aria-label="Clients" className="mt-7 grid grid-cols-5 gap-2.5 sm:gap-4">
-        {CLIENTS.map((c, i) => {
-          const on = i === active;
-          return (
-            <button
-              key={c.company}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => go(i)}
-              className="group flex flex-col gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
-            >
-              <div className="flex items-center gap-1.5 truncate">
-                <span
-                  className={`font-mono text-[10px] tracking-[0.1em] transition-colors duration-300 ${
-                    on ? "font-semibold text-primary" : "text-muted/45 group-hover:text-muted"
-                  }`}
-                >
-                  0{i + 1}
-                </span>
-                <span
-                  className={`truncate font-mono text-[10.5px] tracking-[0.08em] uppercase transition-colors duration-300 ${
-                    on ? "font-medium text-ink" : "text-muted/60 group-hover:text-ink"
-                  }`}
-                >
-                  {c.company}
-                </span>
-              </div>
-              <div className="relative h-[2px] w-full overflow-hidden rounded-full bg-ink/[0.08] transition-colors duration-300 group-hover:bg-ink/[0.14]">
-                {on && (
-                  <motion.span
-                    className="absolute inset-y-0 left-0 rounded-full bg-primary"
-                    style={{ width: reduced ? "100%" : fill }}
-                  />
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
