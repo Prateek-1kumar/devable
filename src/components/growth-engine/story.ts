@@ -25,7 +25,7 @@ const TOP_FOR = 0.35; // across the top into the core
 const OUT_FOR = 0.8; // a band's port → its tile
 const COLLECT_FOR = 0.85; // tile → dashboard
 const TICK_FOR = 0.9; // the chart's new week rising
-const HIGHLIGHT = { rise: 0.1, hold: 0.2, fall: 0.4 };
+const HIGHLIGHT = { rise: 0.08, hold: 0.22, fall: 0.25 };
 const TILE_GLOW = 1.4;
 const CORE_GLOW = 0.9;
 

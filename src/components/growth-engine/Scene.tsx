@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
-import { Vector3, type Group, type OrthographicCamera as OrthoCam } from "three";
+import { Vector3, type OrthographicCamera as OrthoCam } from "three";
 import { CHANNELS } from "./channels";
 import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
 import Floor from "./Floor";
 import GrowthScreen from "./GrowthScreen";
-import { CAMERA_DISTANCE, CONTENT, STACK_RIGHT, STACK_TOP, VIEW_DIR } from "./layout";
+import { CAMERA_DISTANCE, CONTENT, HOVER_ANCHOR, VIEW_DIR } from "./layout";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
 import { FocusContext, HoverContext, Story, StoryContext } from "./story";
@@ -20,13 +20,13 @@ type Props = {
   active: boolean;
   /** Which channel layer the cursor is over, for the DOM hover card. */
   onHover?: (index: number | null) => void;
-  /** The stack's right edge in page pixels, reported every frame, for pinning the hover card. */
+  /** Where the hover card pins (under the destination row), in page pixels, reported every frame. */
   onAnchor?: (anchor: StackAnchor) => void;
   /** Layer highlighted from outside the scene, or null. */
   focus?: number | null;
 };
 
-export type StackAnchor = { x: number; top: number; bottom: number };
+export type StackAnchor = { x: number; y: number };
 
 /**
  * The diagram: a fixed orthographic isometric view (no rotation, tilt or
@@ -91,19 +91,13 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
   );
 }
 
-/** Projects the stack's right edge to page pixels each frame (follows resize and scroll). */
+/** Projects the hover card's anchor to page pixels each frame (follows resize and scroll). */
 function AnchorReporter({ onAnchor }: { onAnchor: (anchor: StackAnchor) => void }) {
-  const probe = useRef<Group>(null);
   const [world] = useState(() => new Vector3());
   useFrame(({ camera, gl }) => {
-    if (!probe.current) return;
     const rect = gl.domElement.getBoundingClientRect();
-    const toPage = (y: number) => {
-      world.set(STACK_RIGHT.x, y, STACK_RIGHT.z).project(camera);
-      return { x: rect.left + ((world.x + 1) / 2) * rect.width, y: rect.top + ((1 - world.y) / 2) * rect.height };
-    };
-    const mid = toPage(STACK_TOP / 2);
-    onAnchor({ x: mid.x, top: toPage(STACK_TOP).y, bottom: toPage(0).y });
+    world.copy(HOVER_ANCHOR).project(camera);
+    onAnchor({ x: rect.left + ((world.x + 1) / 2) * rect.width, y: rect.top + ((1 - world.y) / 2) * rect.height });
   });
-  return <group ref={probe} />;
+  return null;
 }

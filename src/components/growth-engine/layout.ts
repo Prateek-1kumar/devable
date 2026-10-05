@@ -77,5 +77,5 @@ export const collectRoute = (d: (typeof DESTINATIONS)[number]) => [
 export const cardCenter = (node: Vector3, card: { h: number; lift: number }) =>
   node.clone().setY(card.lift).addScaledVector(SCREEN_UP, card.h / 2);
 
-/** The stack's right-hand edge, where the hover card pins itself. */
-export const STACK_RIGHT = { x: HALF, z: -HALF };
+/** Where the hover card pins: the front corner of the destination row, so it opens into the empty floor below. */
+export const HOVER_ANCHOR = new Vector3(TILE.x - TILE.size / 2, 0, DESTINATIONS[0].z + TILE.size / 2);
