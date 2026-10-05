@@ -8,7 +8,8 @@ import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
 import Floor from "./Floor";
 import GrowthScreen from "./GrowthScreen";
-import { CAMERA_DISTANCE, CONTENT, HOVER_ANCHOR, VIEW_DIR } from "./layout";
+import { CAMERA_DISTANCE, CAPTIONS, CONTENT, HOVER_ANCHOR, SCREEN_RIGHT, VIEW_DIR } from "./layout";
+import { Caption } from "./parts";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
 import { FocusContext, HoverContext, Story, StoryContext } from "./story";
@@ -86,6 +87,9 @@ function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "
         <EngineCore />
         <DevtoolTerminal />
         <GrowthScreen />
+        {CAPTIONS.map((c) => (
+          <Caption key={c.n} n={c.n} text={c.text} at={c.at().addScaledVector(SCREEN_RIGHT, c.dx)} />
+        ))}
       </HoverContext.Provider>
     </StoryContext.Provider>
   );

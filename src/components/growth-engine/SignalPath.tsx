@@ -15,8 +15,8 @@ export default function SignalPath() {
 
   return (
     <group>
-      <RouteLine points={IN_ROUTE} />
-      <RouteLine points={RISER} />
+      <RouteLine points={IN_ROUTE} arrows arrowAt={0.85} />
+      <RouteLine points={RISER} arrows />
       <RouteLine points={TOP_ROUTE} />
       <Pulse route={routes.inbound} progress={(t) => story.inbound(t)} />
       <Pulse route={routes.riser} progress={(t) => story.climb(t)} />

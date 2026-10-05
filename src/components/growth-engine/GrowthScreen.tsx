@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { DASH_CARD, DASH_NODE, cardCenter } from "./layout";
-import { palette } from "./palette";
+import { edgeColor, palette } from "./palette";
 import { CARD_PX, CardPlane, DESIGN_ZOOM } from "./parts";
 import { useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
@@ -39,8 +39,8 @@ export default function GrowthScreen() {
       const pad = 12 * u;
       // Card.
       ctx.fillStyle = p.card;
-      ctx.strokeStyle = p.ink;
-      ctx.lineWidth = 1.1 * u;
+      ctx.strokeStyle = edgeColor();
+      ctx.lineWidth = u;
       ctx.beginPath();
       ctx.roundRect(u, u, w - 2 * u, h - 2 * u, 9 * u);
       ctx.fill();

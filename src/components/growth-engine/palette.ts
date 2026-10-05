@@ -31,6 +31,8 @@ export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(ne
 
 /** Outline width in CSS pixels: thin, uniform technical lines. */
 export const INK_PX = 1;
+/** Outlines are ink softened toward the page: present, never harsh. */
+export const edgeColor = () => mix(palette().ink, palette().paper, 0.6);
 
 /** The three visible faces of a box, from the fixed isometric view. */
 export type Face = "top" | "front" | "right";
@@ -45,10 +47,10 @@ export const SHADE: Record<Face, (color: string) => string> = {
  * Flat materials for a box's six faces (three's BoxGeometry order: +x, −x, +y, −y, +z, −z),
  * pushed back a hair so the ink outlines drawn on their edges always win the depth test.
  */
-export function boxFaces(color: string, opts: { opacity?: number } = {}) {
+export function boxFaces(color: string, opts: { opacity?: number; top?: string } = {}) {
   const make = (face: Face | null) =>
     new MeshBasicMaterial({
-      color: face ? SHADE[face](color) : color,
+      color: face === "top" && opts.top ? opts.top : face ? SHADE[face](color) : color,
       transparent: opts.opacity !== undefined,
       opacity: opts.opacity ?? 1,
       depthWrite: opts.opacity === undefined,
@@ -61,9 +63,10 @@ export function boxFaces(color: string, opts: { opacity?: number } = {}) {
 }
 
 /** Recolours box faces made by `boxFaces` in place (for highlights), keeping the per-face shading. */
-export function tintFaces(faces: MeshBasicMaterial[], color: Color) {
+export function tintFaces(faces: MeshBasicMaterial[], color: Color, top?: Color) {
   faces[0].color.copy(color).lerp(INK, 0.16);
-  faces[2].color.copy(color).lerp(WHITE, 0.12);
+  if (top) faces[2].color.copy(top);
+  else faces[2].color.copy(color).lerp(WHITE, 0.12);
   faces[4].color.copy(color);
 }
 const INK = new Color("#0f1a14");

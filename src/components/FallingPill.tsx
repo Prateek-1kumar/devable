@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import PixelField from "./PixelField";
 
 // A tall grey pill stands behind the hero headline, then tips over to the
 // right as you scroll, pivoting on its bottom-right corner, and lands lying
@@ -65,8 +64,6 @@ export default function FallingPill({ children, landed, below }: Props) {
 
   return (
     <div ref={root} className="relative isolate overflow-x-clip [--fall:0]">
-      {/* Dot field spans both screens: the hero and where the pill lands. */}
-      <PixelField className="z-0" />
       <div
         aria-hidden="true"
         className="absolute z-0 origin-bottom-right bg-surface will-change-transform"

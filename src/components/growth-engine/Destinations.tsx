@@ -5,7 +5,7 @@ import { Color, Vector3 } from "three";
 import type { Line2 } from "three-stdlib";
 import { DASH_NODE, DESTINATIONS, TILE, collectRoute, outRoute } from "./layout";
 import { MARK_STYLE, paintMark } from "./marks";
-import { INK_PX, boxFaces, palette, tintFaces } from "./palette";
+import { INK_PX, boxFaces, edgeColor, palette, tintFaces } from "./palette";
 import { Node, Pulse, Route, RouteLine } from "./parts";
 import { useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
@@ -55,7 +55,7 @@ function Tile({ d, index }: { d: Destination; index: number }) {
     <group position={[TILE.x, 0, d.z]}>
       <mesh position-y={TILE.h / 2} material={faces}>
         <boxGeometry args={[TILE.size, TILE.h, TILE.size]} />
-        <Edges color={p.ink} lineWidth={INK_PX} />
+        <Edges color={edgeColor()} lineWidth={INK_PX} />
       </mesh>
       {/* The mark lies on the tile's top, reading along the row like the band labels. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position-y={TILE.h + 0.002}>
@@ -75,7 +75,7 @@ export default function Destinations() {
     <group>
       {DESTINATIONS.map((d, i) => (
         <group key={d.mark}>
-          <RouteLine points={outRoute(d)} />
+          <RouteLine points={outRoute(d)} arrows />
           <RouteLine points={collectRoute(d)} />
           <Pulse route={routes[i].out} progress={(t) => story.out(i, t)} />
           <Pulse route={routes[i].collect} progress={(t) => story.collect(i, t)} />

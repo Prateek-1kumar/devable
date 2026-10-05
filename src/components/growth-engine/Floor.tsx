@@ -35,7 +35,7 @@ export default function Floor() {
             vec2 g = abs(fract(vPos / cell - 0.5) - 0.5) / fwidth(vPos / cell);
             float line = 1.0 - min(min(g.x, g.y), 1.0);
             float fade = 1.0 - smoothstep(radius * 0.45, radius, length(vPos - center));
-            gl_FragColor = vec4(color, line * fade * 0.11);
+            gl_FragColor = vec4(color, line * fade * 0.075);
             #include <colorspace_fragment>
           }`,
       }),
