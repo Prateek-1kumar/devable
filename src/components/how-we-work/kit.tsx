@@ -23,6 +23,12 @@ export const C = {
   primarySoft: "var(--primary-soft)",
   accentSoft: "var(--accent-soft)",
   sage: "var(--sage)",
+  /** Quiet active-state outline: coral at low strength, never a heavy border. */
+  accentLine: "color-mix(in srgb, var(--accent) 38%, transparent)",
+  /** Quiet active-state wash. */
+  accentWash: "color-mix(in srgb, var(--accent) 7%, var(--card))",
+  /** Hairline for dividers inside cards, lighter than card borders. */
+  hair: "color-mix(in srgb, var(--line) 70%, var(--card))",
 } as const;
 /** A small independent palette for chart series, so the data stands apart from the UI chrome. */
 export const DATA = { blue: "#3e6fd8", teal: "#1f9e8f", violet: "#7a5af5", amber: "#e3a008", slate: "#94a3b8" } as const;
@@ -87,8 +93,8 @@ export function PanelSvg({
       <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} className="block h-auto w-full select-none" fontFamily="var(--font-sans)">
         <defs>
           <filter id={`${id}-shadow`} x="-20%" y="-20%" width="140%" height="160%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#0f1a14" floodOpacity="0.06" />
-            <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#0f1a14" floodOpacity="0.07" />
+            <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#0f1a14" floodOpacity="0.04" />
+            <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#0f1a14" floodOpacity="0.05" />
           </filter>
         </defs>
         <MetricStrip metrics={metrics} t={t} at={metricsAt} span={metricsFor} />
@@ -109,11 +115,11 @@ function MetricStrip({ metrics, t, at, span }: { metrics: readonly Metric[]; t: 
         const x = 20 + i * (w + 12);
         return (
           <g key={m.label} transform={`translate(${x} 16)`}>
-            <rect width={w} height={60} rx={10} fill={C.card} stroke={C.line} filter={shadow} />
-            <Mono x={14} y={22} size={9.5} fill={C.muted}>
+            <rect width={w} height={60} rx={12} fill={C.card} stroke={C.line} filter={shadow} />
+            <Mono x={16} y={23} size={9} fill={C.muted}>
               {m.label}
             </Mono>
-            <text x={14} y={47} fontSize={20} fontWeight={600} letterSpacing="-0.02em" fill={C.ink}>
+            <text x={16} y={47} fontSize={19} fontWeight={600} letterSpacing="-0.02em" fill={C.ink}>
               {m.format(m.value * k)}
             </text>
             {/* A tiny trend tick: grows with the count. */}
@@ -121,7 +127,8 @@ function MetricStrip({ metrics, t, at, span }: { metrics: readonly Metric[]; t: 
               d={`M${w - 62} 44 L${w - 50} 40 L${w - 40} 42 L${w - 28} 32 L${w - 16} 26`}
               fill="none"
               stroke={C.primary}
-              strokeWidth={1.5}
+              strokeOpacity={0.7}
+              strokeWidth={1.3}
               strokeLinecap="round"
               strokeLinejoin="round"
               pathLength={1}
@@ -150,7 +157,7 @@ type CardProps = { x: number; y: number; w: number; h: number; r?: number; strok
   "x" | "y" | "width" | "height"
 >;
 /** A white card with a 1px border and a soft shadow. */
-export function Card({ x, y, w, h, r = 10, stroke = C.line, fill = C.card, shadow = true, strokeWidth = 1, ...rest }: CardProps) {
+export function Card({ x, y, w, h, r = 12, stroke = C.line, fill = C.card, shadow = true, strokeWidth = 1, ...rest }: CardProps) {
   const filter = useShadow();
   return <rect x={x} y={y} width={w} height={h} rx={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} filter={shadow ? filter : undefined} {...rest} />;
 }

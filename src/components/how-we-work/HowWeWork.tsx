@@ -36,6 +36,7 @@ export default function HowWeWork() {
   const [stageOnScreen, setStageOnScreen] = useState(false);
   const [inView, setInView] = useState(() => STEPS.map(() => false));
   const panelEls = useRef<(HTMLDivElement | null)[]>([]);
+  const rail = useRef<HTMLSpanElement>(null);
 
   // Desktop: the step follows scroll progress through the track.
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function HowWeWork() {
       const span = rect.height - window.innerHeight;
       const p = span > 0 ? -rect.top / span : 0;
       const next = Math.min(STEPS.length - 1, Math.max(0, Math.floor(p * STEPS.length)));
+      if (rail.current) rail.current.style.transform = `scaleY(${Math.min(1, Math.max(0, p)).toFixed(4)})`;
       if (next !== activeRef.current) {
         activeRef.current = next;
         setActive(next);
@@ -112,24 +114,33 @@ export default function HowWeWork() {
 
       <div ref={track} className="relative mt-16 lg:motion-safe:mt-4 lg:motion-safe:h-[500svh]">
         <div className="lg:motion-safe:sticky lg:motion-safe:top-0 lg:motion-safe:flex lg:motion-safe:h-svh lg:motion-safe:items-center">
-          <div className="grid w-full gap-20 lg:motion-safe:grid-cols-[2.75rem_minmax(0,1fr)_17rem] lg:motion-safe:items-center lg:motion-safe:gap-8 xl:motion-safe:grid-cols-[12.5rem_minmax(0,1fr)_19rem] xl:motion-safe:gap-10 2xl:motion-safe:grid-cols-[14rem_minmax(0,1fr)_22rem]">
+          <div className="grid w-full gap-20 lg:motion-safe:grid-cols-[2rem_minmax(0,1fr)_17rem] lg:motion-safe:items-center lg:motion-safe:gap-8 xl:motion-safe:grid-cols-[12.5rem_minmax(0,1fr)_19rem] xl:motion-safe:gap-10 2xl:motion-safe:grid-cols-[14rem_minmax(0,1fr)_22rem]">
             <nav aria-label={NAV_LABEL} className="hidden lg:motion-safe:col-start-1 lg:motion-safe:row-start-1 lg:motion-safe:block">
-              <ol className="flex flex-col gap-1.5">
+              <ol className="relative flex flex-col gap-6">
+                {/* The rail: a hairline through the badges, filling deep green with scroll progress. */}
+                <span aria-hidden="true" className="absolute top-4 bottom-4 left-[15px] w-px bg-ink/10">
+                  <span ref={rail} className="block h-full w-full origin-top bg-primary/60" style={{ transform: "scaleY(0)" }} />
+                </span>
                 {STEPS.map((step, i) => {
                   const on = i === active;
+                  const done = i < active;
                   return (
-                    <li key={step.n}>
+                    <li key={step.n} className="relative">
                       <button
                         type="button"
                         onClick={() => go(i)}
                         aria-current={on ? "step" : undefined}
-                        className={`flex w-full items-center gap-3 rounded-xl border p-1.5 xl:px-2.5 xl:py-2 text-left font-mono text-[11px] tracking-[0.06em] uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                          on ? "border-ink/15 bg-card text-ink shadow-[0_1px_2px_rgb(15_26_20/0.05)]" : "border-transparent text-muted hover:text-ink"
+                        className={`group flex w-full items-center gap-4 rounded-full text-left font-mono text-[11px] tracking-[0.08em] uppercase transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent ${
+                          on ? "text-ink" : "text-muted hover:text-ink"
                         }`}
                       >
                         <span
-                          className={`grid size-7 shrink-0 place-items-center rounded-md border text-[11px] transition-colors duration-300 ${
-                            on ? "border-primary bg-primary text-white" : "border-ink/15 bg-transparent"
+                          className={`grid size-8 shrink-0 place-items-center rounded-full border text-[10.5px] transition-[background-color,border-color,color,box-shadow] duration-300 ${
+                            on
+                              ? "border-primary bg-primary text-white shadow-[0_0_0_5px_rgb(31_77_58/0.08)]"
+                              : done
+                                ? "border-primary/30 bg-paper text-primary"
+                                : "border-ink/12 bg-paper group-hover:border-ink/25"
                           }`}
                         >
                           {step.n}
