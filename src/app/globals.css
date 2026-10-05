@@ -7,7 +7,7 @@
      3D WebGL scenes, and SVG illustrations). */
   --ink: #0f1a14; /* primary text, outlines, dark bands */
   --paper: #faf9f6; /* warm off-white page, brightened from dull #f6f4ee */
-  --primary: #2bb673; /* the one green primary */
+  --primary: #16ad64; /* the one green primary */
   --secondary: #e8603c; /* secondary: orange / Signal coral */
   --accent: var(--secondary); /* secondary orange for active/working states & live highlights */
   --primary-accent: var(--primary); /* green primary accent */
