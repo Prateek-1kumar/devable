@@ -8,12 +8,14 @@
   --paper: #f6f4ee; /* warm off-white page */
   --primary: #1f4d3a; /* deep green: brand, confirmed / done states */
   --accent: #e8603c; /* coral: CTAs, highlights, the active state, the key data line */
+  --secondary: var(--accent); /* secondary brand color: coral / orange */
   --line: #e9e7e1; /* borders, hairlines */
   --muted: #6b7570; /* secondary text */
   --card: #ffffff; /* cards and panels */
   /* Tints derived from the above for quiet fills. */
   --primary-soft: #dfe8e2;
   --accent-soft: #fbe4dc;
+  --secondary-soft: var(--accent-soft);
   --sage: #8fa898; /* the one muted channel tint */
 
   /* Legacy names, mapped onto the brand so older sections follow it. */
@@ -36,6 +38,8 @@
   --color-ink: var(--ink);
   --color-paper: var(--paper);
   --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-secondary-soft: var(--secondary-soft);
   --color-line: var(--line);
   --color-muted: var(--muted);
   --color-card: var(--card);
