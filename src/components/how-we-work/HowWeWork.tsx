@@ -108,7 +108,7 @@ export default function HowWeWork() {
             {TITLE}
           </h2>
         </div>
-        <p className="max-w-xl text-base leading-relaxed text-muted sm:text-lg">{INTRO}</p>
+        <p className="max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:ml-auto lg:justify-self-end lg:max-w-md xl:max-w-lg">{INTRO}</p>
       </header>
 
       <div ref={track} className="relative mt-16 lg:motion-safe:mt-4 lg:motion-safe:h-[500svh]">

@@ -8,9 +8,9 @@
   --ink: #0f1a14; /* primary text, outlines, dark bands */
   --paper: #faf9f6; /* warm off-white page, brightened from dull #f6f4ee */
   --primary: #2bb673; /* the one green primary */
-  --accent: #2bb673; /* one green accent */
-  --primary-accent: var(--primary);
   --secondary: #e8603c; /* secondary: orange / Signal coral */
+  --accent: var(--secondary); /* secondary orange for active/working states & live highlights */
+  --primary-accent: var(--primary); /* green primary accent */
   --coral: var(--secondary); /* secondary orange alias */
   --line: #eae7e1; /* borders, hairlines */
   --muted: #6b7570; /* secondary text */
@@ -18,8 +18,8 @@
 
   /* Tints derived from the above for quiet fills. */
   --primary-soft: #d8f5e6;
-  --accent-soft: var(--primary-soft);
   --secondary-soft: #fbe4dc;
+  --accent-soft: var(--secondary-soft);
   --sage: #8fa898; /* muted channel tint */
 
   /* Legacy & semantic names, mapped onto the brand so older sections follow it. */

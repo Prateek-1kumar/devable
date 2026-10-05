@@ -132,8 +132,8 @@ function MetricStrip({ metrics, t, at, span }: { metrics: readonly Metric[]; t: 
             <path
               d={`M${w - 62} 44 L${w - 50} 40 L${w - 40} 42 L${w - 28} 32 L${w - 16} 26`}
               fill="none"
-              stroke={C.primary}
-              strokeOpacity={0.7}
+              stroke={C.secondary}
+              strokeOpacity={0.85}
               strokeWidth={1.3}
               strokeLinecap="round"
               strokeLinejoin="round"

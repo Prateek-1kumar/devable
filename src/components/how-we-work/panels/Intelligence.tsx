@@ -85,10 +85,10 @@ function Panel({ t }: { t: number }) {
         return (
           <g key={i}>
             <path d={polyline(pts)} fill="none" stroke={C.ink} strokeOpacity={0.1} strokeLinejoin="round" />
-            <Trace d={polyline(pts)} k={flow} stroke={C.primary} opacity={0.5 * o} />
+            <Trace d={polyline(pts)} k={flow} stroke={C.secondary} opacity={0.6 * o} />
             <Pulse points={pts} k={t < syncAt(i) + 0.1 ? -1 : (t - syncAt(i) - 0.1) / FLOW} r={2.6} />
             <circle cx={pts[0][0]} cy={pts[0][1]} r={2.5} fill={C.card} stroke={C.ink} strokeOpacity={0.25} />
-            <circle cx={pts[0][0]} cy={pts[0][1]} r={2.5} fill={C.primary} opacity={lit} />
+            <circle cx={pts[0][0]} cy={pts[0][1]} r={2.5} fill={C.secondary} opacity={lit} />
           </g>
         );
       })}
