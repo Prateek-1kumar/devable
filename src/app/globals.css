@@ -1,34 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand: editorial green with a coral accent. Calm, technical, premium.
-     These seven are the source of truth: the 3D scene reads them at runtime
-     (growth-engine/palette.ts), so a colour swaps here and nowhere else. */
-  --ink: #0f1a14; /* text, outlines, dark bands */
-  --paper: #f6f4ee; /* warm off-white page */
-  --primary: #1f4d3a; /* deep green: brand, confirmed / done states */
-  --accent: #e8603c; /* coral: CTAs, highlights, the active state, the key data line */
-  --secondary: var(--accent); /* secondary brand color: coral / orange */
-  --line: #e9e7e1; /* borders, hairlines */
+  /* Brand: Editorial green with Signal coral secondary. Calmer and more premium.
+     These tokens are the single source of truth: change them here in globals.css
+     and they update across the entire codebase (Tailwind classes, inline styles,
+     3D WebGL scenes, and SVG illustrations). */
+  --ink: #0f1a14; /* primary text, outlines, dark bands */
+  --paper: #faf9f6; /* warm off-white page, brightened from dull #f6f4ee */
+  --primary: #2bb673; /* the one green primary */
+  --accent: #2bb673; /* one green accent */
+  --primary-accent: var(--primary);
+  --secondary: #e8603c; /* secondary: orange / Signal coral */
+  --coral: var(--secondary); /* secondary orange alias */
+  --line: #eae7e1; /* borders, hairlines */
   --muted: #6b7570; /* secondary text */
   --card: #ffffff; /* cards and panels */
-  /* Tints derived from the above for quiet fills. */
-  --primary-soft: #dfe8e2;
-  --accent-soft: #fbe4dc;
-  --secondary-soft: var(--accent-soft);
-  --sage: #8fa898; /* the one muted channel tint */
 
-  /* Legacy names, mapped onto the brand so older sections follow it. */
+  /* Tints derived from the above for quiet fills. */
+  --primary-soft: #d8f5e6;
+  --accent-soft: var(--primary-soft);
+  --secondary-soft: #fbe4dc;
+  --sage: #8fa898; /* muted channel tint */
+
+  /* Legacy & semantic names, mapped onto the brand so older sections follow it. */
   --background: var(--paper);
-  --surface: #ebe8e0; /* soft warm panels, e.g. the falling pill */
+  --surface: #f0ede6; /* soft warm panels, e.g. the falling pill and diagram stage */
   --foreground: var(--ink);
   --ceramic: #fbfaf6;
+
   /* Pixel field: three warm neutral steps; coral pluses are the sparse accent. */
-  --pixel-light: #ebe8e0;
-  --pixel-stone: #dcd8cd;
-  --pixel-mist: #cfdcd3;
-  --forest: var(--primary);
-  --coral: var(--accent);
+  --pixel-light: #f0ede6;
+  --pixel-stone: #dedad0;
+  --pixel-mist: #d4e0d8;
+  --forest: #1f4d3a;
   --lime: var(--accent-soft);
   --amber: var(--sage);
   --deboss-ink: #1c2c23; /* green-black ink for letters pressed into the page */
@@ -38,21 +42,22 @@
   --color-ink: var(--ink);
   --color-paper: var(--paper);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-primary-accent: var(--primary-accent);
   --color-secondary: var(--secondary);
   --color-secondary-soft: var(--secondary-soft);
   --color-line: var(--line);
   --color-muted: var(--muted);
   --color-card: var(--card);
-  --color-primary-soft: var(--primary-soft);
-  --color-accent-soft: var(--accent-soft);
   --color-sage: var(--sage);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-forest: var(--forest);
-  --color-accent: var(--accent);
-  --color-lime: var(--lime);
   --color-coral: var(--coral);
+  --color-lime: var(--lime);
   --color-amber: var(--amber);
   --font-sans: var(--font-instrument);
   --font-heading: var(--font-instrument);

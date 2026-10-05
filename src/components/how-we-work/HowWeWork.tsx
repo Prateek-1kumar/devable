@@ -181,7 +181,7 @@ export default function HowWeWork() {
                     className={`lg:motion-safe:col-start-2 ${fade} flex justify-center`}
                   >
                     {/* Warm dotted-grid canvas; the panel keeps its aspect and fits the viewport height. */}
-                    <div className="w-full max-w-2xl rounded-3xl border border-line bg-[#efece4] bg-[radial-gradient(#d6d1c4_1px,transparent_1px)] [background-size:14px_14px] p-3 sm:p-4 lg:motion-safe:max-w-[calc((100svh-8rem)*1.077+2rem)]">
+                    <div className="w-full max-w-2xl rounded-3xl border border-line bg-surface bg-[radial-gradient(var(--pixel-stone)_1px,transparent_1px)] [background-size:14px_14px] p-3 sm:p-4 lg:motion-safe:max-w-[calc((100svh-8rem)*1.077+2rem)]">
                       <PanelPlayer
                         panel={PANELS[i]}
                         mode={mode}

@@ -14,6 +14,8 @@ function read() {
     paper: token("--paper"),
     primary: token("--primary"),
     accent: token("--accent"),
+    secondary: token("--secondary"),
+    coral: token("--coral") || token("--secondary"),
     line: token("--line"),
     muted: token("--muted"),
     card: token("--card"),
@@ -40,7 +42,7 @@ export type Face = "top" | "front" | "right";
 export const SHADE: Record<Face, (color: string) => string> = {
   top: (c) => mix(c, "#ffffff", 0.12),
   front: (c) => c,
-  right: (c) => mix(c, "#0f1a14", 0.16),
+  right: (c) => mix(c, palette().ink || "#0f1a14", 0.16),
 };
 
 /**
@@ -64,10 +66,10 @@ export function boxFaces(color: string, opts: { opacity?: number; top?: string }
 
 /** Recolours box faces made by `boxFaces` in place (for highlights), keeping the per-face shading. */
 export function tintFaces(faces: MeshBasicMaterial[], color: Color, top?: Color) {
-  faces[0].color.copy(color).lerp(INK, 0.16);
+  faces[0].color.copy(color).lerp(inkColor(), 0.16);
   if (top) faces[2].color.copy(top);
   else faces[2].color.copy(color).lerp(WHITE, 0.12);
   faces[4].color.copy(color);
 }
-const INK = new Color("#0f1a14");
+const inkColor = () => new Color(palette().ink || "#0f1a14");
 const WHITE = new Color("#ffffff");

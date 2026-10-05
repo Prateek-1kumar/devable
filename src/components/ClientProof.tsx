@@ -69,7 +69,7 @@ const CLIENTS: Client[] = [
 const CLIENT_STATUSES: StatusItem[] = CLIENTS.map((c, i) => ({
   id: String(i),
   label: c.company,
-  color: "#1f4d3a", // deep green
+  color: "var(--primary)",
   icon: "circle-check",
 }));
 

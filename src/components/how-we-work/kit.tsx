@@ -15,18 +15,24 @@ export const STAGE = { x: 20, y: 92, w: 520, h: 412 } as const;
 export const C = {
   ink: "var(--ink)",
   paper: "var(--paper)",
+  surface: "var(--surface)",
   primary: "var(--primary)",
   accent: "var(--accent)",
+  secondary: "var(--secondary)",
+  coral: "var(--coral)",
   line: "var(--line)",
   muted: "var(--muted)",
   card: "var(--card)",
   primarySoft: "var(--primary-soft)",
   accentSoft: "var(--accent-soft)",
+  secondarySoft: "var(--secondary-soft)",
   sage: "var(--sage)",
-  /** Quiet active-state outline: coral at low strength, never a heavy border. */
+  /** Quiet active-state outline: accent at low strength, never a heavy border. */
   accentLine: "color-mix(in srgb, var(--accent) 38%, transparent)",
   /** Quiet active-state wash. */
   accentWash: "color-mix(in srgb, var(--accent) 7%, var(--card))",
+  /** Quiet secondary wash (for coral signals/badges). */
+  secondaryWash: "color-mix(in srgb, var(--secondary) 7%, var(--card))",
   /** Hairline for dividers inside cards, lighter than card borders. */
   hair: "color-mix(in srgb, var(--line) 70%, var(--card))",
 } as const;
