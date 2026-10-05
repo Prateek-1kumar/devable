@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { EYEBROW, INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
+import { INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
 import PanelPlayer, { type PlayMode } from "./PanelPlayer";
 import { PANELS } from "./panels";
 
@@ -104,8 +104,7 @@ export default function HowWeWork() {
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 py-24 sm:px-12 lg:py-32 xl:px-[5vw]">
       <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
         <div>
-          <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">{EYEBROW}</p>
-          <h2 id="how-we-work-title" className="mt-4 max-w-[16ch] text-[clamp(2.2rem,4vw,3.6rem)] leading-[1.04] font-normal tracking-[-0.04em] text-ink">
+          <h2 id="how-we-work-title" className="max-w-[16ch] text-[clamp(2.2rem,4vw,3.6rem)] leading-[1.04] font-normal tracking-[-0.04em] text-ink">
             {TITLE}
           </h2>
         </div>
@@ -162,10 +161,7 @@ export default function HowWeWork() {
               return (
                 <div key={step.n} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:items-center lg:gap-14 lg:motion-safe:contents">
                   <div className={`lg:motion-safe:col-start-3 ${fade} ${on ? "" : "lg:motion-safe:translate-y-2"}`}>
-                    <p className="font-mono text-xs tracking-[0.12em] text-muted uppercase">
-                      <span className="text-ink">{step.n}</span> / 0{STEPS.length} · {step.title}
-                    </p>
-                    <h3 className="mt-4 text-[clamp(1.6rem,2.3vw,2.25rem)] leading-[1.1] font-normal tracking-[-0.03em] text-ink">{step.headline}</h3>
+                    <h3 className="text-[clamp(1.6rem,2.3vw,2.25rem)] leading-[1.1] font-normal tracking-[-0.03em] text-ink">{step.headline}</h3>
                     <p className="mt-4 text-[0.98rem] leading-relaxed text-muted">{step.body}</p>
                     <p className="mt-6 font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{INCLUDES_LABEL}</p>
                     <ul className="mt-2.5 flex flex-wrap gap-1.5">
