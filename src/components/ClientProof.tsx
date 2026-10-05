@@ -1,13 +1,13 @@
 "use client";
 
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, type Variants } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
 import StatusIndicator, { type StatusItem } from "@/components/ui/status-indicator";
 
 // Client proof: a self-contained, luxury card with zero height shift,
-// fluid directional cross-fade, and the morphing status indicator integrated
-// directly into the card footer. Autoplays every 6 seconds.
+// fluid directional cross-fade, and the morphing status indicator anchored
+// inside the card footer. Autoplays every 6 seconds in sync.
 
 type Service = "Social Media" | "GEO" | "Influencer Marketing" | "Reddit";
 const SERVICE_COLOR: Record<Service, string> = {
@@ -137,37 +137,24 @@ export default function ClientProof() {
   const [paused, setPaused] = useState(false);
   const reduced = useReducedMotion();
   const client = CLIENTS[active];
-  const progress = useMotionValue(0);
 
   const go = (i: number) => {
     const next = (i + CLIENTS.length) % CLIENTS.length;
     if (next !== active) {
       setDirection(next > active || (active === CLIENTS.length - 1 && next === 0) ? 1 : -1);
-      progress.set(0);
       setActive(next);
     }
   };
 
-  useEffect(() => {
-    if (reduced) return;
-    progress.set(0);
-  }, [active, reduced, progress]);
-
-  // Auto-advance every 6 seconds
+  // Auto-advance every 6 seconds in sync with active state
   useEffect(() => {
     if (reduced || paused) return;
-    const remaining = HOLD * (1 - progress.get());
-    const controls = animate(progress, 1, {
-      duration: remaining,
-      ease: "linear",
-      onComplete: () => {
-        setDirection(1);
-        progress.set(0);
-        setActive((a) => (a + 1) % CLIENTS.length);
-      },
-    });
-    return () => controls.stop();
-  }, [active, paused, reduced, progress]);
+    const timer = setTimeout(() => {
+      setDirection(1);
+      setActive((a) => (a + 1) % CLIENTS.length);
+    }, HOLD * 1000);
+    return () => clearTimeout(timer);
+  }, [active, paused, reduced]);
 
   return (
     <div
@@ -180,71 +167,83 @@ export default function ClientProof() {
       {/* Locked height figure: stable across all quotes, never resizes */}
       <figure
         aria-roledescription="carousel"
-        className="relative flex h-[26rem] flex-col justify-between overflow-hidden rounded-[20px] border border-line bg-card p-7 sm:h-[22.5rem] sm:p-9 shadow-[0_2px_8px_rgb(15_26_20/0.04),0_1px_2px_rgb(15_26_20/0.02)]"
+        className="relative flex h-[25rem] sm:h-[22.5rem] flex-col justify-between overflow-hidden rounded-[20px] border border-line bg-card p-7 sm:p-9 shadow-[0_2px_8px_rgb(15_26_20/0.04),0_1px_2px_rgb(15_26_20/0.02)]"
       >
-        <AnimatePresence mode="wait" initial={false} custom={direction}>
-          <motion.div
-            key={active}
-            custom={direction}
-            variants={reduced ? reducedVariants : cardVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="flex h-full flex-col justify-between"
-          >
-            {/* Top row: Brand Logo and Service Badge */}
-            <div className="flex min-h-8 items-center justify-between gap-6">
-              <Logo client={client} area={1500} />
-              <div className="flex flex-wrap justify-end gap-1.5">
-                {client.services.map((service) => (
-                  <span
-                    key={service}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-ink/[0.08] bg-paper/70 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.06em] text-muted uppercase"
-                  >
-                    <span className="size-[5.5px] rounded-full" style={{ backgroundColor: SERVICE_COLOR[service] }} />
-                    {service}
-                  </span>
-                ))}
+        {/* Transitioning Card Content */}
+        <div className="relative flex flex-1 flex-col justify-between overflow-hidden">
+          <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <motion.div
+              key={active}
+              custom={direction}
+              variants={reduced ? reducedVariants : cardVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="flex h-full flex-col justify-between"
+            >
+              {/* Top row: Brand Logo and Service Badge */}
+              <div className="flex min-h-8 items-center justify-between gap-6">
+                <Logo client={client} area={1500} />
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {client.services.map((service) => (
+                    <span
+                      key={service}
+                      className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white/90 px-3 py-1 shadow-[0_1px_2px_rgb(15_26_20/0.03),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xs transition-colors hover:border-black/[0.14]"
+                    >
+                      <span className="relative flex size-2 items-center justify-center">
+                        <span
+                          className="absolute size-2 rounded-full opacity-30"
+                          style={{ backgroundColor: SERVICE_COLOR[service] }}
+                        />
+                        <span
+                          className="relative size-1.5 rounded-full"
+                          style={{ backgroundColor: SERVICE_COLOR[service] }}
+                        />
+                      </span>
+                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] text-ink/75 uppercase">
+                        {service}
+                      </span>
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Middle row: Editorial Quote (centered vertically in available space) */}
-            <div className="my-auto flex items-center py-2">
-              <blockquote className="text-[1.32rem] leading-[1.4] font-normal tracking-[-0.025em] text-ink sm:text-[1.54rem]">
-                “{client.quote}”
-              </blockquote>
-            </div>
+              {/* Middle row: Editorial Quote */}
+              <div className="my-auto flex items-center py-3">
+                <blockquote className="text-[1.3rem] leading-[1.4] font-normal tracking-[-0.025em] text-ink sm:text-[1.5rem]">
+                  “{client.quote}”
+                </blockquote>
+              </div>
 
-            {/* Bottom footer: Person info on left, StatusIndicator on right */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line/80 pt-5">
-              <figcaption className="flex items-center gap-3">
+              {/* Bottom footer: Person info */}
+              <figcaption className="flex items-center gap-3 border-t border-line/80 pt-5 pr-44 sm:pr-48">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={client.person.photo}
                   alt=""
                   className="size-10.5 rounded-[9px] object-cover ring-1 ring-black/[0.06] grayscale-[20%]"
                 />
-                <span className="text-[0.92rem] leading-snug">
-                  <span className="block font-medium text-ink">{client.person.name}</span>
-                  <span className="block text-xs text-muted mt-0.5">
+                <span className="text-[0.92rem] leading-snug truncate">
+                  <span className="block font-medium text-ink truncate">{client.person.name}</span>
+                  <span className="block text-xs text-muted mt-0.5 truncate">
                     {client.person.role}, {client.company}
                   </span>
                 </span>
               </figcaption>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-              {/* Status indicator: minimal dots morphing into active pill */}
-              <div className="flex items-center">
-                <StatusIndicator
-                  value={String(active)}
-                  statuses={CLIENT_STATUSES}
-                  ariaLabel="Client testimonials"
-                  onChange={(_, idx) => go(idx)}
-                  className="[--si-pill-bg:var(--primary-soft)] [--si-label:var(--ink)] [--si-dot:#cfdad1] [--si-dot-hover-bg:rgba(31,77,58,0.08)]"
-                />
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+        {/* Anchored Persistent StatusIndicator: OUTSIDE AnimatePresence so it never resets or falls out of sync */}
+        <div className="pointer-events-auto absolute right-7 bottom-6 sm:right-9 sm:bottom-8 z-10 flex items-center">
+          <StatusIndicator
+            value={String(active)}
+            statuses={CLIENT_STATUSES}
+            ariaLabel="Client testimonials"
+            onChange={(_, idx) => go(idx)}
+            className="[--si-pill-bg:var(--primary-soft)] [--si-label:var(--ink)] [--si-dot:#cfdad1] [--si-dot-hover-bg:rgba(31,77,58,0.08)]"
+          />
+        </div>
       </figure>
     </div>
   );

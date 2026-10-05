@@ -343,11 +343,13 @@ export class StatusIndicator extends Base {
         this.#startLoop();
       }
     }
-    (document as any).fonts?.ready?.then(() => {
-      if (!this.isConnected) return;
-      this.#measure();
-      this.#renderAll();
-    });
+    if ("fonts" in document) {
+      document.fonts.ready.then(() => {
+        if (!this.isConnected) return;
+        this.#measure();
+        this.#renderAll();
+      });
+    }
     window.addEventListener('resize', this.#onResize);
     // Connected inside a hidden container (inactive tab, closed <details>,
     // unshown dialog): labels measure 0 there — re-measure once visible.
@@ -409,11 +411,10 @@ export class StatusIndicator extends Base {
 
   get value() { return this.#statuses[this.#index]?.id; }
   set value(v: string | undefined) {
-    const i = this.#statuses.findIndex((s) => s.id === v);
-    if (i >= 0) this.#select(i, { emit: false });
-    else {
-      console.warn(`<status-indicator> unknown value "${v}" ignored — ` +
-        `known ids: ${this.#statuses.map((s) => s.id).join(', ')}.`);
+    if (v === undefined || v === null) return;
+    const i = this.#statuses.findIndex((s) => s.id === String(v));
+    if (i >= 0 && i !== this.#index) {
+      this.#select(i, { emit: false });
     }
   }
 
@@ -445,21 +446,17 @@ export class StatusIndicator extends Base {
     });
     if (cleaned.length === 0) return;
     const prevId = this.#statuses[this.#index]?.id;
+    const currentAttr = this.getAttribute('value');
     const hadFocus = this.shadowRoot?.activeElement?.classList.contains('item');
     this.#statuses = cleaned.map((s) => ({ ...s }));
+    const matched = currentAttr ? this.#statuses.findIndex((s) => s.id === currentAttr) : -1;
     const kept = this.#statuses.findIndex((s) => s.id === prevId);
-    this.#index = kept >= 0 ? kept : Math.min(this.#index, this.#statuses.length - 1);
+    this.#index = matched >= 0 ? matched : kept >= 0 ? kept : 0;
     this.#build();
     if (this.isConnected) { this.#measure(); this.#renderAll(); }
     if (hadFocus) this.#items[this.#index]?.el.focus();
-    const id = this.#statuses[this.#index].id;
-    if (this.getAttribute('value') !== id) this.setAttribute('value', id);
-    if (kept < 0 && prevId !== undefined) {
-      this.dispatchEvent(new CustomEvent('change', {
-        bubbles: true, composed: true,
-        detail: { value: id, index: this.#index, label: this.#statuses[this.#index].label },
-      }));
-    }
+    const id = this.#statuses[this.#index]?.id;
+    if (id && this.getAttribute('value') !== id) this.setAttribute('value', id);
   }
 
   #build() {
@@ -756,7 +753,7 @@ const StatusIndicatorComponent = React.forwardRef<
   { value = "backlog", statuses, ariaLabel = "Status", className, onChange },
   ref,
 ) {
-  const innerRef = React.useRef<any>(null);
+  const innerRef = React.useRef<StatusIndicator | null>(null);
   React.useImperativeHandle(ref, () => innerRef.current!);
 
   React.useEffect(() => {
@@ -765,7 +762,10 @@ const StatusIndicatorComponent = React.forwardRef<
     if (statuses && Array.isArray(statuses)) {
       el.statuses = statuses;
     }
-  }, [statuses]);
+    if (value !== undefined) {
+      el.value = String(value);
+    }
+  }, [statuses, value]);
 
   React.useEffect(() => {
     const el = innerRef.current;
