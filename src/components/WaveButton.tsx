@@ -6,13 +6,13 @@ import type { ReactNode } from "react";
 // button, the label flips color, and a fresh arrow slides in as the old one
 // leaves. Press shrinks the content slightly.
 //
-// Color roles follow the palette: primary is the forest anchor flooded by the
-// lime spark; secondary is a white face flooded by forest.
+// Color roles follow the palette: primary is the coral accent (ink text) flooded
+// by deep green; secondary is a white face flooded by deep green.
 const TONES = {
-  primary: { face: "bg-forest text-white", wave: "text-lime", ink: "group-hover:text-forest group-focus-visible:text-forest" },
+  primary: { face: "bg-accent text-ink", wave: "text-primary", ink: "group-hover:text-white group-focus-visible:text-white" },
   secondary: {
-    face: "bg-white text-forest shadow-[0_0_0_1px_rgb(12_59_41/0.1),0_1px_2px_rgb(12_59_41/0.08)]",
-    wave: "text-forest",
+    face: "bg-white text-ink shadow-[0_0_0_1px_rgb(15_26_20/0.1),0_1px_2px_rgb(15_26_20/0.06)]",
+    wave: "text-primary",
     ink: "group-hover:text-white group-focus-visible:text-white",
   },
 };

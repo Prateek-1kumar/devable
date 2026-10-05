@@ -55,12 +55,12 @@ export default function TrustedBy() {
     <h2 className="flex flex-col gap-[0.2em] text-4xl leading-[1.25] font-semibold opacity-0 transition-opacity duration-300 in-data-landed:opacity-100 sm:text-5xl xl:text-6xl">
       <span>
         <Ink at={0.1}>Trusted by</Ink>{" "}
-        <SweepPill lead={["bg-foreground", "bg-amber"]} fill="bg-accent" text="text-white" at={0.25}>
+        <SweepPill lead={["bg-foreground", "bg-amber"]} fill="bg-primary" text="text-white" at={0.25}>
           AI-native
         </SweepPill>
       </span>
       <span>
-        <SweepPill lead={["bg-amber", "bg-accent"]} fill="bg-coral" text="text-foreground" at={0.6}>
+        <SweepPill lead={["bg-amber", "bg-primary"]} fill="bg-coral" text="text-foreground" at={0.6}>
           dev tools
         </SweepPill>{" "}
         <Ink at={0.95}>and platforms.</Ink>
