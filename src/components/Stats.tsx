@@ -46,7 +46,7 @@ export default function Stats() {
           <dd className="font-heading text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
             {s.prefix}
             <NumberFlow value={shown ? s.value : 0} />
-            <span className="text-accent">{s.suffix}</span>
+            <span className="text-primary">{s.suffix}</span>
           </dd>
         </div>
       ))}

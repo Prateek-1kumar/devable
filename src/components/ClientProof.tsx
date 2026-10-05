@@ -1,16 +1,13 @@
 "use client";
 
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform, type Variants } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
+import StatusIndicator, { type StatusItem } from "@/components/ui/status-indicator";
 
-// Client proof, typographic and quiet: one card, the quote in large even type,
-// services as small monospace labels with square swatches in the hero's channel
-// colors (the site's pixel-block language), and an index of the five clients
-// underneath whose hairlines fill as each quote plays.
-//
-// ponytail: quotes, names, roles and photos are SAMPLE CONTENT for layout only.
-// Replace them with real, approved client quotes and photos before launch.
+// Client proof: a self-contained, luxury card with zero height shift,
+// fluid directional cross-fade, and the morphing status indicator anchored
+// inside the card footer. Autoplays every 6 seconds in sync.
 
 type Service = "Social Media" | "GEO" | "Influencer Marketing" | "Reddit";
 const SERVICE_COLOR: Record<Service, string> = {
@@ -22,7 +19,6 @@ const SERVICE_COLOR: Record<Service, string> = {
 
 type Client = {
   company: string;
-  /** Logo file in /public; without one the company name is set as a wordmark. */
   logo?: string;
   services: Service[];
   quote: string;
@@ -70,30 +66,44 @@ const CLIENTS: Client[] = [
   },
 ];
 
-const HOLD = 7; // seconds each quote plays before the next
-const EASE = [0.22, 1, 0.36, 1] as const;
+const CLIENT_STATUSES: StatusItem[] = CLIENTS.map((c, i) => ({
+  id: String(i),
+  label: c.company,
+  color: "var(--primary)",
+  icon: "circle-check",
+}));
 
-// The quote rises in word by word with a whisper of blur; everything else cross-fades.
-const words: Variants = {
-  enter: {},
-  center: { transition: { staggerChildren: 0.014 } },
-  exit: { opacity: 0, transition: { duration: 0.18, ease: "easeIn" } },
+const HOLD = 6; // auto-advance every 6 seconds
+
+const cardVariants: Variants = {
+  enter: (dir: number) => ({
+    opacity: 0,
+    x: dir * 14,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      x: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.26, ease: "easeOut" },
+    },
+  },
+  exit: (dir: number) => ({
+    opacity: 0,
+    x: dir * -14,
+    transition: {
+      x: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.14, ease: "easeIn" },
+    },
+  }),
 };
-const word: Variants = {
-  enter: { opacity: 0, y: "0.35em", filter: "blur(3px)" },
-  center: { opacity: 1, y: "0em", filter: "blur(0px)", transition: { duration: 0.5, ease: EASE } },
-};
-const fade: Variants = {
+
+const reducedVariants: Variants = {
   enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: 0.45, ease: EASE, delay: 0.08 } },
+  center: { opacity: 1, transition: { duration: 0.25 } },
   exit: { opacity: 0, transition: { duration: 0.18 } },
 };
 
-/**
- * A client logo at a steady visual weight, sized from its natural aspect. Falls
- * back to the name as a wordmark when there is no file or it fails to load,
- * including a failure that happened before React hydrated.
- */
 function Logo({ client, area }: { client: Client; area: number }) {
   const img = useRef<HTMLImageElement>(null);
   const [ratio, setRatio] = useState<number | null>(null);
@@ -105,10 +115,10 @@ function Logo({ client, area }: { client: Client; area: number }) {
       else setFailed(true);
     }
   }, []);
-  if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-foreground">{client.company}</span>;
+  if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-ink">{client.company}</span>;
   const height = ratio ? Math.sqrt(area / ratio) : 26;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- sized from its natural aspect once loaded
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={img}
       src={client.logo}
@@ -121,143 +131,120 @@ function Logo({ client, area }: { client: Client; area: number }) {
   );
 }
 
-function Arrow({ flip = false }: { flip?: boolean }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className={`size-3.5 ${flip ? "rotate-180" : ""}`}>
-      <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-const control =
-  "grid size-9 place-items-center rounded-[8px] border border-foreground/12 text-foreground/70 transition-colors hover:border-foreground/35 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40";
-const mono = "font-mono text-[0.68rem] tracking-[0.14em] uppercase";
-
 export default function ClientProof() {
   const [active, setActive] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
   const reduced = useReducedMotion();
   const client = CLIENTS[active];
-  const progress = useMotionValue(0);
-  const fill = useTransform(progress, (v) => `${v * 100}%`);
 
   const go = (i: number) => {
     const next = (i + CLIENTS.length) % CLIENTS.length;
-    if (next !== active) setActive(next);
+    if (next !== active) {
+      setDirection(next > active || (active === CLIENTS.length - 1 && next === 0) ? 1 : -1);
+      setActive(next);
+    }
   };
 
-  // Each quote plays for HOLD seconds, its hairline filling, then the next one comes in.
-  // Hover or focus pauses it where it is; reduced motion never autoplays.
-  useEffect(() => {
-    if (reduced) return;
-    progress.set(0);
-  }, [active, reduced, progress]);
+  // Auto-advance every 6 seconds in sync with active state
   useEffect(() => {
     if (reduced || paused) return;
-    const remaining = HOLD * (1 - progress.get());
-    const controls = animate(progress, 1, {
-      duration: remaining,
-      ease: "linear",
-      onComplete: () => setActive((a) => (a + 1) % CLIENTS.length),
-    });
-    return () => controls.stop();
-  }, [active, paused, reduced, progress]);
+    const timer = setTimeout(() => {
+      setDirection(1);
+      setActive((a) => (a + 1) % CLIENTS.length);
+    }, HOLD * 1000);
+    return () => clearTimeout(timer);
+  }, [active, paused, reduced]);
 
   return (
     <div
-      className="w-full max-w-[38rem] justify-self-end"
+      className="w-full max-w-[39rem] justify-self-end"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <motion.figure
-        layout
-        transition={{ layout: { duration: 0.5, ease: EASE } }}
+      {/* Locked height figure: stable across all quotes, never resizes */}
+      <figure
         aria-roledescription="carousel"
-        className="rounded-[14px] border border-foreground/[0.09] bg-white px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
+        className="relative flex h-[25rem] sm:h-[22.5rem] flex-col justify-between overflow-hidden rounded-[20px] border border-line bg-card p-7 sm:p-9 shadow-[0_2px_8px_rgb(15_26_20/0.04),0_1px_2px_rgb(15_26_20/0.02)]"
       >
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div key={active} initial="enter" animate="center" exit="exit">
-            <motion.div variants={fade} className="flex min-h-9 items-center justify-between gap-6">
-              <Logo client={client} area={1600} />
-              <ul className="flex flex-wrap justify-end gap-x-5 gap-y-1">
-                {client.services.map((service) => (
-                  <li key={service} className={`flex items-center gap-2 text-foreground/60 ${mono}`}>
-                    <span className="size-[7px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
-                    {service}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            <motion.blockquote
-              variants={reduced ? fade : words}
-              className="mt-10 text-[1.35rem] leading-[1.42] font-normal tracking-[-0.02em] text-foreground sm:text-[1.6rem]"
+        {/* Transitioning Card Content */}
+        <div className="relative flex flex-1 flex-col justify-between overflow-hidden">
+          <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <motion.div
+              key={active}
+              custom={direction}
+              variants={reduced ? reducedVariants : cardVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="flex h-full flex-col justify-between"
             >
-              {reduced
-                ? `“${client.quote}”`
-                : `“${client.quote}”`.split(" ").map((w, i) => (
-                    <motion.span key={i} variants={word} className="inline-block whitespace-pre">
-                      {w}{" "}
-                    </motion.span>
+              {/* Top row: Brand Logo and Service Badge */}
+              <div className="flex min-h-8 items-center justify-between gap-6">
+                <Logo client={client} area={1500} />
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {client.services.map((service) => (
+                    <span
+                      key={service}
+                      className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white/90 px-3 py-1 shadow-[0_1px_2px_rgb(15_26_20/0.03),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xs transition-colors hover:border-black/[0.14]"
+                    >
+                      <span className="relative flex size-2 items-center justify-center">
+                        <span
+                          className="absolute size-2 rounded-full opacity-30"
+                          style={{ backgroundColor: SERVICE_COLOR[service] }}
+                        />
+                        <span
+                          className="relative size-1.5 rounded-full"
+                          style={{ backgroundColor: SERVICE_COLOR[service] }}
+                        />
+                      </span>
+                      <span className="font-mono text-[10px] font-medium tracking-[0.08em] text-ink/75 uppercase">
+                        {service}
+                      </span>
+                    </span>
                   ))}
-            </motion.blockquote>
+                </div>
+              </div>
 
-            <motion.figcaption variants={fade} className="mt-10 flex items-center gap-3.5 border-t border-foreground/[0.08] pt-6 pr-24">
-              {/* pr-24 keeps the person clear of the prev/next controls on the same line. */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- sample photo, swapped for the real one */}
-              <img src={client.person.photo} alt="" className="size-11 rounded-[6px] object-cover grayscale-[35%]" />
-              <span className="text-[0.95rem] leading-snug">
-                <span className="block font-medium text-foreground">{client.person.name}</span>
-                <span className="block text-foreground/55">
-                  {client.person.role}, {client.company}
-                </span>
-              </span>
-            </motion.figcaption>
-          </motion.div>
-        </AnimatePresence>
+              {/* Middle row: Editorial Quote */}
+              <div className="my-auto flex items-center py-3">
+                <blockquote className="text-[1.3rem] leading-[1.4] font-normal tracking-[-0.025em] text-ink sm:text-[1.5rem]">
+                  “{client.quote}”
+                </blockquote>
+              </div>
 
-        {/* Controls sit outside the transition, on the attribution line. */}
-        <div className="relative">
-          {/* Centered on the 44px photo row that ends right above this line. */}
-          <div className="absolute right-0 bottom-1 flex items-center gap-2">
-            <button type="button" aria-label="Previous client" onClick={() => go(active - 1)} className={control}>
-              <Arrow flip />
-            </button>
-            <button type="button" aria-label="Next client" onClick={() => go(active + 1)} className={control}>
-              <Arrow />
-            </button>
-          </div>
-        </div>
-      </motion.figure>
-
-      {/* The index: every client by name, the playing one's hairline filling; past ones full, upcoming empty. */}
-      <div role="tablist" aria-label="Clients" className="mt-5 grid grid-cols-5 gap-3">
-        {CLIENTS.map((c, i) => {
-          const on = i === active;
-          return (
-            <button
-              key={c.company}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => go(i)}
-              className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
-            >
-              <span className={`block truncate transition-colors duration-300 ${mono} ${on ? "text-foreground" : "text-foreground/40 group-hover:text-foreground/70"}`}>
-                {String(i + 1).padStart(2, "0")} {c.company}
-              </span>
-              <span className="relative mt-2.5 block h-px bg-foreground/[0.12]">
-                <motion.span
-                  className="absolute inset-y-0 left-0 bg-foreground"
-                  style={{ width: on ? (reduced ? "100%" : fill) : i < active ? "100%" : "0%" }}
+              {/* Bottom footer: Person info */}
+              <figcaption className="flex items-center gap-3 border-t border-line/80 pt-5 pr-44 sm:pr-48">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={client.person.photo}
+                  alt=""
+                  className="size-10.5 rounded-[9px] object-cover ring-1 ring-black/[0.06] grayscale-[20%]"
                 />
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span className="text-[0.92rem] leading-snug truncate">
+                  <span className="block font-medium text-ink truncate">{client.person.name}</span>
+                  <span className="block text-xs text-muted mt-0.5 truncate">
+                    {client.person.role}, {client.company}
+                  </span>
+                </span>
+              </figcaption>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Anchored Persistent StatusIndicator: OUTSIDE AnimatePresence so it never resets or falls out of sync */}
+        <div className="pointer-events-auto absolute right-7 bottom-6 sm:right-9 sm:bottom-8 z-10 flex items-center">
+          <StatusIndicator
+            value={String(active)}
+            statuses={CLIENT_STATUSES}
+            ariaLabel="Client testimonials"
+            onChange={(_, idx) => go(idx)}
+            className="[--si-pill-bg:var(--primary-soft)] [--si-label:var(--ink)] [--si-dot:#cfdad1] [--si-dot-hover-bg:rgba(31,77,58,0.08)]"
+          />
+        </div>
+      </figure>
     </div>
   );
 }

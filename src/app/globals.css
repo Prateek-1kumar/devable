@@ -1,37 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  /* Green brand, light theme. 60 · 30 · 10: pure white page, forest anchor,
-     emerald brand. Lime and amber are sparks only: hover sweeps and the
-     engine's signal (pulses, leads, live counters). */
-  --background: #ffffff;
-  --surface: #edf0ed; /* soft grey panels, e.g. the falling pill */
-  --foreground: #0f1a14; /* green-black ink */
-  --ceramic: #fbfdf9; /* 3D ceramic and on-screen text */
-  /* Pixel field on white: three steps of one green-grey family, light → deep,
-     so every shape reads; emerald pluses are the sparse accent on top. */
-  --pixel-light: #e6ece7;
-  --pixel-stone: #cfdad1; /* sage, also the 3D cable */
-  --pixel-mist: #b3dcc1; /* mint */
-  --forest: #0c3b29; /* the 30%: dark panels, screens, outlines */
-  --accent: #179a55; /* emerald, the brand */
-  --lime: #c6ef5c;
-  --coral: #ec544b;
-  --amber: #fcb401;
+  /* Brand: Editorial green with Signal coral secondary. Calmer and more premium.
+     These tokens are the single source of truth: change them here in globals.css
+     and they update across the entire codebase (Tailwind classes, inline styles,
+     3D WebGL scenes, and SVG illustrations). */
+  --ink: #0f1a14; /* primary text, outlines, dark bands */
+  --paper: #faf9f6; /* warm off-white page, brightened from dull #f6f4ee */
+  --primary: #16ad64; /* the one green primary */
+  --secondary: #e8603c; /* secondary: orange / Signal coral */
+  --accent: var(--secondary); /* secondary orange for active/working states & live highlights */
+  --primary-accent: var(--primary); /* green primary accent */
+  --coral: var(--secondary); /* secondary orange alias */
+  --line: #eae7e1; /* borders, hairlines */
+  --muted: #6b7570; /* secondary text */
+  --card: #ffffff; /* cards and panels */
+
+  /* Tints derived from the above for quiet fills. */
+  --primary-soft: #d8f5e6;
+  --secondary-soft: #fbe4dc;
+  --accent-soft: var(--secondary-soft);
+  --sage: #8fa898; /* muted channel tint */
+
+  /* Legacy & semantic names, mapped onto the brand so older sections follow it. */
+  --background: var(--paper);
+  --surface: #f0ede6; /* soft warm panels, e.g. the falling pill and diagram stage */
+  --foreground: var(--ink);
+  --ceramic: #fbfaf6;
+
+  /* Pixel field: three warm neutral steps; coral pluses are the sparse accent. */
+  --pixel-light: #f0ede6;
+  --pixel-stone: #dedad0;
+  --pixel-mist: #d4e0d8;
+  --forest: #1f4d3a;
+  --lime: var(--accent-soft);
+  --amber: var(--sage);
   --deboss-ink: #1c2c23; /* green-black ink for letters pressed into the page */
 }
 
 @theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-primary-accent: var(--primary-accent);
+  --color-secondary: var(--secondary);
+  --color-secondary-soft: var(--secondary-soft);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-sage: var(--sage);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-forest: var(--forest);
-  --color-accent: var(--accent);
-  --color-lime: var(--lime);
   --color-coral: var(--coral);
+  --color-lime: var(--lime);
   --color-amber: var(--amber);
   --font-sans: var(--font-instrument);
   --font-heading: var(--font-instrument);
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Highlight pill entrance: color slides in from the left, text ink follows. */
   --animate-pill-sweep: pill-sweep 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;

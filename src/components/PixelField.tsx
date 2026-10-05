@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 // shapes is uncovered softly around the cursor.
 // Fills its nearest positioned parent (give it `relative`) and listens to
 // the pointer there. Colors come from the --pixel-light, --pixel-stone,
-// --pixel-mist and --accent tokens.
+// --pixel-mist and --sage tokens (sage pluses stay quiet behind the hero diagram).
 
 type Props = {
   /** Grid spacing in px. */
@@ -79,7 +79,7 @@ export default function PixelField({ gap = 20, className = "" }: Props) {
     const light = token("--pixel-light");
     const stone = token("--pixel-stone");
     const mist = token("--pixel-mist");
-    const accent = token("--accent");
+    const accent = token("--sage");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let w = 0;

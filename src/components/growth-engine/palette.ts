@@ -1,136 +1,75 @@
-import { BufferAttribute, Color, MeshPhysicalMaterial, MeshStandardMaterial, type Mesh } from "three";
-import { CHANNELS } from "./channels";
+import { Color, MeshBasicMaterial } from "three";
 
-// A neutral stage (porcelain, graphite, soft white) so the four channel colors
-// are the only vivid things in the scene. Page tokens where they apply.
+// The scene's colours come from the page tokens in globals.css, so the 3D
+// follows a brand swap with no edits here. Everything is drawn unlit, like a
+// technical illustration: flat faces whose shade is set per face direction
+// (top lightest, front true, right a step darker), with ink outlines.
 // Client-only: read on first use inside the (ssr: false) scene.
 
 function read() {
   const root = getComputedStyle(document.documentElement);
   const token = (name: string) => root.getPropertyValue(name).trim();
   return {
-    cream: token("--ceramic"),
-    stone: "#dcdfe3", // soft neutral grey: the cable, unlit lights
-    ink: "#16191d", // graphite: device outlines, screens
-    slate: "#8a94a0", // soft edge for light neutral parts (rail)
-    signal: "#ffffff", // your devtool's signal is white light until a channel colors it
-    live: "#34d399", // the monitor's live dot
+    ink: token("--ink"),
+    paper: token("--paper"),
+    primary: token("--primary"),
+    accent: token("--accent"),
+    secondary: token("--secondary"),
+    coral: token("--coral") || token("--secondary"),
+    line: token("--line"),
+    muted: token("--muted"),
+    card: token("--card"),
+    sage: token("--sage"),
     bodyFont: getComputedStyle(document.body).fontFamily,
-    headingFont: token("--font-geist-sans"),
+    monoFont: `${token("--font-geist-mono")}, ui-monospace, monospace`,
   };
 }
-
-// Soft satin: mostly matte with a light clearcoat, so shapes read by form, not gloss.
-const GLOSS = { roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.3 };
-
-/** Ink outline width in pixels: thin, technical-illustration lines. */
-export const INK_PX = 1;
-
-/**
- * Paints a fade onto a centered mesh's vertices (use a `vertexColors` material):
- * `low` at the bottom into `high` at the top. `sweep` (0..1) blends in a diagonal
- * across the front and right faces, so the fade also travels around the visible corner.
- */
-export function paintFade(mesh: Mesh, low: string, high: string, height: number, sweep = 0) {
-  const pos = mesh.geometry.attributes.position;
-  mesh.geometry.computeBoundingBox();
-  const width = mesh.geometry.boundingBox?.max.x ?? 1;
-  const colors = new Float32Array(pos.count * 3);
-  const from = new Color(low);
-  const to = new Color(high);
-  const c = new Color();
-  const clamp = (v: number) => Math.min(1, Math.max(0, v));
-  for (let i = 0; i < pos.count; i++) {
-    const rise = clamp(pos.getY(i) / height + 0.5); // 0 at the bottom, 1 at the top
-    const across = clamp((pos.getX(i) - pos.getZ(i)) / (4 * width) + 0.5); // front-left edge → back-right edge
-    const k = (1 - sweep) * rise + sweep * across;
-    c.lerpColors(from, to, k * k * (3 - 2 * k));
-    c.toArray(colors, i * 3);
-  }
-  mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
-}
-
-/**
- * Adds a soft self-glow in the vertex color itself (not white), so shaded faces
- * keep their hue instead of greying and light gradients stay vivid.
- */
-const INNER_GLOW = 0.28;
-function glowFromWithin<T extends MeshPhysicalMaterial>(material: T) {
-  material.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <emissivemap_fragment>",
-      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += vColor.rgb * ${INNER_GLOW.toFixed(2)};`,
-    );
-  };
-  material.customProgramCacheKey = () => "glow-from-within";
-  return material;
-}
-
-/** `a` moved toward `b` by `k` (0..1), as a hex string. */
-export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
-
-/**
- * Block tones per channel: the body fades from `low` to `high`, `seam` is the thin
- * band that separates it from the block below, `panel` its label plate and `edge`
- * a deep tone for fine lines (the route pucks).
- */
-export const TONES = CHANNELS.map(({ color, pastel, deep, fade }) => ({
-  low: fade[0],
-  high: fade[1],
-  seam: mix(color, "#ffffff", 0.05),
-  panel: mix(pastel, "#ffffff", 0.75),
-  edge: mix(deep, color, 0.25),
-}));
 
 let colors: ReturnType<typeof read> | null = null;
 export const palette = () => (colors ??= read());
 
-function build() {
-  const p = palette();
-  return {
-    /** Glazed ceramic: the cream bodies. */
-    ceramic: new MeshPhysicalMaterial({ color: p.cream, ...GLOSS }),
-    /** Block bodies: tinted per vertex with the channel's fade, glowing gently in that same color. */
-    frost: glowFromWithin(new MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.2 })),
-    /** Label panels, a whisper of their channel's tint. */
-    panelTint: TONES.map(({ panel }) => new MeshStandardMaterial({ color: panel, roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.12 })),
-    /** The thin seam under each block, in the channel's full tone. */
-    seam: TONES.map(({ seam }) => new MeshStandardMaterial({ color: seam, roughness: 0.35, metalness: 0.2 })),
-    /** White label panels on the slab fronts. */
-    panel: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, emissive: "#ffffff", emissiveIntensity: 0.18 }),
-    /** Brushed aluminum: the signal rail and cable collars. */
-    alu: new MeshStandardMaterial({ color: "#e4e7eb", metalness: 0.45, roughness: 0.35 }),
-    /**
-     * The devices (terminal, monitor): warm glossy porcelain.
-     * A small self-glow lifts the shaded faces so white reads as white, not grey.
-     */
-    porcelain: new MeshPhysicalMaterial({
-      color: "#f7f3ea",
-      emissive: "#f7f3ea",
-      emissiveIntensity: 0.2,
-      roughness: 0.3,
-      clearcoat: 0.9,
-      clearcoatRoughness: 0.1,
-    }),
-    /** Brushed champagne metal: device trim and the frame around each screen. */
-    champagne: new MeshStandardMaterial({ color: "#dcc08a", metalness: 0.6, roughness: 0.3 }),
-    /** Neutral black glass behind the device screens. */
-    glass: new MeshStandardMaterial({ color: "#0d1012", roughness: 0.15, metalness: 0.2 }),
-    /** Dark glossy panels and screens. */
-    screen: new MeshStandardMaterial({ color: p.ink, roughness: 0.3, metalness: 0.15 }),
-    stone: new MeshStandardMaterial({ color: p.stone, roughness: 0.6 }),
-    /** Glowing white pearls: the signal on its way up the cable and rail. */
-    pearl: new MeshPhysicalMaterial({
-      color: p.signal,
-      roughness: 0.08,
-      clearcoat: 1,
-      clearcoatRoughness: 0.04,
-      emissive: p.signal,
-      emissiveIntensity: 0.6,
-    }),
-  };
+/** `a` moved toward `b` by `k` (0..1), as a hex string. */
+export const mix = (a: string, b: string, k: number) => `#${new Color(a).lerp(new Color(b), k).getHexString()}`;
+
+/** Outline width in CSS pixels: thin, uniform technical lines. */
+export const INK_PX = 1;
+/** Outlines are ink softened toward the page: present, never harsh. */
+export const edgeColor = () => mix(palette().ink, palette().paper, 0.6);
+
+/** The three visible faces of a box, from the fixed isometric view. */
+export type Face = "top" | "front" | "right";
+/** How each visible face is shaded: toward white (top) or ink (right). */
+export const SHADE: Record<Face, (color: string) => string> = {
+  top: (c) => mix(c, "#ffffff", 0.12),
+  front: (c) => c,
+  right: (c) => mix(c, palette().ink || "#0f1a14", 0.16),
+};
+
+/**
+ * Flat materials for a box's six faces (three's BoxGeometry order: +x, −x, +y, −y, +z, −z),
+ * pushed back a hair so the ink outlines drawn on their edges always win the depth test.
+ */
+export function boxFaces(color: string, opts: { opacity?: number; top?: string } = {}) {
+  const make = (face: Face | null) =>
+    new MeshBasicMaterial({
+      color: face === "top" && opts.top ? opts.top : face ? SHADE[face](color) : color,
+      transparent: opts.opacity !== undefined,
+      opacity: opts.opacity ?? 1,
+      depthWrite: opts.opacity === undefined,
+      toneMapped: false,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    });
+  return [make("right"), make(null), make("top"), make(null), make("front"), make(null)];
 }
 
-let shared: ReturnType<typeof build> | null = null;
-/** Materials shared by every part of the scene. */
-export const materials = () => (shared ??= build());
+/** Recolours box faces made by `boxFaces` in place (for highlights), keeping the per-face shading. */
+export function tintFaces(faces: MeshBasicMaterial[], color: Color, top?: Color) {
+  faces[0].color.copy(color).lerp(inkColor(), 0.16);
+  if (top) faces[2].color.copy(top);
+  else faces[2].color.copy(color).lerp(WHITE, 0.12);
+  faces[4].color.copy(color);
+}
+const inkColor = () => new Color(palette().ink || "#0f1a14");
+const WHITE = new Color("#ffffff");

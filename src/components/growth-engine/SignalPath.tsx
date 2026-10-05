@@ -1,111 +1,29 @@
-import { useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Outlines } from "@react-three/drei";
-import { Quaternion, TubeGeometry, Vector3, type Group, type Mesh } from "three";
-import { CABLE, CABLE_RADIUS, PORTS, RAIL, STACK_TOP } from "./layout";
-import { INK_PX, materials, palette } from "./palette";
-import { CABLE_FOR, CLIMB_FOR, INTRO, clamp01, easeOutCubic, useStory } from "./story";
+import { useMemo } from "react";
+import { IN_ROUTE, RISER, TERMINAL_NODE, TOP_ROUTE } from "./layout";
+import { Node, Pulse, Route, RouteLine } from "./parts";
+import { useStory } from "./story";
 
-const TUBE = { segments: 80, radial: 14 };
-const RAIL_CAP = 0.06; // how far the rail's post cap rises above the top block
-const CABLE_REVEAL = { at: INTRO.terminalAt + INTRO.terminalFor, for: 0.6 };
-const RAIL_BUILD = { at: INTRO.layersAt, for: INTRO.layerStagger * 3 + INTRO.layerFor };
-// The signal is a short single-file train of pearls: lead pearl first, smaller ones behind.
-const TRAIN = [
-  { lag: 0, size: 1 },
-  { lag: 0.035, size: 0.8 },
-  { lag: 0.07, size: 0.62 },
-];
-const UP = new Vector3(0, 1, 0);
+// The way in: from the terminal's floor node straight to the stack, up a trace
+// on its front face past every channel band, then across the top into the
+// engine core. A coral pulse runs it once per cycle.
 
-/** Metal collar where the cable plugs in, aligned with the cable. */
-function Collar({ at, dir, show }: { at: Vector3; dir: Vector3; show: (t: number) => boolean }) {
-  const story = useStory();
-  const ref = useRef<Mesh>(null);
-  const turn = useMemo(() => new Quaternion().setFromUnitVectors(UP, dir), [dir]);
-  useFrame((state) => {
-    if (ref.current) ref.current.visible = show(story.time(state.clock.elapsedTime));
-  });
-  return (
-    <mesh ref={ref} position={at} quaternion={turn} material={materials().alu} castShadow visible={false}>
-      <cylinderGeometry args={[CABLE_RADIUS * 1.5, CABLE_RADIUS * 1.5, 0.14, 24]} />
-      <Outlines thickness={1} color={palette().slate} />
-    </mesh>
-  );
-}
-
-/** The cable from the terminal, the rail up the stack's corner, and the pearl signal that runs along both. */
 export default function SignalPath() {
   const story = useStory();
-  const p = palette();
-  const m = materials();
-  const rail = useRef<Group>(null);
-  const pearls = useRef<(Mesh | null)[]>([]);
-
-  const tube = useMemo(() => new TubeGeometry(CABLE, TUBE.segments, CABLE_RADIUS, TUBE.radial, false), []);
-  useEffect(() => () => tube.dispose(), [tube]);
-  const at = useMemo(() => new Vector3(), []);
-  const split = CABLE_FOR / (CABLE_FOR + CLIMB_FOR);
-  const revealAt = (t: number) => easeOutCubic(clamp01((t - CABLE_REVEAL.at) / CABLE_REVEAL.for));
-
-  useFrame((state) => {
-    const t = story.time(state.clock.elapsedTime);
-
-    // The cable draws itself out of the terminal once it lands (tube indices run along the path).
-    const total = tube.index?.count ?? 0;
-    tube.setDrawRange(0, Math.floor((total * revealAt(t)) / 6) * 6);
-
-    if (rail.current) {
-      const build = easeOutCubic(clamp01((t - RAIL_BUILD.at) / RAIL_BUILD.for));
-      // Hidden until it starts growing: squashed flat it still shows as a dark disc on the ground.
-      rail.current.visible = build > 0;
-      rail.current.scale.y = Math.max(1e-4, build);
-    }
-
-    const s = story.signal(t);
-    TRAIN.forEach(({ lag, size }, i) => {
-      const pearl = pearls.current[i];
-      if (!pearl) return;
-      const k = s - lag;
-      pearl.visible = s >= 0 && k >= 0;
-      if (!pearl.visible) return;
-      if (k < split) CABLE.getPointAt(k / split, at);
-      else at.set(RAIL.x, PORTS.stack.at.y + (STACK_TOP - PORTS.stack.at.y) * ((k - split) / (1 - split)), RAIL.z);
-      pearl.position.copy(at);
-      pearl.scale.setScalar(size);
-    });
-  });
+  const routes = useMemo(() => ({ inbound: new Route(IN_ROUTE), riser: new Route(RISER), top: new Route(TOP_ROUTE) }), []);
+  /** A node is coral while the pulse runs the route it starts. */
+  const live = (f: (t: number) => number) => (t: number) => (f(t) >= 0 ? 1 : 0);
 
   return (
     <group>
-      <mesh geometry={tube} material={m.stone} castShadow receiveShadow>
-        {/* angle 0: the outline shares the tube's geometry, so it follows the draw-range reveal
-            (the default builds a creased copy that would show the whole cable from frame one). */}
-        <Outlines thickness={INK_PX} color={p.slate} angle={0} />
-      </mesh>
-      <Collar at={PORTS.terminal.at} dir={PORTS.terminal.dir} show={(t) => revealAt(t) > 0} />
-      <Collar at={PORTS.stack.at} dir={PORTS.stack.dir} show={(t) => revealAt(t) >= 0.98} />
-      <group ref={rail} position={[RAIL.x, 0, RAIL.z]} visible={false}>
-        {/* Stands a touch above the top block: level with its top face, the two surfaces flicker. */}
-        <mesh position={[0, (STACK_TOP + RAIL_CAP) / 2, 0]} material={m.alu} castShadow>
-          <cylinderGeometry args={[0.075, 0.075, STACK_TOP + RAIL_CAP, 20]} />
-          <Outlines thickness={1} color={p.slate} />
-        </mesh>
-      </group>
-      {TRAIN.map((_, i) => (
-        <mesh
-          key={i}
-          ref={(el) => {
-            pearls.current[i] = el;
-          }}
-          material={m.pearl}
-          visible={false}
-        >
-          <sphereGeometry args={[0.085, 24, 18]} />
-          {/* The white signal needs an ink edge to read on the pale cable. */}
-          <Outlines thickness={1} color={p.ink} />
-        </mesh>
-      ))}
+      <RouteLine points={IN_ROUTE} arrows arrowAt={0.85} />
+      <RouteLine points={RISER} arrows />
+      <RouteLine points={TOP_ROUTE} />
+      <Pulse route={routes.inbound} progress={(t) => story.inbound(t)} />
+      <Pulse route={routes.riser} progress={(t) => story.climb(t)} />
+      <Pulse route={routes.top} progress={(t) => story.top(t)} />
+      <Node at={TERMINAL_NODE} active={live((t) => story.inbound(t))} />
+      <Node at={RISER[0]} active={live((t) => story.climb(t))} />
+      <Node at={TOP_ROUTE[1]} active={live((t) => story.top(t))} />
     </group>
   );
 }

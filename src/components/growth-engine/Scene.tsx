@@ -1,18 +1,18 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
-import { Vector3, type Group } from "three";
+import { OrthographicCamera } from "@react-three/drei";
+import { Vector3, type OrthographicCamera as OrthoCam } from "three";
 import { CHANNELS } from "./channels";
 import Destinations from "./Destinations";
 import DevtoolTerminal from "./DevtoolTerminal";
 import EngineCore from "./EngineCore";
+import Floor from "./Floor";
 import GrowthScreen from "./GrowthScreen";
-import { CAMERA_FOV, CAMERA_POSITION, STACK_RIGHT, STACK_TOP, TARGET } from "./layout";
-import { palette } from "./palette";
+import { CAMERA_DISTANCE, CAPTIONS, CONTENT, HOVER_ANCHOR, SCREEN_RIGHT, VIEW_DIR } from "./layout";
+import { Caption } from "./parts";
 import SignalPath from "./SignalPath";
 import StackLayer from "./StackLayer";
 import { FocusContext, HoverContext, Story, StoryContext } from "./story";
-import { useCursorTilt } from "./useCursorTilt";
 
 type Props = {
   /** Render one settled frame, no motion or interaction (phones, reduced motion). */
@@ -21,127 +21,87 @@ type Props = {
   active: boolean;
   /** Which channel layer the cursor is over, for the DOM hover card. */
   onHover?: (index: number | null) => void;
-  /** The stack's right edge in page pixels, reported every frame, for pinning the hover card. */
+  /** Where the hover card pins (under the destination row), in page pixels, reported every frame. */
   onAnchor?: (anchor: StackAnchor) => void;
   /** Layer highlighted from outside the scene, or null. */
   focus?: number | null;
 };
 
-export type StackAnchor = { x: number; top: number; bottom: number };
+export type StackAnchor = { x: number; y: number };
 
-/** The 3D canvas: camera, studio light, shadows, and the engine itself. */
+/**
+ * The diagram: a fixed orthographic isometric view (no rotation, tilt or
+ * float), drawn unlit with thin ink outlines, like a technical illustration.
+ */
 export default function Scene({ still, active, onHover, onAnchor, focus = null }: Props) {
   return (
-    <Canvas
-      shadows="percentage"
-      flat
-      dpr={[1, 2]}
-      frameloop={still ? "demand" : active ? "always" : "never"}
-      camera={{ position: CAMERA_POSITION.toArray(), fov: CAMERA_FOV, near: 5, far: 80 }}
-    >
-      <CameraRig shift={still ? 0 : 0.08} />
-
-      {/* Soft window light from the upper left and a neutral fill, so every block's hue shows true. */}
-      <hemisphereLight args={["#ffffff", "#eceef2", 0.7]} />
-      <directionalLight
-        castShadow
-        position={[-5, 11, 6]}
-        intensity={1.25}
-        shadow-mapSize={[2048, 2048]}
-        shadow-radius={6}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.02}
-      >
-        <orthographicCamera attach="shadow-camera" args={[-8, 8, 8, -8, 1, 30]} />
-      </directionalLight>
-      <Environment resolution={128} frames={1}>
-        <Lightformer form="rect" intensity={1.2} position={[-4, 5, 4]} scale={[8, 4, 1]} target={[0, 0, 0]} />
-        <Lightformer form="rect" intensity={0.5} position={[5, 3, -3]} scale={[6, 3, 1]} target={[0, 0, 0]} />
-        <Lightformer form="circle" intensity={0.8} position={[0, 8, 0]} scale={4} target={[0, 0, 0]} />
-      </Environment>
-
+    <Canvas flat dpr={[1, 1.5]} frameloop={still ? "demand" : active ? "always" : "never"} gl={{ antialias: true }}>
+      <Camera reserve={still ? 0 : 0.2} />
       <FocusContext.Provider value={focus}>
         <Engine still={still} onHover={onHover} onAnchor={onAnchor} />
       </FocusContext.Provider>
-      <ContactShadows position={[0, 0.001, 0]} scale={14} blur={3} far={2.5} opacity={0.22} resolution={512} color={palette().ink} />
     </Canvas>
   );
 }
 
 /**
- * Aims the camera and shifts the frame so the engine sits right of center,
- * leaving the left side of the canvas clear behind the headline.
+ * Frames the whole diagram in the canvas at any size. `reserve` keeps that
+ * share of the canvas's left side clear (behind the headline on desktop).
  */
-function CameraRig({ shift }: { shift: number }) {
-  const camera = useThree((s) => s.camera);
+function Camera({ reserve }: { reserve: number }) {
+  const camera = useRef<OrthoCam>(null);
   const size = useThree((s) => s.size);
   useLayoutEffect(() => {
-    camera.lookAt(TARGET);
-    camera.setViewOffset(size.width, size.height, -size.width * shift, 0, size.width, size.height);
-    camera.updateProjectionMatrix();
-    return () => camera.clearViewOffset();
-  }, [camera, size, shift]);
-  return null;
+    const cam = camera.current;
+    if (!cam) return;
+    const [u0, u1] = CONTENT.u;
+    const [v0, v1] = CONTENT.v;
+    const room = size.width * (1 - reserve);
+    const zoom = Math.min(room / (u1 - u0), (size.height * 0.92) / (v1 - v0));
+    // The point at the canvas centre, so the content's centre lands in the middle of the free area.
+    const cu = (u0 + u1) / 2 - (size.width * reserve) / 2 / zoom;
+    const cv = (v0 + v1) / 2;
+    cam.left = cu - size.width / 2 / zoom;
+    cam.right = cu + size.width / 2 / zoom;
+    cam.top = cv + size.height / 2 / zoom;
+    cam.bottom = cv - size.height / 2 / zoom;
+    cam.position.copy(VIEW_DIR).multiplyScalar(CAMERA_DISTANCE);
+    cam.lookAt(0, 0, 0);
+    cam.updateProjectionMatrix();
+  }, [size, reserve]);
+  return <OrthographicCamera ref={camera} makeDefault manual near={1} far={100} />;
 }
-
-// The stack tilts around its middle.
-const PIVOT: [number, number, number] = [0, 1.2, 0];
 
 function Engine({ still, onHover = () => {}, onAnchor }: Pick<Props, "still" | "onHover" | "onAnchor">) {
   const [story] = useState(() => new Story(still));
-  const tilt = useCursorTilt({ enabled: !still });
-
-  // Advance the story before any part reads it this frame (negative priority runs first).
-  useFrame((state) => story.update(story.time(state.clock.elapsedTime)), -1);
-
   return (
     <StoryContext.Provider value={story}>
       <HoverContext.Provider value={onHover}>
-        <group ref={tilt} position={PIVOT}>
-          {onAnchor && <AnchorReporter onAnchor={onAnchor} />}
-          <Breathing still={still}>
-            <DevtoolTerminal />
-            <SignalPath />
-            <Destinations />
-            <GrowthScreen />
-            {CHANNELS.map((channel, i) => (
-              <StackLayer key={channel.n} index={i}>
-                {i === CHANNELS.length - 1 && <EngineCore />}
-              </StackLayer>
-            ))}
-          </Breathing>
-        </group>
+        {onAnchor && <AnchorReporter onAnchor={onAnchor} />}
+        <Floor />
+        <SignalPath />
+        <Destinations />
+        {CHANNELS.map((channel, i) => (
+          <StackLayer key={channel.n} index={i} />
+        ))}
+        <EngineCore />
+        <DevtoolTerminal />
+        <GrowthScreen />
+        {CAPTIONS.map((c) => (
+          <Caption key={c.n} n={c.n} text={c.text} at={c.at().addScaledVector(SCREEN_RIGHT, c.dx)} />
+        ))}
       </HoverContext.Provider>
     </StoryContext.Provider>
   );
 }
 
-/** A very slow 1–2px float so the object never looks frozen. */
-function Breathing({ still, children }: { still: boolean; children: ReactNode }) {
-  const group = useRef<Group>(null);
-  useFrame((state) => {
-    if (group.current && !still) group.current.position.y = -PIVOT[1] + Math.sin(state.clock.elapsedTime * 0.8) * 0.02;
-  });
-  return (
-    <group ref={group} position={[0, -PIVOT[1], 0]}>
-      {children}
-    </group>
-  );
-}
-
-/** Projects the stack's right edge to page pixels each frame (follows tilt and resize). */
+/** Projects the hover card's anchor to page pixels each frame (follows resize and scroll). */
 function AnchorReporter({ onAnchor }: { onAnchor: (anchor: StackAnchor) => void }) {
-  const probe = useRef<Group>(null);
   const [world] = useState(() => new Vector3());
   useFrame(({ camera, gl }) => {
-    if (!probe.current) return;
     const rect = gl.domElement.getBoundingClientRect();
-    const toPage = (y: number) => {
-      probe.current!.localToWorld(world.set(STACK_RIGHT.x, y, STACK_RIGHT.z)).project(camera);
-      return { x: rect.left + ((world.x + 1) / 2) * rect.width, y: rect.top + ((1 - world.y) / 2) * rect.height };
-    };
-    const mid = toPage(STACK_TOP / 2);
-    onAnchor({ x: mid.x, top: toPage(STACK_TOP).y, bottom: toPage(0).y });
+    world.copy(HOVER_ANCHOR).project(camera);
+    onAnchor({ x: rect.left + ((world.x + 1) / 2) * rect.width, y: rect.top + ((1 - world.y) / 2) * rect.height });
   });
-  return <group ref={probe} position={[0, -PIVOT[1], 0]} />;
+  return null;
 }

@@ -1,10 +1,8 @@
-// The four channels, bottom (foundation) to top.
-// Colors tell the "dawn rise" story, deep to radiant: indigo → azure → emerald → sun.
-// Your devtool's signal leaves as white light and each channel turns it into its
-// own color: its layer, its token, its lead pearls and its band on the monitor.
-// `color` is the vivid signal (pearls, traces, chart, lit lights), `pastel` the frosted
-// tint (panels), `fade` the block's two-hue light gradient (bottom → top) and
-// `deep` the text-safe shade for glyphs on white.
+// The four channels, bottom (foundation) to top. Each is a solid label band in
+// the stack; bands alternate deep green and ink, and turn coral (the accent)
+// while the signal passes or the channel is pointed at.
+// `color` is the channel's swatch for DOM use (hover card dot, client proof
+// squares), as a CSS colour so it follows the page tokens.
 export const CHANNELS = [
   {
     n: "01",
@@ -13,10 +11,8 @@ export const CHANNELS = [
     short: "Content",
     glyph: "code",
     line: "Docs, tutorials and deep dives developers actually bookmark.",
-    color: "#4f46e5",
-    pastel: "#d4d2ff",
-    fade: ["#9d9aff", "#f0c8ff"] as [string, string],
-    deep: "#4338ca",
+    color: "var(--primary)",
+    band: "primary",
   },
   {
     n: "02",
@@ -25,10 +21,8 @@ export const CHANNELS = [
     short: "Search",
     glyph: "search",
     line: "Found on Google, and cited by ChatGPT, Perplexity and Claude.",
-    color: "#0ea5e9",
-    pastel: "#c6e8fb",
-    fade: ["#6fd0ff", "#a8f4f0"] as [string, string],
-    deep: "#0369a1",
+    color: "var(--ink)",
+    band: "ink",
   },
   {
     n: "03",
@@ -37,10 +31,8 @@ export const CHANNELS = [
     short: "Reddit",
     glyph: "reddit",
     line: "Real conversations in the communities your users already live in.",
-    color: "#10b981",
-    pastel: "#c4f1dc",
-    fade: ["#6ee8b5", "#d6f78c"] as [string, string],
-    deep: "#047857",
+    color: "var(--accent)",
+    band: "primary",
   },
   {
     n: "04",
@@ -49,10 +41,8 @@ export const CHANNELS = [
     short: "Creators",
     glyph: "play",
     line: "Creators your audience follows, showing your tool in action.",
-    color: "#f5b301",
-    pastel: "#ffe9a8",
-    fade: ["#ffb07a", "#ffe48a"] as [string, string],
-    deep: "#b45309",
+    color: "var(--sage)",
+    band: "ink",
   },
 ] as const;
 
