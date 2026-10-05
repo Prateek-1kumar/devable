@@ -4,13 +4,8 @@ import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, use
 import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
 
-// Client proof, typographic and quiet: one card, the quote in large even type,
-// services as small monospace labels with square swatches in the hero's channel
-// colors (the site's pixel-block language), and an index of the five clients
-// underneath whose hairlines fill as each quote plays.
-//
-// ponytail: quotes, names, roles and photos are SAMPLE CONTENT for layout only.
-// Replace them with real, approved client quotes and photos before launch.
+// Client proof: one quiet card with fluid directional transitions, and a
+// minimal, premium progress track at the bottom.
 
 type Service = "Social Media" | "GEO" | "Influencer Marketing" | "Reddit";
 const SERVICE_COLOR: Record<Service, string> = {
@@ -71,29 +66,37 @@ const CLIENTS: Client[] = [
 ];
 
 const HOLD = 7; // seconds each quote plays before the next
-const EASE = [0.22, 1, 0.36, 1] as const;
 
-// The quote rises in word by word with a whisper of blur; everything else cross-fades.
-const words: Variants = {
-  enter: {},
-  center: { transition: { staggerChildren: 0.014 } },
-  exit: { opacity: 0, transition: { duration: 0.18, ease: "easeIn" } },
+// Directional slide and soft fade for card transitions.
+const cardVariants: Variants = {
+  enter: (dir: number) => ({
+    opacity: 0,
+    x: dir * 18,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      x: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.3, ease: "easeOut" },
+    },
+  },
+  exit: (dir: number) => ({
+    opacity: 0,
+    x: dir * -18,
+    transition: {
+      x: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.18, ease: "easeIn" },
+    },
+  }),
 };
-const word: Variants = {
-  enter: { opacity: 0, y: "0.35em", filter: "blur(3px)" },
-  center: { opacity: 1, y: "0em", filter: "blur(0px)", transition: { duration: 0.5, ease: EASE } },
-};
-const fade: Variants = {
+
+const reducedVariants: Variants = {
   enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: 0.45, ease: EASE, delay: 0.08 } },
-  exit: { opacity: 0, transition: { duration: 0.18 } },
+  center: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
-/**
- * A client logo at a steady visual weight, sized from its natural aspect. Falls
- * back to the name as a wordmark when there is no file or it fails to load,
- * including a failure that happened before React hydrated.
- */
 function Logo({ client, area }: { client: Client; area: number }) {
   const img = useRef<HTMLImageElement>(null);
   const [ratio, setRatio] = useState<number | null>(null);
@@ -105,10 +108,10 @@ function Logo({ client, area }: { client: Client; area: number }) {
       else setFailed(true);
     }
   }, []);
-  if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-foreground">{client.company}</span>;
+  if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-ink">{client.company}</span>;
   const height = ratio ? Math.sqrt(area / ratio) : 26;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- sized from its natural aspect once loaded
+    // eslint-disable-next-line @next/next/no-img-element -- sized from natural aspect
     <img
       ref={img}
       src={client.logo}
@@ -130,11 +133,12 @@ function Arrow({ flip = false }: { flip?: boolean }) {
 }
 
 const control =
-  "grid size-9 place-items-center rounded-[8px] border border-foreground/12 text-foreground/70 transition-colors hover:border-foreground/35 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40";
+  "grid size-9 place-items-center rounded-full border border-line bg-card/80 text-ink/70 transition-colors hover:border-ink/25 hover:bg-card hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 const mono = "font-mono text-[0.68rem] tracking-[0.14em] uppercase";
 
 export default function ClientProof() {
   const [active, setActive] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
   const reduced = useReducedMotion();
   const client = CLIENTS[active];
@@ -143,22 +147,29 @@ export default function ClientProof() {
 
   const go = (i: number) => {
     const next = (i + CLIENTS.length) % CLIENTS.length;
-    if (next !== active) setActive(next);
+    if (next !== active) {
+      setDirection(next > active || (active === CLIENTS.length - 1 && next === 0) ? 1 : -1);
+      progress.set(0);
+      setActive(next);
+    }
   };
 
-  // Each quote plays for HOLD seconds, its hairline filling, then the next one comes in.
-  // Hover or focus pauses it where it is; reduced motion never autoplays.
   useEffect(() => {
     if (reduced) return;
     progress.set(0);
   }, [active, reduced, progress]);
+
   useEffect(() => {
     if (reduced || paused) return;
     const remaining = HOLD * (1 - progress.get());
     const controls = animate(progress, 1, {
       duration: remaining,
       ease: "linear",
-      onComplete: () => setActive((a) => (a + 1) % CLIENTS.length),
+      onComplete: () => {
+        setDirection(1);
+        progress.set(0);
+        setActive((a) => (a + 1) % CLIENTS.length);
+      },
     });
     return () => controls.stop();
   }, [active, paused, reduced, progress]);
@@ -171,56 +182,53 @@ export default function ClientProof() {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <motion.figure
-        layout
-        transition={{ layout: { duration: 0.5, ease: EASE } }}
+      <figure
         aria-roledescription="carousel"
-        className="rounded-[14px] border border-foreground/[0.09] bg-white px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
+        className="rounded-[16px] border border-line bg-card px-8 pt-8 pb-7 shadow-[0_1px_3px_rgb(15_26_20/0.04)] sm:px-10 sm:pt-10"
       >
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div key={active} initial="enter" animate="center" exit="exit">
-            <motion.div variants={fade} className="flex min-h-9 items-center justify-between gap-6">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          <motion.div
+            key={active}
+            custom={direction}
+            variants={reduced ? reducedVariants : cardVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+          >
+            <div className="flex min-h-9 items-center justify-between gap-6">
               <Logo client={client} area={1600} />
               <ul className="flex flex-wrap justify-end gap-x-5 gap-y-1">
                 {client.services.map((service) => (
-                  <li key={service} className={`flex items-center gap-2 text-foreground/60 ${mono}`}>
-                    <span className="size-[7px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
+                  <li key={service} className={`flex items-center gap-2 text-muted ${mono}`}>
+                    <span className="size-[7px] rounded-[1.5px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
                     {service}
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
 
-            <motion.blockquote
-              variants={reduced ? fade : words}
-              className="mt-10 text-[1.35rem] leading-[1.42] font-normal tracking-[-0.02em] text-foreground sm:text-[1.6rem]"
-            >
-              {reduced
-                ? `“${client.quote}”`
-                : `“${client.quote}”`.split(" ").map((w, i) => (
-                    <motion.span key={i} variants={word} className="inline-block whitespace-pre">
-                      {w}{" "}
-                    </motion.span>
-                  ))}
-            </motion.blockquote>
+            <div className="mt-8 flex min-h-[7.5rem] items-center sm:min-h-[8.5rem]">
+              <blockquote className="text-[1.3rem] leading-[1.42] font-normal tracking-[-0.025em] text-ink sm:text-[1.58rem]">
+                “{client.quote}”
+              </blockquote>
+            </div>
 
-            <motion.figcaption variants={fade} className="mt-10 flex items-center gap-3.5 border-t border-foreground/[0.08] pt-6 pr-24">
-              {/* pr-24 keeps the person clear of the prev/next controls on the same line. */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- sample photo, swapped for the real one */}
-              <img src={client.person.photo} alt="" className="size-11 rounded-[6px] object-cover grayscale-[35%]" />
+            <figcaption className="mt-8 flex items-center gap-3.5 border-t border-line pt-6 pr-24">
+              {/* pr-24 keeps the person clear of the prev/next controls on the same line */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={client.person.photo} alt="" className="size-11 rounded-[8px] object-cover grayscale-[25%]" />
               <span className="text-[0.95rem] leading-snug">
-                <span className="block font-medium text-foreground">{client.person.name}</span>
-                <span className="block text-foreground/55">
+                <span className="block font-medium text-ink">{client.person.name}</span>
+                <span className="block text-xs text-muted mt-0.5">
                   {client.person.role}, {client.company}
                 </span>
               </span>
-            </motion.figcaption>
+            </figcaption>
           </motion.div>
         </AnimatePresence>
 
-        {/* Controls sit outside the transition, on the attribution line. */}
+        {/* Controls sit outside the transition, on the attribution line */}
         <div className="relative">
-          {/* Centered on the 44px photo row that ends right above this line. */}
           <div className="absolute right-0 bottom-1 flex items-center gap-2">
             <button type="button" aria-label="Previous client" onClick={() => go(active - 1)} className={control}>
               <Arrow flip />
@@ -230,10 +238,10 @@ export default function ClientProof() {
             </button>
           </div>
         </div>
-      </motion.figure>
+      </figure>
 
-      {/* The index: every client by name, the playing one's hairline filling; past ones full, upcoming empty. */}
-      <div role="tablist" aria-label="Clients" className="mt-5 grid grid-cols-5 gap-3">
+      {/* The index: every client by name, the active one's refined hairline filling smoothly */}
+      <div role="tablist" aria-label="Clients" className="mt-7 grid grid-cols-5 gap-2.5 sm:gap-4">
         {CLIENTS.map((c, i) => {
           const on = i === active;
           return (
@@ -243,17 +251,32 @@ export default function ClientProof() {
               role="tab"
               aria-selected={on}
               onClick={() => go(i)}
-              className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
+              className="group flex flex-col gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
             >
-              <span className={`block truncate transition-colors duration-300 ${mono} ${on ? "text-foreground" : "text-foreground/40 group-hover:text-foreground/70"}`}>
-                {String(i + 1).padStart(2, "0")} {c.company}
-              </span>
-              <span className="relative mt-2.5 block h-px bg-foreground/[0.12]">
-                <motion.span
-                  className="absolute inset-y-0 left-0 bg-foreground"
-                  style={{ width: on ? (reduced ? "100%" : fill) : i < active ? "100%" : "0%" }}
-                />
-              </span>
+              <div className="flex items-center gap-1.5 truncate">
+                <span
+                  className={`font-mono text-[10px] tracking-[0.1em] transition-colors duration-300 ${
+                    on ? "font-semibold text-primary" : "text-muted/45 group-hover:text-muted"
+                  }`}
+                >
+                  0{i + 1}
+                </span>
+                <span
+                  className={`truncate font-mono text-[10.5px] tracking-[0.08em] uppercase transition-colors duration-300 ${
+                    on ? "font-medium text-ink" : "text-muted/60 group-hover:text-ink"
+                  }`}
+                >
+                  {c.company}
+                </span>
+              </div>
+              <div className="relative h-[2px] w-full overflow-hidden rounded-full bg-ink/[0.08] transition-colors duration-300 group-hover:bg-ink/[0.14]">
+                {on && (
+                  <motion.span
+                    className="absolute inset-y-0 left-0 rounded-full bg-primary"
+                    style={{ width: reduced ? "100%" : fill }}
+                  />
+                )}
+              </div>
             </button>
           );
         })}
