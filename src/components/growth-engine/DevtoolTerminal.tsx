@@ -1,127 +1,92 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Outlines, RoundedBox } from "@react-three/drei";
-import type { Group, MeshStandardMaterial } from "three";
-import { TERMINAL } from "./layout";
-import { INK_PX, materials, palette } from "./palette";
-import { INTRO, easeOutBack, easeOutCubic, useStory } from "./story";
+import { TERMINAL_CARD, TERMINAL_NODE, cardCenter } from "./layout";
+import { palette } from "./palette";
+import { CARD_PX, CardPlane, DESIGN_ZOOM } from "./parts";
+import { useStory } from "./story";
 import { useCanvasTexture } from "./useCanvasTexture";
 
-const PROMPT = "$ npx your-devtool";
-const TYPE_EVERY = 0.06; // seconds per character
-const SCREEN_TILT = 0.5; // radians the display leans toward the viewer
-const [W, H, D] = TERMINAL.size;
+// Where the signal starts: your devtool's terminal, a dark window pinned above
+// its floor node. It types its command once, then reports each signal it sends.
 
-/** The terminal where the signal starts: types its command, then reports a live status. Hover it to retype. */
+const PROMPT = "npx your-devtool";
+const TYPE_FROM = 0.15;
+const TYPE_EVERY = 0.035; // seconds per character
+const [W, H] = [TERMINAL_CARD.w, TERMINAL_CARD.h];
+
+type View = { chars: number; cursor: boolean; sending: boolean };
+
 export default function DevtoolTerminal() {
   const story = useStory();
   const p = palette();
-  const m = materials();
-  const group = useRef<Group>(null);
-  const clock = useRef(0);
-  const typedFrom = useRef(INTRO.terminalAt + INTRO.terminalFor);
-  const flickerUntil = useRef(0);
-  const view = useRef({ chars: -1, cursor: false, status: "", sending: false });
+  const view = useRef<View>({ chars: PROMPT.length, cursor: false, sending: false });
+  const center = useMemo(() => cardCenter(TERMINAL_NODE, TERMINAL_CARD), []);
 
-  const led = useRef<MeshStandardMaterial>(null);
-
-  const drawScreen = useCallback(
-    (ctx: CanvasRenderingContext2D, _w: number, h: number) => {
-      const { chars, cursor, status, sending } = view.current;
-      const text = PROMPT.slice(0, Math.max(0, chars));
-      const x = h * 0.2;
-      const line = h * 0.4;
-      ctx.font = `500 ${h * 0.2}px ${p.bodyFont}`;
-      ctx.fillStyle = p.cream;
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, x, line);
-      if (cursor && !status) {
-        ctx.fillStyle = p.signal;
-        ctx.fillRect(x + ctx.measureText(text).width + h * 0.03, line - h * 0.11, h * 0.08, h * 0.22);
-      }
-      // Status line: a dot (green while a signal is leaving) and what the tool is doing.
-      if (status) {
-        const y = h * 0.72;
-        ctx.fillStyle = sending ? p.live : p.cream;
-        ctx.globalAlpha = sending ? 1 : 0.6;
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+      const { chars, cursor, sending } = view.current;
+      const u = CARD_PX / DESIGN_ZOOM; // one screen pixel (at the design scale) in texture pixels
+      const r = 9 * u;
+      // Window.
+      ctx.fillStyle = p.ink;
+      ctx.beginPath();
+      ctx.roundRect(u, u, w - 2 * u, h - 2 * u, r);
+      ctx.fill();
+      // Title bar: three quiet dots and the working directory.
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      for (let i = 0; i < 3; i++) {
         ctx.beginPath();
-        ctx.arc(x + h * 0.04, y, h * 0.035, 0, Math.PI * 2);
+        ctx.arc(14 * u + i * 11 * u, 14 * u, 3.2 * u, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = `500 ${h * 0.14}px ${p.bodyFont}`;
-        ctx.fillStyle = p.cream;
-        ctx.globalAlpha = 0.7;
-        ctx.fillText(status, x + h * 0.14, y + 2);
-        ctx.globalAlpha = 1;
       }
+      ctx.font = `500 ${8.6 * u}px ${p.monoFont}`;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,0.42)";
+      ctx.fillText("~/acme — zsh", w / 2, 14.5 * u);
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fillRect(u, 27 * u, w - 2 * u, u);
+
+      const x = 13 * u;
+      const line = (row: number) => 44 * u + row * 17 * u;
+      ctx.font = `500 ${10.5 * u}px ${p.monoFont}`;
+      // The command.
+      ctx.fillStyle = p.accent;
+      ctx.fillText("$", x, line(0));
+      ctx.fillStyle = "#ffffff";
+      const typed = PROMPT.slice(0, chars);
+      ctx.fillText(typed, x + 12 * u, line(0));
+      if (cursor) {
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillRect(x + 12 * u + ctx.measureText(typed).width + 1.5 * u, line(0) - 6 * u, 5.5 * u, 12 * u);
+      }
+      if (chars < PROMPT.length) return;
+      // Output: what the tool knows, then the live signal status.
+      ctx.font = `500 ${9.6 * u}px ${p.monoFont}`;
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillText("✓ docs indexed  214 pages", x, line(1));
+      ctx.fillStyle = sending ? p.accent : "#7fb59a";
+      ctx.beginPath();
+      ctx.arc(x + 3.5 * u, line(2), 3.2 * u, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = sending ? "#ffffff" : "rgba(255,255,255,0.72)";
+      ctx.fillText(sending ? "signal → 4 channels" : "listening for demand", x + 12 * u, line(2));
     },
     [p],
   );
-  const screen = useCanvasTexture(1024, 448, drawScreen);
+  const screen = useCanvasTexture(Math.round(W * CARD_PX), Math.round(H * CARD_PX), draw);
 
   useFrame((state) => {
-    const g = group.current;
-    if (!g) return;
     const t = story.time(state.clock.elapsedTime);
-    clock.current = t;
-
-    const arrive = story.terminalIn(t);
-    g.visible = arrive > 0;
-    g.position.y = (1 - easeOutBack(arrive)) * 1.8;
-    g.scale.setScalar(0.9 + 0.1 * easeOutCubic(arrive));
-
-    const chars = Math.min(PROMPT.length, Math.floor((t - typedFrom.current) / TYPE_EVERY));
-    const cursor = story.still || Math.floor(t * 2) % 2 === 0;
-    const sending = story.signal(t);
-    // After the command finishes typing: a short boot log, then live status.
-    const since = t - typedFrom.current - PROMPT.length * TYPE_EVERY;
-    const status =
-      sending >= 0 ? "signal sent" : since > 0.9 ? (t > INTRO.signalAt ? "listening for demand" : "4 channels live") : since > 0.3 ? "docs indexed" : "";
+    const chars = story.still ? PROMPT.length : Math.max(0, Math.min(PROMPT.length, Math.floor((t - TYPE_FROM) / TYPE_EVERY)));
+    const next: View = { chars, cursor: chars < PROMPT.length && !story.still, sending: story.sending(t) };
     const v = view.current;
-    if (chars !== v.chars || cursor !== v.cursor || status !== v.status) {
-      view.current = { chars, cursor, status, sending: sending >= 0 };
+    if (next.chars !== v.chars || next.cursor !== v.cursor || next.sending !== v.sending) {
+      view.current = next;
       screen.paint();
     }
-
-    // Power light: steady, brighter as a signal leaves, flickers on hover.
-    const flicker = t < flickerUntil.current ? (Math.sin(t * 60) > 0 ? 1.4 : 0.2) : 0;
-    if (led.current) led.current.emissiveIntensity = 0.4 + (sending >= 0 && sending < 0.2 ? 1 : 0) + flicker;
   });
 
-  return (
-    <group position={TERMINAL.position} rotation-y={TERMINAL.yaw}>
-      <group
-        ref={group}
-        visible={false}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          typedFrom.current = clock.current;
-          flickerUntil.current = clock.current + 0.5;
-        }}
-      >
-        <RoundedBox args={[W, H, D]} radius={0.09} smoothness={4} position={[0, H / 2, 0]} material={m.porcelain} castShadow receiveShadow>
-          <Outlines thickness={INK_PX} color={p.ink} />
-        </RoundedBox>
-        <RoundedBox args={[W + 0.03, 0.08, D + 0.03]} radius={0.035} smoothness={3} position={[0, 0.06, 0]} material={m.champagne} castShadow />
-
-        {/* Display housing leans toward the viewer so the prompt reads clearly. */}
-        <group position={[0, H + 0.04, -0.02]} rotation-x={SCREEN_TILT}>
-          <RoundedBox args={[W - 0.16, 0.1, D - 0.3]} radius={0.04} smoothness={3} material={m.porcelain} castShadow>
-            <Outlines thickness={INK_PX} color={p.ink} />
-          </RoundedBox>
-          {/* Champagne frame, then the glass inset in it. RoundedBox radius must stay under half the thinnest side, or the box swells over the screen. */}
-          <RoundedBox args={[W - 0.26, 0.016, D - 0.4]} radius={0.007} smoothness={2} position={[0, 0.052, 0]} material={m.champagne} />
-          <RoundedBox args={[W - 0.3, 0.02, D - 0.44]} radius={0.01} smoothness={2} position={[0, 0.055, 0]} material={m.glass} />
-          <mesh rotation-x={-Math.PI / 2} position={[0, 0.067, 0]}>
-            <planeGeometry args={[W - 0.34, (W - 0.34) * (448 / 1024)]} />
-            <meshBasicMaterial map={screen.texture} transparent toneMapped={false} />
-          </mesh>
-        </group>
-
-        <mesh position={[W / 2 - 0.16, H + 0.01, D / 2 - 0.14]}>
-          <sphereGeometry args={[0.045, 16, 12]} />
-          <meshStandardMaterial ref={led} color={p.ink} emissive={p.signal} emissiveIntensity={0.4} roughness={0.3} />
-        </mesh>
-      </group>
-    </group>
-  );
+  return <CardPlane center={center} w={W} h={H} texture={screen.texture} />;
 }
