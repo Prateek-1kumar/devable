@@ -42,7 +42,7 @@ export const CONTENT = { u: [-4.45, 5.25], v: [-2.35, 4.5] } as const;
 // ── The input: your devtool's terminal, in front of the stack. ──
 const RISER_X = -HALF + 0.18;
 export const TERMINAL_NODE = new Vector3(RISER_X, 0, 3.4);
-export const TERMINAL_CARD = { w: 2.15, h: 1.02, lift: 0.32 };
+export const TERMINAL_CARD = { w: 2.28, h: 1.24, lift: 0.32 };
 /** Floor route from the terminal to the stack, then up the front face to the top. */
 export const IN_ROUTE = [TERMINAL_NODE.clone().setY(TERMINAL_CARD.lift), TERMINAL_NODE, new Vector3(RISER_X, 0, HALF)];
 export const RISER = [new Vector3(RISER_X, 0, HALF), new Vector3(RISER_X, STACK_TOP, HALF)];

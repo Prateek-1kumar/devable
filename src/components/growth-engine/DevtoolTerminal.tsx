@@ -26,7 +26,7 @@ export default function DevtoolTerminal() {
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       const { chars, cursor, sending } = view.current;
       const u = CARD_PX / DESIGN_ZOOM; // one screen pixel (at the design scale) in texture pixels
-      const r = 9 * u;
+      const r = 10 * u;
       // Window.
       ctx.fillStyle = p.ink;
       ctx.beginPath();
@@ -36,42 +36,44 @@ export default function DevtoolTerminal() {
       ctx.fillStyle = "rgba(255,255,255,0.18)";
       for (let i = 0; i < 3; i++) {
         ctx.beginPath();
-        ctx.arc(14 * u + i * 11 * u, 14 * u, 3.2 * u, 0, Math.PI * 2);
+        ctx.arc(16 * u + i * 11 * u, 15 * u, 3.2 * u, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.font = `500 ${8.6 * u}px ${p.monoFont}`;
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(255,255,255,0.42)";
-      ctx.fillText("~/acme — zsh", w / 2, 14.5 * u);
+      ctx.fillText("~/acme — zsh", w / 2, 15.5 * u);
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.fillRect(u, 27 * u, w - 2 * u, u);
+      ctx.fillRect(u, 30 * u, w - 2 * u, u);
 
-      const x = 13 * u;
-      const line = (row: number) => 44 * u + row * 17 * u;
+      const x = 18 * u;
+      const line0 = 49 * u;
+      const line1 = 71 * u;
+      const line2 = 91 * u;
       ctx.font = `500 ${10.5 * u}px ${p.monoFont}`;
       // The command.
       ctx.fillStyle = p.accent;
-      ctx.fillText("$", x, line(0));
+      ctx.fillText("$", x, line0);
       ctx.fillStyle = "#ffffff";
       const typed = PROMPT.slice(0, chars);
-      ctx.fillText(typed, x + 12 * u, line(0));
+      ctx.fillText(typed, x + 13 * u, line0);
       if (cursor) {
         ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillRect(x + 12 * u + ctx.measureText(typed).width + 1.5 * u, line(0) - 6 * u, 5.5 * u, 12 * u);
+        ctx.fillRect(x + 13 * u + ctx.measureText(typed).width + 1.5 * u, line0 - 6 * u, 5.5 * u, 12 * u);
       }
       if (chars < PROMPT.length) return;
       // Output: what the tool knows, then the live signal status.
       ctx.font = `500 ${9.6 * u}px ${p.monoFont}`;
       ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.fillText("✓ docs indexed  214 pages", x, line(1));
+      ctx.fillText("✓ docs indexed  214 pages", x, line1);
       ctx.fillStyle = sending ? p.accent : "#7fb59a";
       ctx.beginPath();
-      ctx.arc(x + 3.5 * u, line(2), 3.2 * u, 0, Math.PI * 2);
+      ctx.arc(x + 3.5 * u, line2, 3.2 * u, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = sending ? "#ffffff" : "rgba(255,255,255,0.72)";
-      ctx.fillText(sending ? "signal → 4 channels" : "listening for demand", x + 12 * u, line(2));
+      ctx.fillText(sending ? "signal → 4 channels" : "listening for demand", x + 13 * u, line2);
     },
     [p],
   );
