@@ -1,15 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { EYEBROW, INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
+import { INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
 import PanelPlayer, { type PlayMode } from "./PanelPlayer";
 import { PANELS } from "./panels";
-
-// How we work: a slim step nav on the left (~20%) and, on the right, one card
-// per step that stacks over the previous one as you scroll. Each card pairs the
-// step's live visual (a calm product moment on a dotted canvas) with its copy on
-// a white panel. Below 1024px the nav hides and the cards simply follow each
-// other; panels play once when in view. Reduced motion shows each settled frame.
 
 const DESKTOP_QUERY = "(min-width: 1024px)";
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
@@ -108,17 +102,19 @@ export default function HowWeWork() {
 
   return (
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
-      <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
-        <div>
-          <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">{EYEBROW}</p>
-          <h2 id="how-we-work-title" className="mt-4 max-w-[16ch] text-[clamp(2.2rem,4vw,3.6rem)] leading-[1.04] font-normal tracking-[-0.04em] text-ink">
-            {TITLE}
-          </h2>
-        </div>
-        <p className="max-w-xl text-base leading-relaxed text-muted sm:text-lg">{INTRO}</p>
+      <header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start lg:gap-12 xl:gap-20">
+        <h2
+          id="how-we-work-title"
+          className="max-w-[18ch] text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.14] font-normal tracking-[-0.03em] text-ink"
+        >
+          {TITLE}
+        </h2>
+        <p className="w-full max-w-2xl text-[0.95rem] leading-relaxed text-muted sm:text-[1rem] lg:ml-auto lg:pt-1 lg:text-right xl:max-w-3xl">
+          {INTRO}
+        </p>
       </header>
 
-      <div className="mt-16 grid gap-10 lg:mt-20 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
+      <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
         {/* The nav: vertically centered in the viewport, minimal clean typography. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
           <div className="sticky top-[max(112px,calc(50vh-140px))]">
@@ -190,7 +186,7 @@ export default function HowWeWork() {
                 {/* The copy. */}
                 <div className="flex flex-col justify-center overflow-y-auto p-7 sm:p-10 xl:p-12">
                   <p className="inline-flex w-fit items-center gap-2 rounded-full bg-paper px-3 py-1 font-mono text-[11px] font-medium tracking-[0.08em] text-ink/80">
-                    <span className="size-1.5 rounded-full bg-accent" />
+                    <span className="size-1.5 rounded-full bg-light-green" />
                     {step.n}
                   </p>
                   <h3 id={`hww-step-${step.n}`} className="mt-5 text-[clamp(1.5rem,2.1vw,2.05rem)] leading-[1.12] font-normal tracking-[-0.03em] text-ink">

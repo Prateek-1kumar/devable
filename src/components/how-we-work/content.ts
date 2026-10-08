@@ -1,7 +1,3 @@
-// The section's words, verbatim from the brief and in reading order. The DOM
-// column, the step nav and the panels' metric strips all read from here, so the
-// panels stay aria-hidden: `panel` is each animation's text equivalent.
-
 export const EYEBROW = "How we work";
 export const TITLE = "A growth engine built around your product.";
 export const INTRO =
