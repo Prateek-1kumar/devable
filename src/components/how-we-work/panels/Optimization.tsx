@@ -9,7 +9,7 @@ import type { PanelModule } from "../PanelPlayer";
 // Crucially, all signals and actions remain permanently visible through the settle
 // period so the compounding story is clear, soothing, and complete.
 
-const DURATION = 15.0;
+const DURATION = 27.0;
 const SETTLE = 12.0;
 
 type Pt = readonly [number, number];

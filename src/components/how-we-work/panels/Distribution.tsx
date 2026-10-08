@@ -8,7 +8,7 @@ import type { PanelModule } from "../PanelPlayer";
 // then settles with a light green check. The counter under the article ticks
 // "Live in 1/4 … 4/4 channels" and holds in a calm, settled state.
 
-const DURATION = 15.0;
+const DURATION = 27.0;
 const SETTLE = 12.0;
 
 type Pt = readonly [number, number];

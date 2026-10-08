@@ -59,9 +59,8 @@ export default function PanelPlayer({ panel, mode, playing, run }: Props) {
         c.t = 0;
       }
 
-      // While c.t is between settle and totalCycle, clamp to settle so it stays completed
-      const displayT = Math.min(c.t, settle);
-      setT(displayT);
+      // Advance t smoothly through totalCycle (settle + 15s hold) so continuous flow animations run
+      setT(c.t);
 
       raf = requestAnimationFrame(tick);
     };

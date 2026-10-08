@@ -7,7 +7,7 @@ import type { PanelModule } from "../PanelPlayer";
 // copy lines, a runnable code example verified with "✓ runs", an engineer's review badge,
 // and finally the Published state, settling into a calm reading period.
 
-const DURATION = 15.0;
+const DURATION = 27.0;
 const SETTLE = 12.0;
 
 // ── Layout ──────────────────────────────────────────────────────────────────

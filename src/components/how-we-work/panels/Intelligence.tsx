@@ -9,7 +9,7 @@ import type { PanelModule } from "../PanelPlayer";
 // is actually tested and verified. Findings check off in calm, soothing beats
 // until the model reads complete and settles for a comfortable reading period.
 
-const DURATION = 15.0;
+const DURATION = 27.0;
 const SETTLE = 12.0;
 
 // ── Sources ─────────────────────────────────────────────────────────────────
@@ -125,18 +125,28 @@ function Panel({ t }: { t: number }) {
     1 - ramp(t, QUICK.at + QUICK.dur - 0.35, 0.35, easeOut),
   );
   const done = ramp(t, DONE, 0.4);
+  const settleFlow = ramp(t, 11.4, 0.6, easeOut);
 
   return (
     <PanelSvg t={t}>
       <g opacity={fade}>
-        {/* Connectors: quiet grey curves, the active one traced in warm accent. */}
+        {/* Connectors: quiet curves during early build, glowing live channels plugged to product model */}
         {GROUPS.map((_, g) => {
           const pts = curvePts(g);
           const [sx, sy] = start(g);
           const [ex, ey] = entry(g);
+
+          // Continuous flow when settled: all 5 channels stream harmoniously into the Product Model
+          const cycle = 1.8;
+          const phase = (g * 0.36) % cycle;
+          const flowK = ((t + phase) % cycle) / cycle;
+
           return (
             <g key={g}>
+              {/* Baseline grey curve */}
               <Trace d={curve(g)} k={1} stroke={C.hair} width={1.2} />
+
+              {/* Status active trace and initial discovery pulse */}
               {STATUSES.map((s, i) =>
                 s.group === g || s.group === -1 ? (
                   <g key={i} opacity={1 - ramp(t, s.at + s.dur - 0.3, 0.3)}>
@@ -150,8 +160,54 @@ function Panel({ t }: { t: number }) {
                   </g>
                 ) : null,
               )}
-              <circle cx={sx} cy={sy} r={2} fill={C.card} stroke={C.hair} />
-              <circle cx={ex} cy={ey} r={2} fill={C.card} stroke={C.hair} />
+
+              {/* Settled state: lines stay illuminated, flowing into and plugged to the Product Model */}
+              {settleFlow > 0 && (
+                <>
+                  {/* Illuminated green channel */}
+                  <path
+                    d={curve(g)}
+                    fill="none"
+                    stroke={C.lightGreen}
+                    strokeWidth={1.3}
+                    opacity={settleFlow * 0.55}
+                  />
+
+                  {/* Flowing data pulses travelling along the curve into the product model */}
+                  <g opacity={settleFlow * Math.sin(flowK * Math.PI)}>
+                    <Pulse points={pts} k={flowK} color={C.lightGreen} r={2.8} />
+                  </g>
+
+                  {/* Plugged port halo on the Product Model card */}
+                  <circle
+                    cx={ex}
+                    cy={ey}
+                    r={5}
+                    fill={C.lightGreen}
+                    opacity={settleFlow * 0.22}
+                  />
+                </>
+              )}
+
+              {/* Source port dot */}
+              <circle
+                cx={sx}
+                cy={sy}
+                r={settleFlow > 0.5 ? 2.6 : 2}
+                fill={settleFlow > 0.5 ? C.lightGreen : C.card}
+                stroke={settleFlow > 0.5 ? C.lightGreen : C.hair}
+                strokeWidth={1.2}
+              />
+
+              {/* Card entry port dot */}
+              <circle
+                cx={ex}
+                cy={ey}
+                r={settleFlow > 0.5 ? 2.6 : 2}
+                fill={settleFlow > 0.5 ? C.lightGreen : C.card}
+                stroke={settleFlow > 0.5 ? C.lightGreen : C.hair}
+                strokeWidth={1.2}
+              />
             </g>
           );
         })}
@@ -179,7 +235,7 @@ function Panel({ t }: { t: number }) {
           const y = groupY(g);
           return (
             <g key={grp.label}>
-              <Mono x={COL.x + 1} y={y + 1} size={9} fill={lit > 0.5 ? C.ink : C.muted}>
+              <Mono x={COL.x + 1} y={y + 1} size={9} fill={lit > 0.5 || settleFlow > 0.5 ? C.ink : C.muted}>
                 {grp.label}
               </Mono>
               <circle

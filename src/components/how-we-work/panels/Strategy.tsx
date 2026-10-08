@@ -22,7 +22,7 @@ import type { PanelModule } from "../PanelPlayer";
 // smoothly to #1, re-balancing the engine mix towards creators with a quiet, decisive transition.
 // Holds steady for a generous reading period before looping.
 
-const DURATION = 15.0;
+const DURATION = 27.0;
 const SETTLE = 12.0;
 
 // Beats.

@@ -119,31 +119,23 @@ export default function HowWeWork() {
       </header>
 
       <div className="mt-16 grid gap-10 lg:mt-20 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
-        {/* The nav: vertically centered in the viewport, minimal hairline rail with a quiet connector to the cards. */}
+        {/* The nav: vertically centered in the viewport, minimal clean typography. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
           <div className="sticky top-[max(112px,calc(50vh-140px))]">
-            <ol className="border-l border-ink/10">
+            <ol className="space-y-1">
               {STEPS.map((step, i) => {
                 const on = i === active;
                 return (
-                  <li key={step.n} className="relative">
-                    {/* Active rail indicator: soft rounded hairline bar */}
-                    <span
-                      aria-hidden="true"
-                      className={`absolute -left-px top-2 bottom-2 w-0.5 rounded-full bg-ink transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                        on ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
-                      }`}
-                    />
-
+                  <li key={step.n}>
                     <button
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className="group flex w-full items-center py-3 pl-5 pr-1 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      className="group flex w-full items-center py-2.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-light-green"
                     >
                       <span
                         className={`font-mono text-[11px] tracking-[0.08em] transition-colors duration-300 ${
-                          on ? "text-accent font-semibold" : "text-muted/60 group-hover:text-ink/80"
+                          on ? "text-light-green font-semibold" : "text-muted/60 group-hover:text-ink/80"
                         }`}
                       >
                         {step.n}
@@ -155,34 +147,11 @@ export default function HowWeWork() {
                       >
                         {step.title}
                       </span>
-
-                      {/* Subtle connector leader to the cards */}
-                      <span
-                        aria-hidden="true"
-                        className={`ml-auto flex items-center pl-3 transition-all duration-300 ease-out ${
-                          on
-                            ? "opacity-100 translate-x-0"
-                            : "opacity-0 -translate-x-2 pointer-events-none"
-                        }`}
-                      >
-                        <span className="h-px w-5 bg-ink/25" />
-                        <span className="size-1 rounded-full bg-ink/35" />
-                      </span>
                     </button>
                   </li>
                 );
               })}
             </ol>
-
-            {/* Quiet minimal counter */}
-            <p
-              className="mt-7 pl-5 font-mono text-[11px] tracking-[0.12em] text-muted/60 uppercase"
-              aria-hidden="true"
-            >
-              <span className="font-semibold text-ink">{STEPS[active].n}</span>
-              <span className="mx-1.5 opacity-40">/</span>
-              <span>0{STEPS.length}</span>
-            </p>
           </div>
         </nav>
 
