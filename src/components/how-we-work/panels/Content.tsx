@@ -1,96 +1,83 @@
-import { STEPS } from "../content";
-import { C, Card, Check, DATA, Lines, Mark, Mono, PanelSvg, clamp01, easeInOut, easeOut, lerp, outro, ramp } from "../kit";
+import { C, Card, Check, DATA, Mono, PanelSvg, clamp01, easeOut, lerp, outro, ramp } from "../kit";
 import type { PanelModule } from "../PanelPlayer";
 
-// 03 Content Engine. Beginning: a content brief fills in: target query, search
-// volume, intent, audience and a three-part outline. Work: each outline item
-// lifts out of the brief and lands as a section of the article; a code example
-// types in and a comparison table fills. Result: the article goes live, its SEO
-// and AI-readiness scores climb and it is marked optimized.
+// 03 Content Engine. A production checklist on the left works through Brief →
+// Research → Code built and tested → Technical review → Publish, one step at a
+// time, while the article on the right assembles in sync: the title, two lines
+// of copy, a code example that types in and is marked "runs", an engineer's
+// review badge, and finally the Published state.
 
-const DURATION = 9;
-const SETTLE = 8.2;
+const DURATION = 9.5;
+const SETTLE = 8.6;
 
 // ── Layout ──────────────────────────────────────────────────────────────────
-const BRIEF = { x: 20, y: 100, w: 172, h: 296 };
-const SCORE = { x: 20, y: 408, w: 172, h: 96 };
-const DOC = { x: 206, y: 100, w: 334, h: 404 };
+const H = 252;
+const TOP = (400 - H) / 2;
+const LIST = { x: 39, y: TOP, w: 164, h: H };
+const DOC = { x: 215, y: TOP, w: 226, h: H };
 const PAD = 16;
-const IN = DOC.x + 20; // article text column
-const COL = DOC.w - 40;
+const HEAD_H = 38;
 
-const QUERY = ["postgres connection", "pooling serverless"];
-const QUERY_LEN = QUERY.join(" ").length;
-const SLUG = "pg-pooling";
-const TITLE = "Connection pooling for serverless Postgres";
+// ── The checklist ───────────────────────────────────────────────────────────
+type Step = { label: string; status: readonly (readonly [number, string])[]; at: number; done: number };
+const STEPS: readonly Step[] = [
+  { label: "Brief", status: [[0.35, "Outlining…"]], at: 0.35, done: 1.2 },
+  { label: "Research", status: [[1.3, "Reading docs…"]], at: 1.3, done: 2.2 },
+  {
+    label: "Code built & tested",
+    status: [
+      [2.3, "Writing code…"],
+      [3.55, "Running tests…"],
+    ],
+    at: 2.3,
+    done: 4.35,
+  },
+  { label: "Technical review", status: [[4.45, "Engineer reviewing…"]], at: 4.45, done: 6.05 },
+  { label: "Publish", status: [[6.4, "Publishing…"]], at: 6.4, done: 7.15 },
+];
+const ROW = 40;
+const rowY = (i: number) => LIST.y + HEAD_H + 24 + i * ROW;
+const DOT_X = LIST.x + PAD + 7;
 
-const OUTLINE = ["Connection limits", "A pooled client", "Poolers compared"];
-const itemY = (i: number) => BRIEF.y + 218 + i * 30;
-// Article section headings, top to bottom.
-const HEAD_Y = [DOC.y + 118, DOC.y + 166, DOC.y + 290];
+// ── The article, in sync ───────────────────────────────────────────────────
+const IN = DOC.x + 14;
+const TITLE = ["Connection pooling for", "serverless Postgres"];
+const TITLE_LEN = TITLE[0].length + TITLE[1].length;
+const TITLE_AT = [0.55, 0.6] as const;
+const COPY_AT = 1.5;
+const COPY_W = [DOC.w - 28, DOC.w - 28 - 64];
 
-// ── Timeline ────────────────────────────────────────────────────────────────
-// Beat 1 (brief): query types, facts and outline rise in.
-const TYPE_Q = [0.5, 0.75] as const;
-const META_AT = 1.35;
-const itemAt = (i: number) => 1.6 + i * 0.14;
-// Beat 2 (draft): title and slug, then the outline items move across one by one.
-const TITLE_AT = 2.15;
-const FLY = 0.55;
-const FLY_AT = [2.85, 3.6, 5.0];
-const landAt = (i: number) => FLY_AT[i] + FLY;
-const CODE_AT = landAt(1) + 0.15;
-const CODE_FOR = 0.75;
-const rowAt = (i: number) => landAt(2) + 0.12 + i * 0.22;
-// Beat 3 (result): published, scores climb, optimized.
-const LIVE = 6.2;
-const RISE = [6.3, 0.65] as const;
-const OPTIMIZED = 6.95;
-
-// ── Code example (TypeScript), tokenised for a restrained highlight. ───────
 type Tok = readonly [string, string];
 const KW = DATA.violet;
 const STR = DATA.teal;
-const NUM = DATA.blue;
-const PUN = C.muted;
 const ID = C.ink;
+const PUN = C.muted;
 const CODE: readonly (readonly Tok[])[] = [
-  [["import", KW], [" { Pool } ", ID], ["from", KW], [' "@yourtool/pg"', STR], [";", PUN]],
-  [["const", KW], [" pool = ", ID], ["new", KW], [" Pool", ID], ["({", PUN]],
-  [["  url: process.env.", ID], ["DATABASE_URL", NUM], [",", PUN]],
-  [["  mode: ", ID], ['"transaction"', STR], [",", PUN]],
-  [["});", PUN]],
+  [["import", KW], [" { Pool } ", ID], ["from", KW], [' "pg"', STR], [";", PUN]],
+  [["const", KW], [" pool = ", ID], ["new", KW], [" Pool", ID], ["();", PUN]],
+  [["await", KW], [" pool.", ID], ["query", ID], ["(", PUN], ['"SELECT 1"', STR], [");", PUN]],
 ];
 const LINE_LEN = CODE.map((l) => l.reduce((m, [s]) => m + s.length, 0));
 const LINE_START = LINE_LEN.map((_, i) => LINE_LEN.slice(0, i).reduce((a, b) => a + b, 0));
 const CODE_LEN = LINE_LEN.reduce((a, b) => a + b, 0);
-const CODE_BOX = { x: IN, y: HEAD_Y[1] + 11, w: COL, h: 86 };
-const CODE_FS = 9.4;
-const CODE_PITCH = 13.2;
+const CODE_BOX = { x: IN, y: DOC.y + 128, w: DOC.w - 28, h: 78 };
+const CODE_FS = 10;
 const CHAR = CODE_FS * 0.6;
+const CODE_PITCH = 15;
+const codeLineY = (i: number) => CODE_BOX.y + 40 + i * CODE_PITCH;
+const CODE_IN = 2.35;
+const TYPE = [2.6, 0.95] as const;
+const RUNS = 4.1;
+// The reviewer's attention moves down the code, one line at a time.
+const REVIEW = [4.7, 1.2] as const;
+const BADGE = 6.15;
+const BADGE_Y = DOC.y + 229;
 
-// ── Comparison table ───────────────────────────────────────────────────────
-const TOOLS = ["YourTool", "PgBouncer", "RDS Proxy"];
-const ROWS: { label: string; has: [boolean, boolean, boolean] }[] = [
-  { label: "Edge runtimes", has: [true, false, false] },
-  { label: "Zero config", has: [true, false, true] },
-];
-const TABLE = { x: IN, y: HEAD_Y[2] + 11, w: COL, head: 26, row: 30 };
-const TABLE_H = TABLE.head + ROWS.length * TABLE.row;
-const TCOL = 116;
-const TW = (TABLE.w - TCOL) / 3;
-const tcolX = (j: number) => TABLE.x + TCOL + j * TW + TW / 2;
-
-const SCORES = [
-  { label: "SEO", from: 58, to: 94 },
-  { label: "AI-ready", from: 41, to: 91 },
-];
-
-/** Fade plus a small rise, for staggered entrances. */
-const enter = (t: number, at: number, dur = 0.42) => ramp(t, at, dur, easeOut);
+/** Fade plus a small rise, for entrances. */
+const enter = (t: number, at: number, dur = 0.45) => ramp(t, at, dur, easeOut);
 const rise = (k: number) => `translate(0 ${(1 - k) * 5})`;
 
-/** The first `n` characters of a tokenised line, as coloured tspans. */
+/** The first `n` characters of a tokenised line. */
 function typed(line: readonly Tok[], n: number) {
   const out: Tok[] = [];
   for (const [s, c] of line) {
@@ -104,356 +91,180 @@ function typed(line: readonly Tok[], n: number) {
 function Panel({ t }: { t: number }) {
   const o = outro(t, DURATION);
 
-  // Brief.
-  const qChars = Math.round(ramp(t, TYPE_Q[0], TYPE_Q[1], (x) => x) * QUERY_LEN);
-  const typingQ = t > TYPE_Q[0] - 0.15 && t < TYPE_Q[0] + TYPE_Q[1] + 0.25;
-  const focusQ = Math.min(ramp(t, TYPE_Q[0] - 0.2, 0.25), 1 - ramp(t, TYPE_Q[0] + TYPE_Q[1] + 0.15, 0.3));
-  const meta = (i: number) => enter(t, META_AT + i * 0.12);
+  // Article state.
+  const titleChars = Math.round(ramp(t, TITLE_AT[0], TITLE_AT[1], (x) => x) * TITLE_LEN);
+  const copy = ramp(t, COPY_AT, 0.6, easeOut);
+  const codeIn = enter(t, CODE_IN);
+  const codeChars = Math.round(ramp(t, TYPE[0], TYPE[1], (x) => x) * CODE_LEN);
+  const codeTyping = t > TYPE[0] - 0.1 && t < TYPE[0] + TYPE[1] + 0.25;
+  const runs = enter(t, RUNS, 0.4);
+  const badge = enter(t, BADGE, 0.5);
+  const live = ramp(t, STEPS[4].done, 0.4);
 
-  // Article.
-  const titleChars = Math.round(ramp(t, TITLE_AT, 0.55, (x) => x) * TITLE.length);
-  const slugChars = Math.round(ramp(t, TITLE_AT + 0.1, 0.45, (x) => x) * SLUG.length);
-  const byline = enter(t, TITLE_AT + 0.45);
-  const live = ramp(t, LIVE, 0.4);
-  const codeChars = Math.round(ramp(t, CODE_AT, CODE_FOR, (x) => x) * CODE_LEN);
-  const codeTyping = t > CODE_AT && t < CODE_AT + CODE_FOR + 0.2;
-
-  // Scores.
-  const scoreIn = ramp(t, LIVE, 0.4);
-  const grow = ramp(t, RISE[0], RISE[1], easeInOut);
-  const risen = grow >= 1;
-  const optimized = ramp(t, OPTIMIZED, 0.4);
-
-  // Lay the code out character by character so typing reads left to right.
   const codeLines = CODE.map((line, i) => {
     const n = Math.max(0, Math.min(LINE_LEN[i], codeChars - LINE_START[i]));
-    return { toks: typed(line, n), n, len: LINE_LEN[i] };
+    return { toks: typed(line, n), n };
   });
-  const typing = codeLines.findIndex((l) => l.n < l.len);
-  const caretLine = typing < 0 ? CODE.length - 1 : typing;
+  const typingLine = codeLines.findIndex((l, i) => l.n < LINE_LEN[i]);
+  const caretLine = typingLine < 0 ? CODE.length - 1 : typingLine;
+
+  // Review highlight: a quiet wash that steps down the three lines.
+  const rk = clamp01((t - REVIEW[0]) / REVIEW[1]);
+  const reviewOn = Math.min(ramp(t, REVIEW[0] - 0.2, 0.3), 1 - ramp(t, REVIEW[0] + REVIEW[1], 0.3));
+  const reviewY = lerp(codeLineY(0), codeLineY(2), easeInOutSteps(rk));
 
   return (
-    <PanelSvg metrics={STEPS[2].metrics} t={t} metricsAt={[LIVE, RISE[0]]} metricsFor={[1, 1.1]}>
-      {/* ── The brief ── */}
-      <Card x={BRIEF.x} y={BRIEF.y} w={BRIEF.w} h={BRIEF.h} />
-      <g transform={`translate(${BRIEF.x + PAD} ${BRIEF.y + 25})`}>
-        <BriefIcon />
-        <Mono x={14} y={0} size={9.5} fill={C.ink}>
-          Content brief
-        </Mono>
-      </g>
-      <line x1={BRIEF.x} x2={BRIEF.x + BRIEF.w} y1={BRIEF.y + 40} y2={BRIEF.y + 40} stroke={C.hair} />
-
-      <Mono x={BRIEF.x + PAD} y={BRIEF.y + 63} size={8.4}>
-        Target query
+    <PanelSvg t={t}>
+      {/* ── Production checklist ── */}
+      <Card x={LIST.x} y={LIST.y} w={LIST.w} h={LIST.h} />
+      <Mono x={LIST.x + PAD} y={LIST.y + 24} size={9} fill={C.ink}>
+        Production
       </Mono>
-      <rect
-        x={BRIEF.x + PAD}
-        y={BRIEF.y + 71}
-        width={BRIEF.w - 2 * PAD}
-        height={40}
-        rx={8}
-        fill={C.paper}
-        stroke={C.line}
-      />
-      {/* Focus: a quiet coral wash and outline while the query is typed. */}
-      <rect
-        x={BRIEF.x + PAD}
-        y={BRIEF.y + 71}
-        width={BRIEF.w - 2 * PAD}
-        height={40}
-        rx={8}
-        fill={C.accentWash}
-        stroke={C.accentLine}
-        opacity={focusQ}
-      />
-      <Mark name="google" x={BRIEF.x + PAD + 12} y={BRIEF.y + 86} size={11} />
-      <g opacity={o}>
-        {QUERY.map((line, i) => {
-          const start = i === 0 ? 0 : QUERY[0].length + 1;
-          const shown = line.slice(0, Math.max(0, qChars - start));
-          return (
-            <text key={i} x={BRIEF.x + PAD + 23} y={BRIEF.y + 90 + i * 14} fontSize={11} fontWeight={550} fill={C.ink}>
-              {shown}
-            </text>
-          );
-        })}
-      </g>
-      {typingQ && qChars < QUERY_LEN && (
-        <rect
-          x={BRIEF.x + PAD + 23 + (qChars > QUERY[0].length ? qChars - QUERY[0].length - 1 : qChars) * 5.55 + 1.5}
-          y={BRIEF.y + 81 + (qChars > QUERY[0].length ? 14 : 0)}
-          width={1.2}
-          height={12}
-          fill={C.accent}
-        />
-      )}
+      <line x1={LIST.x} x2={LIST.x + LIST.w} y1={LIST.y + HEAD_H} y2={LIST.y + HEAD_H} stroke={C.hair} />
 
-      {/* Volume and intent, then audience. */}
-      <g opacity={meta(0) * o} transform={rise(meta(0))}>
-        <Bars x={BRIEF.x + PAD} y={BRIEF.y + 133} />
-        <text x={BRIEF.x + PAD + 16} y={BRIEF.y + 137} fontSize={11.5} fontWeight={600} fill={C.ink}>
-          2.9k
-          <tspan fontWeight={500} fill={C.muted}>
-            {" /mo · How-to"}
-          </tspan>
-        </text>
-      </g>
-      <g opacity={meta(1) * o} transform={rise(meta(1))}>
-        <Person x={BRIEF.x + PAD} y={BRIEF.y + 157} />
-        <text x={BRIEF.x + PAD + 16} y={BRIEF.y + 161} fontSize={11.5} fontWeight={500} fill={C.muted}>
-          Backend engineers
-        </text>
-      </g>
-
-      <line x1={BRIEF.x + PAD} x2={BRIEF.x + BRIEF.w - PAD} y1={BRIEF.y + 178} y2={BRIEF.y + 178} stroke={C.hair} />
-      <Mono x={BRIEF.x + PAD} y={BRIEF.y + 199} size={8.4} opacity={enter(t, itemAt(0) - 0.1) * o}>
-        Outline
-      </Mono>
-      {OUTLINE.map((label, i) => {
-        const y = itemY(i);
-        const k = enter(t, itemAt(i));
-        // Active while its copy travels to the article.
-        const active = Math.min(ramp(t, FLY_AT[i] - 0.15, 0.25), 1 - ramp(t, landAt(i) - 0.05, 0.3));
-        const done = ramp(t, landAt(i), 0.35) * o;
-        const cx = BRIEF.x + PAD + 7;
+      {/* The rail between step markers: grey, turning green as steps complete. */}
+      {STEPS.slice(0, -1).map((s, i) => {
+        const y0 = rowY(i) - 4 + 10;
+        const y1 = rowY(i + 1) - 4 - 10;
+        const k = ramp(t, s.done, 0.35) * o;
         return (
-          <g key={label} opacity={k * o} transform={rise(k)}>
-            {/* Quiet active row: wash and a 2px coral tick. */}
-            <g opacity={active}>
-              <rect x={BRIEF.x + 8} y={y - 17} width={BRIEF.w - 16} height={26} rx={6} fill={C.accentWash} />
-              <rect x={BRIEF.x + 8} y={y - 11} width={2} height={14} rx={1} fill={C.accent} />
-            </g>
-            <circle cx={cx} cy={y - 4} r={6.5} fill={C.card} stroke={C.line} opacity={1 - done} />
-            <Mono x={cx} y={y - 1} size={8.4} textAnchor="middle" letterSpacing={0} fill={active > 0.5 ? C.accent : C.muted} opacity={1 - done}>
-              {i + 1}
-            </Mono>
-            {done > 0 && <Check x={cx} y={y - 4} r={6.5} k={done} />}
-            <text x={BRIEF.x + PAD + 22} y={y} fontSize={11.5} fontWeight={550} fill={active > 0.5 ? C.accent : C.ink} opacity={1 - 0.4 * done}>
-              {label}
-            </text>
+          <g key={s.label}>
+            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={y1} stroke={C.line} />
+            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={lerp(y0, y1, k)} stroke={C.primary} strokeOpacity={0.55} opacity={k > 0 ? 1 : 0} />
           </g>
         );
       })}
 
-      {/* ── Page score ── */}
-      <Card x={SCORE.x} y={SCORE.y} w={SCORE.w} h={SCORE.h} />
-      <Mono x={SCORE.x + PAD} y={SCORE.y + 25} size={8.8} fill={C.ink}>
-        Page score
-      </Mono>
-      <g opacity={optimized * o} transform={`translate(${SCORE.x + SCORE.w - PAD} ${SCORE.y + 25})`}>
-        <circle cx={-61} cy={-3} r={3} fill={C.primary} />
-        <Mono x={0} y={0} size={8.4} fill={C.primary} textAnchor="end">
-          Optimized
-        </Mono>
-      </g>
-      {SCORES.map((s, i) => {
-        const v = lerp(s.from, s.to, grow);
-        const x = SCORE.x + PAD + i * 76;
-        const color = risen ? C.primary : grow > 0 ? C.accent : C.ink;
-        const shown = scoreIn * o;
+      {STEPS.map((s, i) => {
+        const y = rowY(i);
+        const cur = Math.min(ramp(t, s.at, 0.3), 1 - ramp(t, s.done, 0.3)) * o;
+        const done = ramp(t, s.done, 0.4) * o;
+        const status = s.status.reduce((acc, [at, text]) => (t >= at ? text : acc), s.status[0][1]);
+        const statusK = Math.min(enter(t, s.at + 0.1, 0.35), 1 - ramp(t, s.done - 0.1, 0.3)) * o;
+        const breathe = 0.5 + 0.5 * Math.sin((t - s.at) * Math.PI * 1.6);
         return (
           <g key={s.label}>
-            <Mono x={x} y={SCORE.y + 52} size={8.4}>
+            {/* Waiting: hollow. */}
+            <circle cx={DOT_X} cy={y - 4} r={7} fill={C.card} stroke={C.line} />
+            {/* Current: a coral dot with a soft, breathing halo. */}
+            <g opacity={cur}>
+              <circle cx={DOT_X} cy={y - 4} r={7} fill={C.accentWash} stroke={C.accentLine} />
+              <circle cx={DOT_X} cy={y - 4} r={3 + 2.2 * breathe} fill={C.accent} opacity={0.16} />
+              <circle cx={DOT_X} cy={y - 4} r={3} fill={C.accent} />
+            </g>
+            {done > 0 && <Check x={DOT_X} y={y - 4} r={7} k={done} />}
+            <text x={LIST.x + PAD + 22} y={y} fontSize={11.5} fontWeight={550} fill={C.ink} opacity={lerp(0.5, 1, Math.max(cur, done))}>
               {s.label}
-            </Mono>
-            <text x={x} y={SCORE.y + 76} fontSize={18} fontWeight={600} letterSpacing="-0.02em" fill={C.muted} opacity={1 - shown}>
-              –
             </text>
-            <text x={x} y={SCORE.y + 76} fontSize={18} fontWeight={600} letterSpacing="-0.02em" fill={color} opacity={shown}>
-              {Math.round(v)}
-            </text>
-            <rect x={x + 28} y={SCORE.y + 68} width={34} height={4} rx={2} fill={C.line} />
-            <rect x={x + 28} y={SCORE.y + 68} width={(34 * v * shown) / 100} height={4} rx={2} fill={risen ? C.primary : grow > 0 ? C.accent : C.muted} />
+            {statusK > 0 && (
+              <text x={LIST.x + PAD + 22} y={y + 15} fontSize={11.5} fill={C.accent} opacity={statusK} transform={rise(statusK)}>
+                {status}
+              </text>
+            )}
           </g>
         );
       })}
 
       {/* ── The article ── */}
       <Card x={DOC.x} y={DOC.y} w={DOC.w} h={DOC.h} />
-      {[0, 1, 2].map((i) => (
-        <circle key={i} cx={DOC.x + PAD + i * 10} cy={DOC.y + 18} r={3} fill={C.line} />
-      ))}
-      <rect x={DOC.x + 54} y={DOC.y + 9} width={176} height={18} rx={9} fill={C.paper} stroke={C.line} />
-      <Lock x={DOC.x + 65} y={DOC.y + 18} />
-      <Mono x={DOC.x + 74} y={DOC.y + 21} size={8.6} letterSpacing={0} fill={C.muted} style={{ textTransform: "none" }}>
-        yourtool.dev/blog/
-        <tspan fill={C.ink} opacity={o}>
-          {SLUG.slice(0, slugChars)}
-        </tspan>
+      <Mono x={IN} y={DOC.y + 24} size={9} fill={C.muted}>
+        Article
       </Mono>
-      {/* Status: draft → published. A dot and a soft fill, no heavy outline. */}
-      <g transform={`translate(${DOC.x + DOC.w - PAD} ${DOC.y + 9})`}>
-        <rect x={-80} width={80} height={18} rx={9} fill={C.paper} stroke={C.line} opacity={1 - live * o} />
-        <rect x={-80} width={80} height={18} rx={9} fill={C.primarySoft} opacity={live * o} />
-        <circle cx={-68} cy={9} r={3} fill={C.accent} opacity={(1 - live * o) * (t > TITLE_AT ? 1 : 0.35)} />
-        <circle cx={-68} cy={9} r={3} fill={C.primary} opacity={live * o} />
-        <Mono x={-58} y={12.2} size={8.4} fill={C.muted} opacity={1 - live * o}>
+      {/* Status: draft → published. */}
+      <g transform={`translate(${DOC.x + DOC.w - 14} ${DOC.y + 10})`}>
+        <rect x={-84} width={84} height={19} rx={9.5} fill={C.paper} stroke={C.line} opacity={1 - live * o} />
+        <rect x={-84} width={84} height={19} rx={9.5} fill={C.primarySoft} opacity={live * o} />
+        <circle cx={-72} cy={9.5} r={3} fill={C.muted} opacity={(1 - live * o) * 0.6} />
+        <circle cx={-72} cy={9.5} r={3} fill={C.primary} opacity={live * o} />
+        <Mono x={-62} y={12.8} size={9} fill={C.muted} opacity={1 - live * o}>
           Draft
         </Mono>
-        <Mono x={-58} y={12.2} size={8.4} fill={C.primary} opacity={live * o}>
+        <Mono x={-62} y={12.8} size={9} fill={C.primary} opacity={live * o}>
           Published
         </Mono>
       </g>
-      <line x1={DOC.x} x2={DOC.x + DOC.w} y1={DOC.y + 36} y2={DOC.y + 36} stroke={C.hair} />
+      <line x1={DOC.x} x2={DOC.x + DOC.w} y1={DOC.y + HEAD_H} y2={DOC.y + HEAD_H} stroke={C.hair} />
 
-      {/* Title and byline. */}
-      <rect x={IN} y={DOC.y + 55} width={210} height={12} rx={3} fill={C.paper} opacity={titleChars === 0 || o < 1 ? 1 : 0} />
-      <text x={IN} y={DOC.y + 66} fontSize={14.5} fontWeight={600} letterSpacing="-0.02em" fill={C.ink} opacity={o}>
-        {TITLE.slice(0, titleChars)}
-      </text>
-      <g opacity={byline * o} transform={rise(byline)}>
-        <circle cx={IN + 7} cy={DOC.y + 85} r={7} fill={C.primarySoft} />
-        <text x={IN + 7} y={DOC.y + 88.5} fontSize={8.5} fontWeight={600} fill={C.primary} textAnchor="middle">
-          MC
-        </text>
-        <Mono x={IN + 21} y={DOC.y + 88} size={8.4}>
-          Maya Chen · 9 min read
+      {/* Title: placeholders until the brief lands, then it types in. */}
+      {TITLE.map((line, i) => {
+        const start = i === 0 ? 0 : TITLE[0].length;
+        const shown = line.slice(0, Math.max(0, titleChars - start));
+        const y = DOC.y + 66 + i * 20;
+        return (
+          <g key={i}>
+            <rect x={IN} y={y - 10} width={i === 0 ? 150 : 120} height={10} rx={3} fill={C.paper} opacity={shown.length === 0 ? 1 : 1 - o} />
+            <text x={IN} y={y} fontSize={15} fontWeight={600} letterSpacing="-0.02em" fill={C.ink} opacity={o}>
+              {shown}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Two lines of copy from the research. */}
+      {COPY_W.map((w, i) => (
+        <g key={i}>
+          <rect x={IN} y={DOC.y + 101 + i * 11} width={w} height={4.5} rx={2.25} fill={C.paper} />
+          <rect x={IN} y={DOC.y + 101 + i * 11} width={w * clamp01(copy * 2 - i)} height={4.5} rx={2.25} fill={C.line} opacity={o} />
+        </g>
+      ))}
+
+      {/* Code example: types in, then is marked as running. */}
+      <rect x={CODE_BOX.x} y={CODE_BOX.y} width={CODE_BOX.w} height={CODE_BOX.h} rx={8} fill={C.paper} stroke={C.line} strokeDasharray={codeIn > 0 ? undefined : "3 3"} opacity={lerp(0.6, 1, codeIn * o)} />
+      <g opacity={codeIn * o} transform={rise(codeIn)}>
+        <Mono x={CODE_BOX.x + 12} y={CODE_BOX.y + 18} size={9} fill={C.muted} style={{ textTransform: "none" }} letterSpacing="0.02em">
+          db.ts
         </Mono>
+        <line x1={CODE_BOX.x} x2={CODE_BOX.x + CODE_BOX.w} y1={CODE_BOX.y + 26} y2={CODE_BOX.y + 26} stroke={C.hair} />
+        {/* Reviewer's line highlight. */}
+        <rect x={CODE_BOX.x + 1} y={reviewY - 11} width={CODE_BOX.w - 2} height={15} fill={C.accentWash} opacity={reviewOn} />
+        <rect x={CODE_BOX.x + 1} y={reviewY - 10} width={2} height={13} rx={1} fill={C.accent} opacity={reviewOn} />
+        {codeLines.map((l, i) => (
+          <text key={i} x={CODE_BOX.x + 12} y={codeLineY(i)} fontFamily="var(--font-mono)" fontSize={CODE_FS} xmlSpace="preserve" style={{ whiteSpace: "pre" }}>
+            {l.toks.map(([s, c], j) => (
+              <tspan key={j} fill={c}>
+                {s}
+              </tspan>
+            ))}
+          </text>
+        ))}
+        {codeTyping && (
+          <rect x={CODE_BOX.x + 12 + codeLines[caretLine].n * CHAR + 0.5} y={codeLineY(caretLine) - 9} width={1.2} height={11} fill={C.accent} />
+        )}
+        {/* ✓ runs */}
+        <g opacity={runs * o} transform={`translate(${CODE_BOX.x + CODE_BOX.w - 10} ${CODE_BOX.y + 5}) ${rise(runs)}`}>
+          <rect x={-56} width={56} height={17} rx={8.5} fill={C.primarySoft} />
+          <path d="M-46 8.6 l2.6 2.6 l4.8 -5" fill="none" stroke={C.primary} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Mono x={-34} y={11.8} size={9} fill={C.primary}>
+            runs
+          </Mono>
+        </g>
       </g>
 
-      {/* Sections: headings land from the outline, then their bodies fill. */}
-      {OUTLINE.map((label, i) => {
-        const k = ramp(t, landAt(i) - 0.12, 0.25) * o;
-        const body = ramp(t, landAt(i) + 0.05, 0.5, easeOut) * o;
-        return (
-          <g key={label}>
-            <text x={IN} y={HEAD_Y[i]} fontSize={12} fontWeight={600} fill={C.ink} opacity={k}>
-              {label}
-            </text>
-            {i === 0 && <Lines x={IN} y={HEAD_Y[0] + 10} widths={[COL, COL - 86]} gap={11} h={4} k={body} />}
-          </g>
-        );
-      })}
-
-      {/* Code example. */}
-      {(() => {
-        const k = enter(t, landAt(1) - 0.05);
-        return (
-          <g opacity={k * o} transform={rise(k)}>
-            <rect x={CODE_BOX.x} y={CODE_BOX.y} width={CODE_BOX.w} height={CODE_BOX.h} rx={8} fill={C.paper} stroke={C.line} />
-            <Mono x={CODE_BOX.x + CODE_BOX.w - 12} y={CODE_BOX.y + 18} size={8.4} textAnchor="end">
-              db.ts
-            </Mono>
-            {codeLines.map((l, i) => {
-              const y = CODE_BOX.y + 20 + i * CODE_PITCH;
-              return (
-                <g key={i}>
-                  <text x={CODE_BOX.x + 18} y={y} fontFamily="var(--font-mono)" fontSize={CODE_FS} fill={C.muted} opacity={0.55} textAnchor="end">
-                    {i + 1}
-                  </text>
-                  <text x={CODE_BOX.x + 28} y={y} fontFamily="var(--font-mono)" fontSize={CODE_FS} xmlSpace="preserve" style={{ whiteSpace: "pre" }}>
-                    {l.toks.map(([s, c], j) => (
-                      <tspan key={j} fill={c}>
-                        {s}
-                      </tspan>
-                    ))}
-                  </text>
-                </g>
-              );
-            })}
-            {codeTyping && (
-              <rect x={CODE_BOX.x + 28 + codeLines[caretLine].n * CHAR + 0.5} y={CODE_BOX.y + 11 + caretLine * CODE_PITCH} width={1.2} height={11} fill={C.accent} />
-            )}
-          </g>
-        );
-      })()}
-
-      {/* Comparison table. */}
-      {(() => {
-        const k = enter(t, landAt(2) - 0.05);
-        return (
-          <g opacity={k * o} transform={rise(k)}>
-            <rect x={TABLE.x} y={TABLE.y} width={TABLE.w} height={TABLE_H} rx={8} fill={C.card} stroke={C.line} />
-            {/* Your column, quietly highlighted. */}
-            <rect x={tcolX(0) - TW / 2} y={TABLE.y + 0.5} width={TW} height={TABLE_H - 1} fill={C.primarySoft} opacity={0.55} />
-            {TOOLS.map((name, j) => (
-              <Mono key={name} x={tcolX(j)} y={TABLE.y + 16.5} size={8.4} letterSpacing="0.02em" textAnchor="middle" fill={j === 0 ? C.primary : C.muted}>
-                {name}
-              </Mono>
-            ))}
-            <line x1={TABLE.x} x2={TABLE.x + TABLE.w} y1={TABLE.y + TABLE.head} y2={TABLE.y + TABLE.head} stroke={C.hair} />
-            {ROWS.map((r, i) => {
-              const rk = enter(t, rowAt(i), 0.4);
-              const y = TABLE.y + TABLE.head + i * TABLE.row;
-              const cy = y + TABLE.row / 2;
-              return (
-                <g key={r.label}>
-                  {i > 0 && <line x1={TABLE.x} x2={TABLE.x + TABLE.w} y1={y} y2={y} stroke={C.hair} />}
-                  <rect x={TABLE.x + 14} y={cy - 2} width={86} height={4} rx={2} fill={C.line} opacity={1 - clamp01(rk * 3)} />
-                  <g opacity={rk} transform={rise(rk)}>
-                    <text x={TABLE.x + 14} y={cy + 4} fontSize={11.5} fontWeight={550} fill={C.ink}>
-                      {r.label}
-                    </text>
-                    {r.has.map((h, j) =>
-                      h ? (
-                        <Check key={j} x={tcolX(j)} y={cy} r={6} k={rk} />
-                      ) : (
-                        <line key={j} x1={tcolX(j) - 4} x2={tcolX(j) + 4} y1={cy} y2={cy} stroke={C.muted} strokeLinecap="round" />
-                      ),
-                    )}
-                  </g>
-                </g>
-              );
-            })}
-          </g>
-        );
-      })()}
-
-      {/* Each outline item travelling from the brief into the article. */}
-      {OUTLINE.map((label, i) => {
-        const raw = clamp01((t - FLY_AT[i]) / FLY);
-        if (raw <= 0 || raw >= 1) return null;
-        const k = easeInOut(raw);
-        const x = lerp(BRIEF.x + PAD + 22, IN, k);
-        const y = lerp(itemY(i), HEAD_Y[i], k);
-        const w = label.length * 6.4 + 16;
-        const fade = Math.min(1, raw * 5, (1 - raw) * 5);
-        return (
-          <g key={label} opacity={fade}>
-            <rect x={x - 8} y={y - 15} width={w} height={22} rx={6} fill={C.accentWash} stroke={C.accentLine} />
-            <text x={x} y={y} fontSize={lerp(11.5, 12, k)} fontWeight={600} fill={C.accent}>
-              {label}
-            </text>
-          </g>
-        );
-      })}
+      {/* Reviewed by an engineer. */}
+      <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill="none" stroke={C.line} strokeDasharray="3 3" opacity={(1 - badge) * o * 0.8} />
+      <g opacity={badge * o} transform={rise(badge)}>
+        <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill={C.card} stroke={C.line} />
+        <circle cx={IN + 12} cy={BADGE_Y} r={9} fill={C.primarySoft} />
+        <text x={IN + 12} y={BADGE_Y + 3.3} fontSize={9} fontWeight={650} fill={C.primary} textAnchor="middle">
+          MC
+        </text>
+        <text x={IN + 27} y={BADGE_Y + 4} fontSize={11.5} fontWeight={550} fill={C.ink}>
+          Reviewed by an engineer
+        </text>
+        <Check x={IN + DOC.w - 28 - 13} y={BADGE_Y} r={6.5} k={ramp(t, BADGE + 0.2, 0.4)} />
+      </g>
     </PanelSvg>
   );
 }
 
-function BriefIcon() {
-  return (
-    <g fill="none" stroke={C.ink} strokeWidth={1} strokeLinejoin="round" transform="translate(-1 -9.5)">
-      <rect x={0} y={1} width={9} height={11} rx={1.5} />
-      <path d="M3 0.5h3v2H3z M2.5 6h4M2.5 8.5h3" strokeLinecap="round" />
-    </g>
-  );
-}
-function Bars({ x, y }: { x: number; y: number }) {
-  return (
-    <g transform={`translate(${x} ${y})`} fill={C.muted}>
-      <rect x={0} y={1} width={2.4} height={4} rx={0.6} />
-      <rect x={3.8} y={-2} width={2.4} height={7} rx={0.6} />
-      <rect x={7.6} y={-5} width={2.4} height={10} rx={0.6} />
-    </g>
-  );
-}
-function Person({ x, y }: { x: number; y: number }) {
-  return (
-    <g transform={`translate(${x + 5} ${y})`} fill={C.muted}>
-      <circle cx={0} cy={-2.6} r={2.4} />
-      <path d="M-4.6 5a4.6 4 0 0 1 9.2 0z" />
-    </g>
-  );
-}
-function Lock({ x, y }: { x: number; y: number }) {
-  return (
-    <g transform={`translate(${x} ${y})`} fill="none" stroke={C.muted} strokeWidth={1}>
-      <rect x={-3} y={-1} width={6} height={4.5} rx={1} fill={C.muted} />
-      <path d="M-1.8 -1v-1.4a1.8 1.8 0 0 1 3.6 0V-1" />
-    </g>
-  );
+/** Eases between three resting lines (0, 0.5, 1), so the highlight dwells on each. */
+function easeInOutSteps(k: number) {
+  const seg = k * 3; // dwell, move, dwell, move, dwell… compressed into 3 parts
+  if (seg < 1) return 0;
+  if (seg < 1.5) return 0.5 * easeOut((seg - 1) / 0.5);
+  if (seg < 2) return 0.5;
+  if (seg < 2.5) return 0.5 + 0.5 * easeOut((seg - 2) / 0.5);
+  return 1;
 }
 
 const content: PanelModule = { duration: DURATION, settle: SETTLE, Panel };
