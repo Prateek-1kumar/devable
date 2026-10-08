@@ -25,10 +25,15 @@ const desktopMedia = media(DESKTOP_QUERY);
 const reducedMedia = media(REDUCED_QUERY);
 const useMedia = (m: ReturnType<typeof media>) => useSyncExternalStore(m.subscribe, m.get, () => false);
 
-/** Where card i sticks, in px from the viewport top: each peeks a little below the last. */
-const STICK = 104;
-const PEEK = 12;
-const stickAt = (i: number) => STICK + i * PEEK;
+/**
+ * Calculates the sticky top offset so cards are perfectly centered vertically in the viewport.
+ */
+const getStickTop = () => {
+  if (typeof window === "undefined") return 140;
+  const vh = window.innerHeight;
+  const cardH = Math.min(576, vh - 160);
+  return Math.max(90, Math.round((vh - cardH) / 2));
+};
 
 export default function HowWeWork() {
   const desktop = useMedia(desktopMedia);
@@ -38,18 +43,19 @@ export default function HowWeWork() {
   const [runs, setRuns] = useState(() => STEPS.map(() => 0));
   const [inView, setInView] = useState(() => STEPS.map(() => false));
   const cards = useRef<(HTMLElement | null)[]>([]);
-  // Zero-height markers where each card sits in the document flow (a stuck card's own rect doesn't move).
+  // Zero-height markers where each card sits in the document flow.
   const marks = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Desktop: the active step is the last card that has reached its sticky slot.
+  // Desktop: the active step is the last card that has reached the centered sticky slot.
   useEffect(() => {
     if (!desktop) return;
     let raf = 0;
     const update = () => {
       raf = 0;
+      const stick = getStickTop();
       let next = 0;
       marks.current.forEach((el, i) => {
-        if (el && el.getBoundingClientRect().top <= stickAt(i) + 4) next = i;
+        if (el && el.getBoundingClientRect().top <= stick + 12) next = i;
       });
       if (next !== activeRef.current) {
         activeRef.current = next;
@@ -91,13 +97,17 @@ export default function HowWeWork() {
   const go = (i: number) => {
     const el = marks.current[i];
     if (!el) return;
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - stickAt(i) + 1, behavior: reduced ? "auto" : "smooth" });
+    const stick = getStickTop();
+    window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - stick + 1,
+      behavior: reduced ? "auto" : "smooth",
+    });
   };
 
   const mode: PlayMode = reduced ? "still" : desktop ? "loop" : "once";
 
   return (
-    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 py-24 sm:px-12 lg:py-32 xl:px-[6vw]">
+    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
       <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
         <div>
           <p className="font-mono text-xs tracking-[0.14em] text-muted uppercase">{EYEBROW}</p>
@@ -109,29 +119,19 @@ export default function HowWeWork() {
       </header>
 
       <div className="mt-16 grid gap-10 lg:mt-20 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
-        {/* The nav: vertically centered in the viewport with smooth tactile beads that adapt the site UI. */}
+        {/* The nav: vertically centered in the viewport, minimal hairline rail with a quiet connector to the cards. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
-          <div className="sticky top-[max(112px,calc(50vh-170px))]">
-            <ol className="relative pl-6 space-y-1.5">
-              {/* The vertical string / cord connecting the beads */}
-              <div
-                aria-hidden="true"
-                className="absolute left-[7px] top-4 bottom-4 w-[1.5px] -translate-x-1/2 bg-gradient-to-b from-transparent via-line to-transparent"
-              />
-
+          <div className="sticky top-[max(112px,calc(50vh-140px))]">
+            <ol className="border-l border-ink/10">
               {STEPS.map((step, i) => {
                 const on = i === active;
                 return (
-                  <li key={step.n} className="group relative">
-                    {/* The bead on the vertical thread */}
+                  <li key={step.n} className="relative">
+                    {/* Active rail indicator: soft rounded hairline bar */}
                     <span
                       aria-hidden="true"
-                      className={`absolute left-[7px] top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                        on
-                          ? "h-5 w-2.5 rounded-full bg-primary ring-4 ring-primary-soft shadow-[0_2px_8px_rgba(31,77,58,0.25)]"
-                          : i < active
-                          ? "h-2.5 w-2.5 rounded-full bg-light-green ring-2 ring-light-green-soft shadow-xs"
-                          : "h-2 w-2 rounded-full bg-card border border-ink/20 shadow-xs group-hover:scale-125 group-hover:border-secondary/60 group-hover:bg-secondary-soft/50"
+                      className={`absolute -left-px top-2 bottom-2 w-0.5 rounded-full bg-ink transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                        on ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
                       }`}
                     />
 
@@ -139,25 +139,34 @@ export default function HowWeWork() {
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className={`flex w-full items-center gap-3 rounded-full py-2 px-3.5 text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                        on
-                          ? "bg-card/90 shadow-[0_2px_12px_-4px_rgba(15,26,20,0.08)] border border-line/80 text-ink"
-                          : "text-muted hover:text-ink hover:bg-card/40 border border-transparent"
-                      }`}
+                      className="group flex w-full items-center py-3 pl-5 pr-1 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
                       <span
-                        className={`font-mono text-[11px] font-medium tracking-[0.08em] transition-colors duration-300 ${
-                          on ? "text-secondary font-semibold" : "text-muted/80 group-hover:text-ink"
+                        className={`font-mono text-[11px] tracking-[0.08em] transition-colors duration-300 ${
+                          on ? "text-accent font-semibold" : "text-muted/60 group-hover:text-ink/80"
                         }`}
                       >
                         {step.n}
                       </span>
                       <span
-                        className={`text-[0.93rem] tracking-[-0.01em] transition-colors duration-300 ${
+                        className={`ml-3.5 text-[0.95rem] tracking-[-0.015em] transition-colors duration-300 ${
                           on ? "font-semibold text-ink" : "font-normal text-muted group-hover:text-ink"
                         }`}
                       >
                         {step.title}
+                      </span>
+
+                      {/* Subtle connector leader to the cards */}
+                      <span
+                        aria-hidden="true"
+                        className={`ml-auto flex items-center pl-3 transition-all duration-300 ease-out ${
+                          on
+                            ? "opacity-100 translate-x-0"
+                            : "opacity-0 -translate-x-2 pointer-events-none"
+                        }`}
+                      >
+                        <span className="h-px w-5 bg-ink/25" />
+                        <span className="size-1 rounded-full bg-ink/35" />
                       </span>
                     </button>
                   </li>
@@ -165,31 +174,15 @@ export default function HowWeWork() {
               })}
             </ol>
 
-            {/* Step counter pill with micro progress beads */}
-            <div className="mt-5 pl-6">
-              <div className="inline-flex items-center gap-2.5 rounded-full border border-line/80 bg-card/70 px-3.5 py-1.5 shadow-xs backdrop-blur-xs">
-                <div className="flex items-center gap-1.5" aria-hidden="true">
-                  {STEPS.map((_, idx) => (
-                    <span
-                      key={idx}
-                      className={`h-1.5 rounded-full transition-all duration-400 ${
-                        idx === active
-                          ? "w-3 bg-secondary"
-                          : idx < active
-                          ? "w-1.5 bg-light-green"
-                          : "w-1.5 bg-line"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="h-3 w-px bg-line" aria-hidden="true" />
-                <p className="font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
-                  <span className="font-semibold text-ink">{STEPS[active].n}</span>
-                  <span className="mx-1 text-muted/60">/</span>
-                  <span>0{STEPS.length}</span>
-                </p>
-              </div>
-            </div>
+            {/* Quiet minimal counter */}
+            <p
+              className="mt-7 pl-5 font-mono text-[11px] tracking-[0.12em] text-muted/60 uppercase"
+              aria-hidden="true"
+            >
+              <span className="font-semibold text-ink">{STEPS[active].n}</span>
+              <span className="mx-1.5 opacity-40">/</span>
+              <span>0{STEPS.length}</span>
+            </p>
           </div>
         </nav>
 
@@ -208,8 +201,15 @@ export default function HowWeWork() {
                   cards.current[i] = el;
                 }}
                 aria-labelledby={`hww-step-${step.n}`}
-                style={{ "--stick": `${stickAt(i)}px` } as CSSProperties}
-                className={`grid overflow-hidden rounded-2xl border border-line bg-card shadow-[0_1px_2px_rgb(15_26_20/0.04),0_16px_40px_-24px_rgb(15_26_20/0.18)] lg:sticky lg:top-(--stick) lg:h-[min(36rem,calc(100svh-10rem))] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] ${i < STEPS.length - 1 ? "mb-8 lg:mb-[24vh]" : ""}`}
+                style={
+                  {
+                    top: "max(90px, calc((100svh - min(36rem, calc(100svh - 10rem))) / 2))",
+                    zIndex: i + 10,
+                  } as CSSProperties
+                }
+                className={`grid overflow-hidden rounded-2xl border border-line bg-card shadow-none lg:sticky lg:h-[min(36rem,calc(100svh-10rem))] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] transition-opacity duration-200 ${
+                  i < active ? "lg:opacity-0 lg:pointer-events-none" : "lg:opacity-100"
+                } ${i < STEPS.length - 1 ? "mb-8 lg:mb-[36vh]" : "mb-8 lg:mb-[50vh]"}`}
               >
                 {/* The live visual on a warm dotted canvas. */}
                 <div
