@@ -119,7 +119,6 @@ const FINDINGS: { label: string; at: number; value?: string }[] = [
 
 function Panel({ t }: { t: number }) {
   const fade = outro(t, DURATION);
-  const cardIn = ramp(t, 0.15, 0.5, easeOut);
   // The terminal takes over the card's body during the quickstart beat.
   const term = Math.min(
     ramp(t, QUICK.at + 0.1, 0.35, easeOut),
@@ -132,13 +131,12 @@ function Panel({ t }: { t: number }) {
       <g opacity={fade}>
         {/* Connectors: quiet grey curves, the active one traced in warm accent. */}
         {GROUPS.map((_, g) => {
-          const on = ramp(t, 0.3 + g * 0.08, 0.6);
           const pts = curvePts(g);
           const [sx, sy] = start(g);
           const [ex, ey] = entry(g);
           return (
             <g key={g}>
-              <Trace d={curve(g)} k={on} stroke={C.line} width={1.2} />
+              <Trace d={curve(g)} k={1} stroke={C.hair} width={1.2} />
               {STATUSES.map((s, i) =>
                 s.group === g || s.group === -1 ? (
                   <g key={i} opacity={1 - ramp(t, s.at + s.dur - 0.3, 0.3)}>
@@ -152,15 +150,14 @@ function Panel({ t }: { t: number }) {
                   </g>
                 ) : null,
               )}
-              <circle cx={sx} cy={sy} r={2} fill={C.card} stroke={C.line} opacity={on} />
-              <circle cx={ex} cy={ey} r={2} fill={C.card} stroke={C.line} opacity={on} />
+              <circle cx={sx} cy={sy} r={2} fill={C.card} stroke={C.hair} />
+              <circle cx={ex} cy={ey} r={2} fill={C.card} stroke={C.hair} />
             </g>
           );
         })}
 
-        {/* Source groups */}
+        {/* Source groups: ALWAYS visible so visual is never empty */}
         {GROUPS.map((grp, g) => {
-          const k = ramp(t, 0.05 + g * 0.08, 0.5, easeOut);
           const active = Math.max(
             0,
             ...STATUSES.map((s) =>
@@ -181,7 +178,7 @@ function Panel({ t }: { t: number }) {
           const fin = ramp(t, groupDone(g), 0.4);
           const y = groupY(g);
           return (
-            <g key={grp.label} opacity={k} transform={`translate(0 ${(1 - k) * 5})`}>
+            <g key={grp.label}>
               <Mono x={COL.x + 1} y={y + 1} size={9} fill={lit > 0.5 ? C.ink : C.muted}>
                 {grp.label}
               </Mono>
@@ -196,13 +193,12 @@ function Panel({ t }: { t: number }) {
                 const x = COL.x + i * (TILE + TGAP);
                 return (
                   <g key={it.key} transform={`translate(${x} ${y + 10})`}>
-                    <Card x={0} y={0} w={TILE} h={TILE} r={6} shadow={false} stroke={C.line} />
+                    <rect width={TILE} height={TILE} rx={6} fill={C.paper} />
                     <rect
                       width={TILE}
                       height={TILE}
                       rx={6}
                       fill={C.accentWash}
-                      stroke={C.accentLine}
                       opacity={lit}
                     />
                     <g transform={`translate(${TILE / 2} ${TILE / 2})`}>{it.icon}</g>
@@ -213,8 +209,8 @@ function Panel({ t }: { t: number }) {
           );
         })}
 
-        {/* Product model card */}
-        <g opacity={cardIn} transform={`translate(0 ${(1 - cardIn) * 6})`}>
+        {/* Product model card: ALWAYS visible */}
+        <g>
           <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} r={12} />
           <Mono x={CARD.x + PAD} y={CARD.y + 24} size={9} fill={C.muted}>
             Product model
@@ -282,44 +278,57 @@ function Panel({ t }: { t: number }) {
 function StatusLine({ t, done }: { t: number; done: number }) {
   const x = CARD.x + PAD;
   const breathe = 0.5 + 0.5 * Math.sin(t * 3.2);
+  const isEarly = t < STATUSES[0].at;
   return (
     <g>
       <circle
         cx={x + 4}
         cy={STATUS_Y - 4}
-        r={4 + 2.5 * breathe}
-        fill={C.accent}
-        opacity={(0.14 + 0.06 * breathe) * (1 - done) * ramp(t, 0.5, 0.3)}
+        r={5 + 2 * breathe}
+        fill={done > 0.5 ? C.lightGreen : C.accent}
+        opacity={done > 0.5 ? 0.22 : 0.18}
       />
       <circle
         cx={x + 4}
         cy={STATUS_Y - 4}
-        r={3.5}
+        r={3}
         fill={done > 0.5 ? C.lightGreen : C.accent}
-        opacity={ramp(t, 0.5, 0.3)}
       />
-      {STATUSES.map((s, i) => {
-        const inK = ramp(t, s.at, 0.3, easeOut);
-        const outK =
-          i === STATUSES.length - 1
-            ? ramp(t, DONE - 0.15, 0.25)
-            : ramp(t, s.at + s.dur - 0.2, 0.25);
-        const o = Math.min(inK, 1 - outK);
-        if (o <= 0) return null;
-        return (
-          <text
-            key={s.text}
-            x={x + 16}
-            y={STATUS_Y + (1 - inK) * 4}
-            fontSize={12.5}
-            fontWeight={500}
-            fill={C.ink}
-            opacity={o}
-          >
-            {s.text}
-          </text>
-        );
-      })}
+      {isEarly && done <= 0 && (
+        <text
+          x={x + 16}
+          y={STATUS_Y}
+          fontSize={12.5}
+          fontWeight={500}
+          fill={C.ink}
+          opacity={0.85}
+        >
+          {STATUSES[0].text}
+        </text>
+      )}
+      {!isEarly &&
+        STATUSES.map((s, i) => {
+          const inK = ramp(t, s.at, 0.3, easeOut);
+          const outK =
+            i === STATUSES.length - 1
+              ? ramp(t, DONE - 0.15, 0.25)
+              : ramp(t, s.at + s.dur - 0.2, 0.25);
+          const o = Math.min(inK, 1 - outK);
+          if (o <= 0) return null;
+          return (
+            <text
+              key={s.text}
+              x={x + 16}
+              y={STATUS_Y + (1 - inK) * 4}
+              fontSize={12.5}
+              fontWeight={500}
+              fill={C.ink}
+              opacity={o}
+            >
+              {s.text}
+            </text>
+          );
+        })}
       {done > 0 && (
         <g opacity={done} transform={`translate(0 ${(1 - done) * 4})`}>
           <text x={x + 16} y={STATUS_Y} fontSize={12.5} fontWeight={600} fill={C.lightGreen}>
@@ -335,11 +344,11 @@ function StatusLine({ t, done }: { t: number; done: number }) {
 function ProgressDots({ t }: { t: number }) {
   const x0 = CARD.x + PAD + 14;
   return (
-    <g opacity={ramp(t, 0.5, 0.3)}>
+    <g>
       {STATUSES.map((s, i) => {
         const on = ramp(t, s.at, 0.25);
         const off = ramp(t, s.at + s.dur - 0.15, 0.25);
-        const fill = off > 0.5 ? C.lightGreen : on > 0.5 ? C.accent : C.line;
+        const fill = off > 0.5 ? C.lightGreen : on > 0.5 ? C.accent : C.hair;
         return (
           <circle
             key={i}
@@ -370,9 +379,9 @@ function Terminal({ t, k }: { t: number; k: number }) {
   const cw = 6.6;
   return (
     <g opacity={k} transform={`translate(0 ${(1 - k) * 5})`}>
-      <rect x={x} y={y} width={w} height={h} rx={8} fill={C.accentWash} stroke={C.accentLine} />
+      <rect x={x} y={y} width={w} height={h} rx={8} fill={C.paper} />
       {[0, 1, 2].map((i) => (
-        <circle key={i} cx={x + 12 + i * 9} cy={y + 13} r={2.6} fill={C.line} />
+        <circle key={i} cx={x + 12 + i * 9} cy={y + 13} r={2.6} fill={C.hair} />
       ))}
       <text x={x + 12} y={y + 42} {...mono} fill={C.muted}>
         $ <tspan fill={C.ink}>{typed}</tspan>

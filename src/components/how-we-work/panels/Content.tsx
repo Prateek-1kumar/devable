@@ -48,9 +48,6 @@ const DOT_X = LIST.x + PAD + 7;
 // ── The article, in sync ───────────────────────────────────────────────────
 const IN = DOC.x + 14;
 const TITLE = ["Connection pooling for", "serverless Postgres"];
-const TITLE_LEN = TITLE[0].length + TITLE[1].length;
-const TITLE_AT = [0.7, 1.3] as const; // start at 0.7s, takes 1.3s to type
-const COPY_AT = 2.4;
 const COPY_W = [DOC.w - 28, DOC.w - 28 - 64];
 
 type Tok = readonly [string, string];
@@ -63,16 +60,10 @@ const CODE: readonly (readonly Tok[])[] = [
   [["const", KW], [" pool = ", ID], ["new", KW], [" Pool", ID], ["();", PUN]],
   [["await", KW], [" pool.", ID], ["query", ID], ["(", PUN], ['"SELECT 1"', STR], [");", PUN]],
 ];
-const LINE_LEN = CODE.map((l) => l.reduce((m, [s]) => m + s.length, 0));
-const LINE_START = LINE_LEN.map((_, i) => LINE_LEN.slice(0, i).reduce((a, b) => a + b, 0));
-const CODE_LEN = LINE_LEN.reduce((a, b) => a + b, 0);
 const CODE_BOX = { x: IN, y: DOC.y + 128, w: DOC.w - 28, h: 78 };
 const CODE_FS = 10;
-const CHAR = CODE_FS * 0.6;
 const CODE_PITCH = 15;
 const codeLineY = (i: number) => CODE_BOX.y + 40 + i * CODE_PITCH;
-const CODE_IN = 4.3;
-const TYPE = [4.7, 1.8] as const; // typing takes 1.8s
 const RUNS = 7.1;
 const REVIEW = [8.0, 1.8] as const; // reviewer inspection
 const BADGE = 9.2;
@@ -81,39 +72,16 @@ const BADGE_Y = DOC.y + 229;
 const enter = (t: number, at: number, dur = 0.45) => ramp(t, at, dur, easeOut);
 const rise = (k: number) => `translate(0 ${(1 - k) * 5})`;
 
-function typed(line: readonly Tok[], n: number) {
-  const out: Tok[] = [];
-  for (const [s, c] of line) {
-    if (n <= 0) break;
-    out.push([s.slice(0, n), c]);
-    n -= s.length;
-  }
-  return out;
-}
-
 function Panel({ t }: { t: number }) {
   const o = outro(t, DURATION);
 
-  // Article state.
-  const titleChars = Math.round(ramp(t, TITLE_AT[0], TITLE_AT[1], (x) => x) * TITLE_LEN);
-  const copy = ramp(t, COPY_AT, 0.7, easeOut);
-  const codeIn = enter(t, CODE_IN);
-  const codeChars = Math.round(ramp(t, TYPE[0], TYPE[1], (x) => x) * CODE_LEN);
-  const codeTyping = t > TYPE[0] - 0.1 && t < TYPE[0] + TYPE[1] + 0.3;
-  const runs = enter(t, RUNS, 0.4);
-  const badge = enter(t, BADGE, 0.5);
   const live = ramp(t, STEPS[4].done, 0.4);
-
-  const codeLines = CODE.map((line, i) => {
-    const n = Math.max(0, Math.min(LINE_LEN[i], codeChars - LINE_START[i]));
-    return { toks: typed(line, n), n };
-  });
-  const typingLine = codeLines.findIndex((l, i) => l.n < LINE_LEN[i]);
-  const caretLine = typingLine < 0 ? CODE.length - 1 : typingLine;
+  const reviewed = ramp(t, BADGE, 0.4);
+  const runs = ramp(t, RUNS, 0.4);
 
   // Review highlight: a quiet wash that steps down the three lines.
   const rk = clamp01((t - REVIEW[0]) / REVIEW[1]);
-  const reviewOn = Math.min(ramp(t, REVIEW[0] - 0.2, 0.3), 1 - ramp(t, REVIEW[0] + REVIEW[1], 0.3));
+  const reviewActive = t >= REVIEW[0] && t <= REVIEW[0] + REVIEW[1];
   const reviewY = lerp(codeLineY(0), codeLineY(2), easeInOutSteps(rk));
 
   return (
@@ -132,7 +100,7 @@ function Panel({ t }: { t: number }) {
         const k = ramp(t, s.done, 0.35) * o;
         return (
           <g key={s.label}>
-            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={y1} stroke={C.line} />
+            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={y1} stroke={C.hair} />
             <line
               x1={DOT_X}
               x2={DOT_X}
@@ -155,9 +123,9 @@ function Panel({ t }: { t: number }) {
         const breathe = 0.5 + 0.5 * Math.sin((t - s.at) * Math.PI * 1.4);
         return (
           <g key={s.label}>
-            <circle cx={DOT_X} cy={y - 4} r={7} fill={C.card} stroke={C.line} />
+            <circle cx={DOT_X} cy={y - 4} r={7} fill={C.card} stroke={C.hair} />
             <g opacity={cur}>
-              <circle cx={DOT_X} cy={y - 4} r={7} fill={C.accentWash} stroke={C.accentLine} />
+              <circle cx={DOT_X} cy={y - 4} r={7} fill={C.accentWash} />
               <circle cx={DOT_X} cy={y - 4} r={3 + 2.2 * breathe} fill={C.accent} opacity={0.16} />
               <circle cx={DOT_X} cy={y - 4} r={3} fill={C.accent} />
             </g>
@@ -194,84 +162,60 @@ function Panel({ t }: { t: number }) {
         Article
       </Mono>
 
-      {/* Status: Draft → Published */}
-      <g transform={`translate(${DOC.x + DOC.w - 14} ${DOC.y + 10})`}>
-        <rect
-          x={-88}
-          width={88}
-          height={20}
-          rx={10}
-          fill={C.paper}
-          stroke={C.line}
-          opacity={1 - live * o}
-        />
-        <rect
-          x={-88}
-          width={88}
-          height={20}
-          rx={10}
-          fill={C.lightGreenSoft}
-          opacity={live * o}
-        />
-        <circle cx={-75} cy={10} r={3} fill={C.muted} opacity={(1 - live * o) * 0.6} />
-        <circle cx={-75} cy={10} r={3} fill={C.lightGreen} opacity={live * o} />
-        <Mono x={-65} y={13.3} size={9} fill={C.muted} opacity={1 - live * o}>
-          Draft
-        </Mono>
-        <Mono x={-65} y={13.3} size={9} fill={C.lightGreen} fontWeight={600} opacity={live * o}>
-          Published
-        </Mono>
+      {/* Status: glowing brand presence, ZERO boxed wireframe borders */}
+      <g transform={`translate(${DOC.x + DOC.w - 18} ${DOC.y + 22})`}>
+        {/* Draft state: quiet dot, clean typography, NO border box */}
+        <g opacity={1 - live}>
+          <circle cx={-38} cy={-2.5} r={2.5} fill={C.muted} opacity={0.6} />
+          <Mono x={-31} y={0.5} size={9} fill={C.muted} letterSpacing="0.1em">
+            Draft
+          </Mono>
+        </g>
+        {/* Published state: soft glowing emerald brand aura, NO border box */}
+        <g opacity={live}>
+          <circle cx={-56} cy={-2.5} r={7} fill={C.lightGreen} opacity={0.25} />
+          <circle cx={-56} cy={-2.5} r={3} fill={C.lightGreen} />
+          <Mono x={-46} y={0.5} size={9} fill={C.lightGreen} fontWeight={600} letterSpacing="0.1em">
+            Published
+          </Mono>
+        </g>
       </g>
-      <line x1={DOC.x} x2={DOC.x + DOC.w} y1={DOC.y + HEAD_H} y2={DOC.y + HEAD_H} stroke={C.hair} />
+      <line x1={DOC.x} x2={DOC.x + DOC.w} y1={DOC.y + HEAD_H} y2={DOC.y + HEAD_H} stroke={C.hair} strokeOpacity={0.6} />
 
-      {/* Title */}
+      {/* Title: ALWAYS visible so card is never blank */}
       {TITLE.map((line, i) => {
-        const start = i === 0 ? 0 : TITLE[0].length;
-        const shown = line.slice(0, Math.max(0, titleChars - start));
         const y = DOC.y + 66 + i * 20;
         return (
-          <g key={i}>
-            <rect
-              x={IN}
-              y={y - 10}
-              width={i === 0 ? 150 : 120}
-              height={10}
-              rx={3}
-              fill={C.paper}
-              opacity={shown.length === 0 ? 1 : 1 - o}
-            />
-            <text
-              x={IN}
-              y={y}
-              fontSize={15}
-              fontWeight={600}
-              letterSpacing="-0.02em"
-              fill={C.ink}
-              opacity={o}
-            >
-              {shown}
-            </text>
-          </g>
+          <text
+            key={i}
+            x={IN}
+            y={y}
+            fontSize={15}
+            fontWeight={600}
+            letterSpacing="-0.02em"
+            fill={C.ink}
+            opacity={o}
+          >
+            {line}
+          </text>
         );
       })}
 
-      {/* Two lines of copy */}
+      {/* Two lines of copy: ALWAYS visible */}
       {COPY_W.map((w, i) => (
-        <g key={i}>
-          <rect x={IN} y={DOC.y + 101 + i * 11} width={w} height={4.5} rx={2.25} fill={C.paper} />
-          <rect
-            x={IN}
-            y={DOC.y + 101 + i * 11}
-            width={w * clamp01(copy * 2 - i)}
-            height={4.5}
-            rx={2.25}
-            fill={C.line}
-            opacity={o}
-          />
-        </g>
+        <rect
+          key={i}
+          x={IN}
+          y={DOC.y + 101 + i * 11}
+          width={w}
+          height={4.5}
+          rx={2.25}
+          fill={C.line}
+          opacity={o * 0.7}
+        />
       ))}
 
-      {/* Code example */}
+      {/* Code example: clean seamless paper surface, ZERO border strokes */}
       <rect
         x={CODE_BOX.x}
         y={CODE_BOX.y}
@@ -279,11 +223,8 @@ function Panel({ t }: { t: number }) {
         height={CODE_BOX.h}
         rx={8}
         fill={C.paper}
-        stroke={C.line}
-        strokeDasharray={codeIn > 0 ? undefined : "3 3"}
-        opacity={lerp(0.6, 1, codeIn * o)}
       />
-      <g opacity={codeIn * o} transform={rise(codeIn)}>
+      <g opacity={o}>
         <Mono
           x={CODE_BOX.x + 12}
           y={CODE_BOX.y + 18}
@@ -294,32 +235,29 @@ function Panel({ t }: { t: number }) {
         >
           db.ts
         </Mono>
-        <line
-          x1={CODE_BOX.x}
-          x2={CODE_BOX.x + CODE_BOX.w}
-          y1={CODE_BOX.y + 26}
-          y2={CODE_BOX.y + 26}
-          stroke={C.hair}
-        />
-        {/* Reviewer line highlight */}
-        <rect
-          x={CODE_BOX.x + 1}
-          y={reviewY - 11}
-          width={CODE_BOX.w - 2}
-          height={15}
-          fill={C.accentWash}
-          opacity={reviewOn}
-        />
-        <rect
-          x={CODE_BOX.x + 1}
-          y={reviewY - 10}
-          width={2.5}
-          height={13}
-          rx={1}
-          fill={C.accent}
-          opacity={reviewOn}
-        />
-        {codeLines.map((l, i) => (
+        {/* Reviewer line scan highlight */}
+        {reviewActive && (
+          <>
+            <rect
+              x={CODE_BOX.x + 1}
+              y={reviewY - 11}
+              width={CODE_BOX.w - 2}
+              height={15}
+              fill={C.accentWash}
+              opacity={0.8}
+            />
+            <rect
+              x={CODE_BOX.x + 1}
+              y={reviewY - 10}
+              width={2.5}
+              height={13}
+              rx={1}
+              fill={C.accent}
+              opacity={0.9}
+            />
+          </>
+        )}
+        {CODE.map((line, i) => (
           <text
             key={i}
             x={CODE_BOX.x + 12}
@@ -329,26 +267,18 @@ function Panel({ t }: { t: number }) {
             xmlSpace="preserve"
             style={{ whiteSpace: "pre" }}
           >
-            {l.toks.map(([s, c], j) => (
+            {line.map(([s, c], j) => (
               <tspan key={j} fill={c}>
                 {s}
               </tspan>
             ))}
           </text>
         ))}
-        {codeTyping && (
-          <rect
-            x={CODE_BOX.x + 12 + codeLines[caretLine].n * CHAR + 0.5}
-            y={codeLineY(caretLine) - 9}
-            width={1.2}
-            height={11}
-            fill={C.accent}
-          />
-        )}
-        {/* ✓ runs pill */}
+
+        {/* ✓ runs badge: borderless soft green pill */}
         <g
           opacity={runs * o}
-          transform={`translate(${CODE_BOX.x + CODE_BOX.w - 10} ${CODE_BOX.y + 5}) ${rise(runs)}`}
+          transform={`translate(${CODE_BOX.x + CODE_BOX.w - 10} ${CODE_BOX.y + 5})`}
         >
           <rect x={-56} width={56} height={18} rx={9} fill={C.lightGreenSoft} />
           <path
@@ -365,35 +295,28 @@ function Panel({ t }: { t: number }) {
         </g>
       </g>
 
-      {/* Reviewed by an engineer badge */}
-      <rect
-        x={IN}
-        y={BADGE_Y - 12}
-        width={DOC.w - 28}
-        height={24}
-        rx={12}
-        fill="none"
-        stroke={C.line}
-        strokeDasharray="3 3"
-        opacity={(1 - badge) * o * 0.8}
-      />
-      <g opacity={badge * o} transform={rise(badge)}>
-        <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill={C.card} stroke={C.line} />
-        <circle cx={IN + 12} cy={BADGE_Y} r={9} fill={C.lightGreenSoft} />
+      {/* Reviewed by an engineer: clean, borderless verified badge */}
+      <g opacity={o}>
+        <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill={C.paper} />
+        <circle cx={IN + 12} cy={BADGE_Y} r={8.5} fill={reviewed > 0.5 ? C.lightGreenSoft : C.card} />
         <text
           x={IN + 12}
-          y={BADGE_Y + 3.3}
-          fontSize={9}
+          y={BADGE_Y + 3.2}
+          fontSize={8.5}
           fontWeight={650}
-          fill={C.lightGreen}
+          fill={reviewed > 0.5 ? C.lightGreen : C.muted}
           textAnchor="middle"
         >
           MC
         </text>
-        <text x={IN + 27} y={BADGE_Y + 4} fontSize={11.5} fontWeight={550} fill={C.ink}>
+        <text x={IN + 26} y={BADGE_Y + 3.8} fontSize={11} fontWeight={550} fill={C.ink}>
           Reviewed by an engineer
         </text>
-        <Check x={IN + DOC.w - 28 - 13} y={BADGE_Y} r={6.5} k={ramp(t, BADGE + 0.2, 0.4)} color={C.lightGreen} />
+        {reviewed > 0.5 ? (
+          <Check x={IN + DOC.w - 28 - 12} y={BADGE_Y} r={6} k={reviewed} color={C.lightGreen} />
+        ) : (
+          <circle cx={IN + DOC.w - 28 - 12} cy={BADGE_Y} r={3} fill={C.line} />
+        )}
       </g>
     </PanelSvg>
   );

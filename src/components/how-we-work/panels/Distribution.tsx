@@ -72,7 +72,6 @@ function rounded(pts: readonly Pt[], r = 8) {
 
 function Panel({ t }: { t: number }) {
   const o = outro(t, DURATION);
-  const artIn = ramp(t, 0.1, 0.5, easeOut);
   const live = [0, 1, 2, 3].filter((i) => t >= doneAt(i) + 0.1).length;
   const distributing = ramp(t, sendAt(0), 0.3) * (1 - ramp(t, ALL_LIVE, 0.3));
   const allLive = ramp(t, ALL_LIVE, 0.4);
@@ -87,21 +86,24 @@ function Panel({ t }: { t: number }) {
           const send = ramp(t, sendAt(i), TRAVEL, easeInOut);
           return (
             <g key={`c${i}`}>
-              <path d={d} fill="none" stroke={C.ink} strokeOpacity={0.12 * artIn} />
+              <path d={d} fill="none" stroke={C.ink} strokeOpacity={0.12} />
               <Trace d={d} k={send} stroke={mix(C.accent, C.lightGreen, done)} opacity={lerp(0.85, 0.5, done)} />
               <Pulse points={route} k={t < sendAt(i) ? -1 : t > litAt(i) ? 2 : send} r={2.6} />
             </g>
           );
         })}
 
-        {/* The article. */}
-        <g opacity={artIn} transform={`translate(0 ${(1 - artIn) * 5})`}>
+        {/* The article: ALWAYS visible so card is never empty */}
+        <g>
           <Card x={ART.x} y={ART.y} w={ART.w} h={ART.h} />
           <DocGlyph x={ART.x + 14} y={ART.y + 13} />
           <Mono x={ART.x + 30} y={ART.y + 22.5} size={9}>
             Article
           </Mono>
-          <Mono x={ART.x + ART.w - 14} y={ART.y + 22.5} size={9} fill={C.lightGreen} fontWeight={600} textAnchor="end">
+          {/* Glowing brand status indicator, NO wireframe box */}
+          <circle cx={ART.x + ART.w - 68} cy={ART.y + 20} r={5} fill={C.lightGreen} opacity={0.25} />
+          <circle cx={ART.x + ART.w - 68} cy={ART.y + 20} r={2.5} fill={C.lightGreen} />
+          <Mono x={ART.x + ART.w - 58} y={ART.y + 23} size={9} fill={C.lightGreen} fontWeight={600} letterSpacing="0.08em">
             Published
           </Mono>
           <text x={ART.x + 14} y={ART.y + 46} fontSize={13.5} fontWeight={600} letterSpacing="-0.01em" fill={C.ink}>
@@ -112,12 +114,19 @@ function Panel({ t }: { t: number }) {
           </text>
           <line x1={ART.x + 14} x2={ART.x + ART.w - 14} y1={ART.y + 75} y2={ART.y + 75} stroke={C.hair} />
 
-          {/* The channel pickup counter. */}
+          {/* The channel pickup counter */}
           <circle
             cx={ART.x + 17}
             cy={ART.y + 87.5}
-            r={3}
-            fill={mix(mix(C.line, C.accent, distributing), C.lightGreen, allLive)}
+            r={allLive > 0.5 ? 5 : 3}
+            fill={allLive > 0.5 ? C.lightGreen : distributing > 0.5 ? C.accent : C.line}
+            opacity={allLive > 0.5 ? 0.25 : 1}
+          />
+          <circle
+            cx={ART.x + 17}
+            cy={ART.y + 87.5}
+            r={2.5}
+            fill={allLive > 0.5 ? C.lightGreen : distributing > 0.5 ? C.accent : C.line}
           />
           <Mono
             x={ART.x + 27}
@@ -166,23 +175,24 @@ function Surface({
   right?: ReactNode;
 }) {
   const { x, y } = CHANNELS[i];
-  const enter = ramp(t, 0.35 + i * 0.08, 0.45, easeOut);
-  const { lit, waiting, fact, active, done } = phase(t, i);
+  const { waiting, fact, active, done } = phase(t, i);
   const tx = x + P + 26 + 9;
   return (
-    <g opacity={enter * (0.5 + 0.5 * lit)} transform={`translate(0 ${(1 - enter) * 5})`}>
+    <g>
       <Card x={x} y={y} w={CARD.w} h={CARD.h} r={11} />
-      <rect x={x} y={y} width={CARD.w} height={CARD.h} rx={11} fill={C.accentWash} stroke={C.accentLine} opacity={active} />
-      <rect x={x + P} y={y + 15} width={26} height={26} rx={7} fill={C.paper} stroke={C.line} />
+      {/* Active wash without stroke border */}
+      <rect x={x} y={y} width={CARD.w} height={CARD.h} rx={11} fill={C.accentWash} opacity={active} />
+      {/* Icon surface: clean borderless tile */}
+      <rect x={x + P} y={y + 15} width={26} height={26} rx={7} fill={C.paper} />
       <g transform={`translate(${x + P + 13} ${y + 28})`}>{mark}</g>
 
-      {/* Before: Waiting. After: Live detail */}
+      {/* Before: Ready. After: Live detail */}
       <g opacity={waiting}>
         <text x={tx} y={y + 25} fontSize={12} fontWeight={550} fill={C.muted}>
           {name}
         </text>
         <Mono x={tx} y={y + 41} size={9} fill={C.muted}>
-          Waiting
+          Ready
         </Mono>
       </g>
       <g opacity={fact} transform={`translate(0 ${(1 - fact) * 4})`}>
@@ -191,12 +201,13 @@ function Surface({
         {right ? <g transform={`translate(${x + CARD.w - P} ${y + 41})`}>{right}</g> : null}
       </g>
 
-      {/* Status: hollow, coral while active, green check once live. */}
-      <circle cx={x + CARD.w - P - 3} cy={y + 20} r={3} fill="none" stroke={C.ink} strokeOpacity={0.22 * (1 - Math.max(active, done))} />
-      <circle cx={x + CARD.w - P - 3} cy={y + 20} r={3} fill={C.accent} opacity={active} />
-      <g opacity={done}>
+      {/* Status: clean indicator dot, coral while active, green check once live. NO outline box */}
+      {done <= 0 && (
+        <circle cx={x + CARD.w - P - 3} cy={y + 20} r={2.5} fill={active > 0 ? C.accent : C.hair} />
+      )}
+      {done > 0 && (
         <Check x={x + CARD.w - P - 3} y={y + 20} r={5.5} k={done} color={C.lightGreen} />
-      </g>
+      )}
     </g>
   );
 }

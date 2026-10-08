@@ -22,37 +22,53 @@ type Props = {
 };
 
 /**
- * Drives one panel's clock with requestAnimationFrame. The panel is a pure
- * function of t, so every frame is deterministic; the clock only runs while
- * `playing`, which pauses everything off screen.
+ * After completion (at `settle`), the card remains in that completed state
+ * for 15 seconds before smoothly replaying if it is still in the viewport.
  */
+const HOLD_SECONDS = 15;
+
 export default function PanelPlayer({ panel, mode, playing, run }: Props) {
-  const { duration, settle, Panel } = panel;
+  const { settle, Panel } = panel;
   const [t, setT] = useState(0);
-  const clock = useRef({ t: 0, run });
+  const clock = useRef({ t: 0, run, hasStarted: false });
 
   useEffect(() => {
-    if (mode === "still" || !playing) return;
+    if (mode === "still" || !playing) {
+      clock.current.hasStarted = false;
+      clock.current.t = 0;
+      return;
+    }
+
     const c = clock.current;
-    if (c.run !== run) Object.assign(c, { t: 0, run });
-    if (mode === "once" && c.t >= settle) return;
+    if (!c.hasStarted || c.run !== run) {
+      c.t = 0;
+      c.run = run;
+      c.hasStarted = true;
+    }
+
+    const totalCycle = settle + HOLD_SECONDS;
+
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      c.t += Math.min(now - last, 100) / 1000; // a long frame (tab switch) never skips the story
+      c.t += Math.min(now - last, 100) / 1000;
       last = now;
-      if (mode === "loop") c.t %= duration;
-      else if (c.t >= settle) {
-        c.t = settle;
-        setT(settle);
-        return;
+
+      // After holding the complete state for 15s, replay if still in viewport
+      if (c.t >= totalCycle) {
+        c.t = 0;
       }
-      setT(c.t);
+
+      // While c.t is between settle and totalCycle, clamp to settle so it stays completed
+      const displayT = Math.min(c.t, settle);
+      setT(displayT);
+
       raf = requestAnimationFrame(tick);
     };
+
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [mode, playing, run, duration, settle]);
+  }, [mode, playing, run, settle]);
 
-  return <Panel t={mode === "still" ? settle : t} />;
+  return <Panel t={mode === "still" ? settle : !playing ? 0 : t} />;
 }

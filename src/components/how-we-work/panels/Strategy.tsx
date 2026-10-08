@@ -6,8 +6,6 @@ import {
   Mark,
   Mono,
   PanelSvg,
-  blip,
-  clamp01,
   easeInOut,
   easeOut,
   lerp,
@@ -30,7 +28,6 @@ const SETTLE = 12.0;
 // Beats.
 const FOUND_AT = (i: number) => 0.6 + i * 0.7; // rows enter one by one calmly (0.6s to 2.7s)
 const MIX_AT = 4.2; // engine mix derives from opportunities
-const MIX_FOR = 1.2;
 const EVENT_AT = 6.8; // "v2 launch" priority chip appears
 const BOOST_AT = 7.6; // creator impact rises
 const BOOST_FOR = 0.9;
@@ -152,25 +149,12 @@ function Tile({ glyph, x, y }: { glyph: Glyph; x: number; y: number }) {
 
 function Panel({ t }: { t: number }) {
   const o = outro(t, DURATION);
-  const build = ramp(t, MIX_AT, MIX_FOR, easeOut);
   const rebal = ramp(t, REBAL_AT, REBAL_FOR, easeInOut);
   const boost = ramp(t, BOOST_AT, BOOST_FOR, easeOut);
   const event = ramp(t, EVENT_AT, 0.5, easeOut);
   const done = ramp(t, DONE_AT, 0.4);
   const rerankK = ramp(t, RERANK_AT, RERANK_DUR, easeInOut);
-  const isMoving = blip(t, RERANK_AT, RERANK_DUR - 0.2, 0.1);
 
-  // Status line: transitions calmly between phases.
-  const statuses = [
-    {
-      text: "Finding opportunities…",
-      on: ramp(t, 0.2, 0.3) - ramp(t, MIX_AT - 0.3, 0.3),
-    },
-    {
-      text: "Building the mix…",
-      on: ramp(t, MIX_AT, 0.3) - ramp(t, EVENT_AT - 0.3, 0.3),
-    },
-  ];
   const working = 1 - ramp(t, EVENT_AT - 0.3, 0.3);
   const pulse = 0.55 + 0.45 * Math.cos(t * Math.PI * 2 * 0.8);
 
@@ -180,112 +164,95 @@ function Panel({ t }: { t: number }) {
   return (
     <PanelSvg t={t}>
       <g opacity={o}>
-        <g opacity={ramp(t, 0, 0.4)}>
-          <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} />
+        <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} />
 
-          {/* ── Header ── */}
-          <circle
-            cx={L + 5}
-            cy={HEAD_Y - 3.5}
-            r={5.5}
-            fill="none"
-            stroke={C.line}
-            opacity={1 - done}
-          />
-          <g opacity={done}>
-            <Check x={L + 5} y={HEAD_Y - 3.5} r={5.5} k={done} color={C.lightGreen} />
-          </g>
-          <Mono x={L + 18} y={HEAD_Y} size={9.5} fill={C.ink}>
-            Growth plan
-          </Mono>
+        {/* ── Header ── */}
+        <circle
+          cx={L + 5}
+          cy={HEAD_Y - 3.5}
+          r={5.5}
+          fill="none"
+          stroke={C.hair}
+          opacity={1 - done}
+        />
+        <g opacity={done}>
+          <Check x={L + 5} y={HEAD_Y - 3.5} r={5.5} k={done} color={C.lightGreen} />
+        </g>
+        <Mono x={L + 18} y={HEAD_Y} size={9.5} fill={C.ink}>
+          Growth plan
+        </Mono>
 
-          {statuses.map((s) => (
+        {/* Status: gentle glowing brand dot and text */}
+        {working > 0 && (
+          <g opacity={working}>
+            <circle
+              cx={STATUS_X - 9}
+              cy={HEAD_Y - 4}
+              r={5}
+              fill={C.accent}
+              opacity={0.18 * pulse}
+            />
+            <circle
+              cx={STATUS_X - 9}
+              cy={HEAD_Y - 4}
+              r={2.5}
+              fill={C.accent}
+            />
             <text
-              key={s.text}
               x={STATUS_X}
               y={HEAD_Y}
               fontSize={11.5}
               fill={C.muted}
-              opacity={clamp01(s.on)}
             >
-              {s.text}
-            </text>
-          ))}
-          <circle
-            cx={STATUS_X - 9}
-            cy={HEAD_Y - 4}
-            r={3}
-            fill={C.accent}
-            opacity={working * pulse * ramp(t, 0.25, 0.3)}
-          />
-
-          {/* The priority event: a quiet chip in place of status */}
-          <g
-            opacity={event}
-            transform={`translate(${R - chipW} ${HEAD_Y - 15 + (1 - event) * 4})`}
-          >
-            <rect
-              width={chipW}
-              height={22}
-              rx={11}
-              fill={C.accentWash}
-              stroke={C.accentLine}
-            />
-            <circle cx={12} cy={11} r={3} fill={C.accent} />
-            <text x={22} y={15} fontSize={11} fill={C.ink}>
-              <tspan fontWeight={600}>v2 launch</tspan>
-              <tspan fill={C.muted}> · in 3 weeks</tspan>
+              Evaluating opportunities…
             </text>
           </g>
+        )}
 
-          <line x1={L} x2={R} y1={ROWS_Y - 6} y2={ROWS_Y - 6} stroke={C.hair} />
+        {/* The priority event: clean borderless chip with glowing coral dot */}
+        <g
+          opacity={event}
+          transform={`translate(${R - chipW} ${HEAD_Y - 15 + (1 - event) * 4})`}
+        >
+          <rect
+            width={chipW}
+            height={22}
+            rx={11}
+            fill={C.accentWash}
+          />
+          <circle cx={12} cy={11} r={5} fill={C.accent} opacity={0.25} />
+          <circle cx={12} cy={11} r={2.5} fill={C.accent} />
+          <text x={22} y={15} fontSize={11} fill={C.ink}>
+            <tspan fontWeight={600}>v2 launch</tspan>
+            <tspan fill={C.muted}> · in 3 weeks</tspan>
+          </text>
+        </g>
 
-          {/* ── Opportunities ── */}
-          {OPPS.map((op) => {
-            const entryK = ramp(t, FOUND_AT(op.initialSlot), 0.45, easeOut);
-            if (entryK <= 0) return null;
+        <line x1={L} x2={R} y1={ROWS_Y - 6} y2={ROWS_Y - 6} stroke={C.hair} />
 
-            // Slot interpolates smoothly between initialSlot and finalSlot during the single rerank beat
-            const currentSlot = lerp(op.initialSlot, op.finalSlot, rerankK);
-            const y = ROWS_Y + currentSlot * ROW_H + (1 - entryK) * 5;
-            const cy = y + ROW_H / 2;
-            const fillK = ramp(t, FOUND_AT(op.initialSlot) + 0.2, 0.5, easeOut);
-            const value = op.boosted ? lerp(op.impact, op.boosted, boost) : op.impact;
-            const isBoostedRow = Boolean(op.boosted);
-            const highlightActive = isBoostedRow ? ramp(t, BOOST_AT - 0.2, 0.4) : 0;
-            const lifted = isBoostedRow && isMoving > 0;
+        {/* ── Opportunities: ALWAYS visible from start ── */}
+        {OPPS.map((op) => {
+          // Slot interpolates smoothly between initialSlot and finalSlot during the single rerank beat
+          const currentSlot = lerp(op.initialSlot, op.finalSlot, rerankK);
+          const y = ROWS_Y + currentSlot * ROW_H;
+          const cy = y + ROW_H / 2;
+          const value = op.boosted ? lerp(op.impact, op.boosted, boost) : op.impact;
+          const isBoostedRow = Boolean(op.boosted);
+          const highlightActive = isBoostedRow ? ramp(t, BOOST_AT - 0.2, 0.4) : 0;
 
-            return (
-              <g key={op.title} opacity={entryK}>
-                {/* Background card for row */}
-                <rect
-                  x={L - 8}
-                  y={y + 3}
-                  width={R - L + 16}
-                  height={ROW_H - 6}
-                  rx={8}
-                  fill={C.card}
-                />
-                {lifted && (
-                  <Card
-                    x={L - 8}
-                    y={y + 3}
-                    w={R - L + 16}
-                    h={ROW_H - 6}
-                    r={8}
-                    opacity={isMoving}
-                  />
-                )}
-                {/* Active highlight when boosted */}
-                <rect
-                  x={L - 8}
-                  y={y + 3}
-                  width={R - L + 16}
-                  height={ROW_H - 6}
-                  rx={8}
-                  fill={C.accentWash}
-                  opacity={highlightActive}
-                />
+          return (
+            <g key={op.title}>
+              {/* Background card for row: clean borderless surface */}
+              <rect
+                x={L - 8}
+                y={y + 3}
+                width={R - L + 16}
+                height={ROW_H - 6}
+                rx={8}
+                fill={highlightActive > 0 ? C.accentWash : C.card}
+              />
+              {/* Active left indicator bar */}
+              {highlightActive > 0 && (
                 <rect
                   x={L - 8}
                   y={cy - 8}
@@ -295,60 +262,60 @@ function Panel({ t }: { t: number }) {
                   fill={C.accent}
                   opacity={highlightActive}
                 />
+              )}
 
-                {/* Channel tiles */}
-                {op.marks.map((m, j) => (
-                  <Tile
-                    key={m}
-                    glyph={m}
-                    x={L + 56 - (op.marks.length - 1 - j) * 25}
-                    y={cy}
-                  />
-                ))}
-
-                {/* Title */}
-                <text
-                  x={L + 76}
-                  y={cy + 4.2}
-                  fontSize={12.5}
-                  fontWeight={550}
-                  fill={C.ink}
-                >
-                  {op.title}
-                </text>
-
-                {/* Impact bar */}
-                <rect
-                  x={IMP.x}
-                  y={cy - 2.5}
-                  width={IMP.w}
-                  height={5}
-                  rx={2.5}
-                  fill={C.hair}
+              {/* Channel tiles */}
+              {op.marks.map((m, j) => (
+                <Tile
+                  key={m}
+                  glyph={m}
+                  x={L + 56 - (op.marks.length - 1 - j) * 25}
+                  y={cy}
                 />
-                <rect
-                  x={IMP.x}
-                  y={cy - 2.5}
-                  width={(IMP.w * value * fillK) / 10}
-                  height={5}
-                  rx={2.5}
-                  fill={ENGINE[op.engine].color}
-                />
-                <text
-                  x={R}
-                  y={cy + 4.2}
-                  fontSize={12}
-                  fontWeight={600}
-                  textAnchor="end"
-                  fill={C.ink}
-                  opacity={clamp01(fillK * 2)}
-                  style={{ fontVariantNumeric: "tabular-nums" }}
-                >
-                  {(value * fillK).toFixed(1)}
-                </text>
-              </g>
-            );
-          })}
+              ))}
+
+              {/* Title */}
+              <text
+                x={L + 76}
+                y={cy + 4.2}
+                fontSize={12.5}
+                fontWeight={550}
+                fill={C.ink}
+              >
+                {op.title}
+              </text>
+
+              {/* Impact bar */}
+              <rect
+                x={IMP.x}
+                y={cy - 2.5}
+                width={IMP.w}
+                height={5}
+                rx={2.5}
+                fill={C.hair}
+              />
+              <rect
+                x={IMP.x}
+                y={cy - 2.5}
+                width={Math.max(4, (IMP.w * value) / 10)}
+                height={5}
+                rx={2.5}
+                fill={ENGINE[op.engine].color}
+              />
+              <text
+                x={R}
+                y={cy + 4.2}
+                fontSize={12}
+                fontWeight={600}
+                textAnchor="end"
+                fill={C.ink}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {value.toFixed(1)}
+              </text>
+            </g>
+          );
+        })}
 
           {/* ── Fixed rank numbers (01..04) ── */}
           {[0, 1, 2, 3].map((s) => (
@@ -395,44 +362,27 @@ function Panel({ t }: { t: number }) {
                 BAR.x +
                 (usable * shares.slice(0, i).reduce((a, b) => a + b, 0)) / 100 +
                 gap * i;
-              const segK = clamp01(build * 4 - i);
-              const hi = i === CREATORS ? rebal : 0;
               return (
                 <g key={ENGINE[i].label}>
                   <rect
                     x={x0}
                     y={BAR.y}
-                    width={Math.max(0, w * segK)}
+                    width={Math.max(0, w)}
                     height={BAR.h}
                     rx={BAR.h / 2}
                     fill={ENGINE[i].color}
-                  />
-                  <rect
-                    x={x0 - 2}
-                    y={BAR.y - 2}
-                    width={w + 4}
-                    height={BAR.h + 4}
-                    rx={(BAR.h + 4) / 2}
-                    fill="none"
-                    stroke={C.accentLine}
-                    opacity={hi}
                   />
                 </g>
               );
             });
           })()}
 
-          {/* 4 Engine Part Metrics */}
+          {/* 4 Engine Part Metrics: ALWAYS visible */}
           {ENGINE.map((e, i) => {
             const x = L + i * COL_W;
-            const k = ramp(t, MIX_AT + i * 0.15, 0.45, easeOut);
             const delta = MIX_AFTER[i] - MIX_BEFORE[i];
             return (
-              <g
-                key={e.label}
-                opacity={k}
-                transform={`translate(0 ${(1 - k) * 4})`}
-              >
+              <g key={e.label}>
                 <circle cx={x + 3.5} cy={LEG_Y - 3.5} r={3.5} fill={e.color} />
                 <Mono x={x + 12} y={LEG_Y} size={9} fill={C.muted}>
                   {e.label}
@@ -446,7 +396,7 @@ function Panel({ t }: { t: number }) {
                   fill={C.ink}
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  {`${Math.round(shares[i] * build)}%`}
+                  {`${Math.round(shares[i])}%`}
                 </text>
                 {i === CREATORS && (
                   <text
@@ -464,10 +414,9 @@ function Panel({ t }: { t: number }) {
             );
           })}
         </g>
-      </g>
-    </PanelSvg>
-  );
-}
+      </PanelSvg>
+    );
+  }
 
 const strategy: PanelModule = { duration: DURATION, settle: SETTLE, Panel };
 export default strategy;

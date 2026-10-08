@@ -16,7 +16,7 @@ type Pt = readonly [number, number];
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 const CARD = { x: 52, y: 44, w: 376, h: 304 };
-const PLOT = { x: 74, y: 150, w: 332, h: 125 };
+const PLOT = { x: 74, y: 165, w: 332, h: 110 };
 const BASE = PLOT.y + PLOT.h; // y = 275
 
 // 12 weeks of traffic data showing launch spike at W3 then compounding growth
@@ -53,37 +53,49 @@ type Signal = {
   text: string;
   action: string;
   cardX: number;
+  cardY: number;
   cardW: number;
+  cardH?: number;
+  leaderX?: number;
 };
 
-// 3 non-colliding signal cards aligned across a neat horizontal shelf above the curve
+// 3 organic, asymmetrically aligned signal cards staggered naturally across the chart negative space
 const SIGNALS: Signal[] = [
   {
-    week: 4, // W5
+    week: 4, // W5 (px = 194.7, py = 238.3)
     at: 3.6,
     mark: "googlesearchconsole",
     text: "Page #9 → #3",
     action: "Double down",
-    cardX: 62,
-    cardW: 108,
+    cardX: 64,
+    cardY: 106,
+    cardW: 104,
+    cardH: 43,
+    leaderX: 148,
   },
   {
-    week: 7, // W8
+    week: 7, // W8 (px = 285.3, py = 214.5)
     at: 6.8,
     mark: "chatgpt",
     text: "AI prompt gap",
     action: "Write answer",
-    cardX: 182,
-    cardW: 112,
+    cardX: 184,
+    cardY: 88,
+    cardW: 108,
+    cardH: 44,
+    leaderX: 262,
   },
   {
-    week: 10, // W11
+    week: 10, // W11 (px = 375.8, py = 183.3)
     at: 9.8,
     mark: "youtube",
     text: "Creator 3× reach",
     action: "Rebook creator",
-    cardX: 306,
-    cardW: 112,
+    cardX: 304,
+    cardY: 96,
+    cardW: 114,
+    cardH: 43,
+    leaderX: 370,
   },
 ];
 
@@ -114,7 +126,6 @@ function Panel({ t }: { t: number }) {
   const pts = upTo(p);
   const tip = pts[pts.length - 1] ?? PTS[0];
   const drawing = LEGS.some((l) => t >= l.at && t < l.at + l.dur);
-  const launch = ramp(t, 1.8, 0.45, easeOut);
   const done = ramp(t, DONE_AT, 0.4, easeOut);
 
   return (
@@ -142,12 +153,22 @@ function Panel({ t }: { t: number }) {
         </text>
 
         {/* Status messages while running */}
+        {done <= 0 && t < STATUS[0].from && (
+          <g>
+            <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={5} fill={C.accent} opacity={0.2} />
+            <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={2.5} fill={C.accent} />
+            <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} textAnchor="end">
+              {STATUS[0].text}
+            </Mono>
+          </g>
+        )}
         {STATUS.map((s) => {
           const k = Math.min(ramp(t, s.from, 0.3), 1 - ramp(t, s.to - 0.25, 0.25));
           if (k <= 0) return null;
           return (
             <g key={s.text} opacity={k}>
-              <circle cx={CARD.x + CARD.w - 138} cy={CARD.y + 26.5} r={3} fill={C.accent} />
+              <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={5} fill={C.accent} opacity={0.2} />
+              <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={2.5} fill={C.accent} />
               <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} textAnchor="end">
                 {s.text}
               </Mono>
@@ -155,7 +176,7 @@ function Panel({ t }: { t: number }) {
           );
         })}
 
-        {/* Settled state in header */}
+        {/* Settled state in header: glowing brand presence */}
         <g opacity={done} transform={`translate(0 ${(1 - done) * 4})`}>
           <Check x={CARD.x + CARD.w - 156} y={CARD.y + 26.5} r={5.5} k={done} color={C.lightGreen} />
           <Mono
@@ -170,6 +191,9 @@ function Panel({ t }: { t: number }) {
           </Mono>
         </g>
 
+        {/* Header divider line */}
+        <line x1={CARD.x} x2={CARD.x + CARD.w} y1={CARD.y + 38} y2={CARD.y + 38} stroke={C.hair} />
+
         {/* Subtle grid lines & axes */}
         {[30, 70, 105].map((v) => (
           <line
@@ -182,7 +206,7 @@ function Panel({ t }: { t: number }) {
             strokeDasharray="2 4"
           />
         ))}
-        <line x1={PLOT.x} x2={PLOT.x + PLOT.w} y1={BASE} y2={BASE} stroke={C.line} />
+        <line x1={PLOT.x} x2={PLOT.x + PLOT.w} y1={BASE} y2={BASE} stroke={C.hair} />
         <Mono x={PLOT.x} y={BASE + 18} size={9} textAnchor="middle">
           W1
         </Mono>
@@ -190,14 +214,14 @@ function Panel({ t }: { t: number }) {
           W12
         </Mono>
 
-        {/* Launch week marker at W3 */}
-        <g opacity={launch}>
+        {/* Launch week marker at W3: ALWAYS visible */}
+        <g>
           <line
             x1={PTS[LAUNCH][0]}
             x2={PTS[LAUNCH][0]}
             y1={PTS[LAUNCH][1] + 6}
             y2={BASE}
-            stroke={C.line}
+            stroke={C.hair}
             strokeDasharray="2 3"
           />
           <Mono
@@ -214,7 +238,16 @@ function Panel({ t }: { t: number }) {
           </Mono>
         </g>
 
-        {/* The organic traffic curve & soft area fill */}
+        {/* Baseline curve: ALWAYS visible so chart is never an empty void */}
+        <path
+          d={polyline(PTS)}
+          fill="none"
+          stroke={C.hair}
+          strokeWidth={1.5}
+          strokeDasharray="3 3"
+        />
+
+        {/* The active organic traffic curve & soft area fill */}
         {pts.length > 1 && (
           <g>
             <path
@@ -240,7 +273,7 @@ function Panel({ t }: { t: number }) {
           </g>
         )}
 
-        {/* 3 Persistent Signal popovers and leaders */}
+        {/* 3 Persistent Signal popovers and leaders: ALWAYS visible */}
         {SIGNALS.map((s) => (
           <SignalCard key={s.text} s={s} t={t} />
         ))}
@@ -253,49 +286,57 @@ function Panel({ t }: { t: number }) {
 function SignalCard({ s, t }: { s: Signal; t: number }) {
   const [px, py] = PTS[s.week];
   const reached = ramp(t, s.at - 0.1, 0.4, easeOut);
-  if (reached <= 0) return null;
-
-  const cardIn = ramp(t, s.at, 0.45, easeOut);
   const green = ramp(t, s.at + 0.8, 0.4, easeOut);
-  const cardY = 68;
-  const cardH = 46;
-  const leaderX = s.cardX + s.cardW / 2;
+  const cardY = s.cardY;
+  const cardH = s.cardH ?? 44;
+  const leaderX = s.leaderX ?? s.cardX + s.cardW / 2;
 
   return (
     <g>
       {/* Dashed vertical leader line from card down to data point */}
-      <line
-        x1={leaderX}
-        x2={px}
-        y1={cardY + cardH}
-        y2={py - 6}
-        stroke={green > 0.5 ? C.lightGreen : C.accentLine}
-        strokeWidth={1}
-        strokeDasharray="2 3"
-        opacity={cardIn * 0.85}
-      />
+      {reached > 0 && (
+        <>
+          <line
+            x1={leaderX}
+            x2={px}
+            y1={cardY + cardH}
+            y2={py - 6}
+            stroke={green > 0.5 ? C.lightGreen : C.accent}
+            strokeWidth={1}
+            strokeDasharray="2 3"
+            opacity={reached * 0.75}
+          />
 
-      {/* Point on the traffic curve: pulses coral, then settles to light green check dot */}
-      <circle
-        cx={px}
-        cy={py}
-        r={4.2}
-        fill={green > 0.5 ? C.lightGreen : C.accent}
-        stroke={C.card}
-        strokeWidth={1.4}
-      />
+          {/* Anchor pin dot at the base of the card */}
+          <circle
+            cx={leaderX}
+            cy={cardY + cardH}
+            r={1.8}
+            fill={green > 0.5 ? C.lightGreen : C.accent}
+            opacity={reached * 0.75}
+          />
 
-      {/* Popover card */}
-      <g opacity={cardIn} transform={`translate(0 ${(1 - cardIn) * 4})`}>
-        <Card x={s.cardX} y={cardY} w={s.cardW} h={cardH} r={8} />
+          {/* Point on the traffic curve: pulses coral, then settles to light green check dot */}
+          <circle
+            cx={px}
+            cy={py}
+            r={4.2}
+            fill={green > 0.5 ? C.lightGreen : C.accent}
+            stroke={C.card}
+            strokeWidth={1.4}
+          />
+        </>
+      )}
+
+      {/* Popover card: clean borderless surface, ZERO harsh inner strokes */}
+      <g>
         <rect
-          x={s.cardX + 0.5}
-          y={cardY + 0.5}
-          width={s.cardW - 1}
-          height={cardH - 1}
-          rx={7.5}
-          fill="none"
-          stroke={green > 0.5 ? C.line : C.accentLine}
+          x={s.cardX}
+          y={cardY}
+          width={s.cardW}
+          height={cardH}
+          rx={8}
+          fill={green > 0.5 ? C.card : reached > 0 ? C.accentWash : C.paper}
         />
 
         {/* Header: source mark + signal description */}
@@ -310,14 +351,13 @@ function SignalCard({ s, t }: { s: Signal; t: number }) {
           {s.text}
         </text>
 
-        {/* Next action pill */}
-        <g transform={`translate(${s.cardX + 7} ${cardY + 25})`}>
+        {/* Next action pill: clean borderless pill */}
+        <g transform={`translate(${s.cardX + 7} ${cardY + 24})`}>
           <rect
             width={s.cardW - 14}
             height={16}
             rx={8}
-            fill={green > 0.5 ? C.lightGreenSoft : C.accentWash}
-            stroke={green > 0.5 ? "transparent" : C.accentLine}
+            fill={green > 0.5 ? C.lightGreenSoft : reached > 0 ? C.accentWash : C.card}
           />
           {green < 0.5 ? (
             <text
@@ -325,10 +365,10 @@ function SignalCard({ s, t }: { s: Signal; t: number }) {
               y={11.2}
               fontSize={9}
               fontWeight={600}
-              fill={C.accent}
+              fill={reached > 0 ? C.accent : C.muted}
               textAnchor="middle"
             >
-              {`→ ${s.action}`}
+              {reached > 0 ? `→ ${s.action}` : s.action}
             </text>
           ) : (
             <g>

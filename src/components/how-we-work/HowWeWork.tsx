@@ -104,7 +104,7 @@ export default function HowWeWork() {
     });
   };
 
-  const mode: PlayMode = reduced ? "still" : desktop ? "loop" : "once";
+  const mode: PlayMode = reduced ? "still" : "loop";
 
   return (
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
@@ -220,7 +220,10 @@ export default function HowWeWork() {
                 </div>
                 {/* The copy. */}
                 <div className="flex flex-col justify-center overflow-y-auto p-7 sm:p-10 xl:p-12">
-                  <p className="inline-flex w-fit rounded-md border border-line px-2 py-1 font-mono text-[11px] tracking-[0.1em] text-ink/70">{step.n}</p>
+                  <p className="inline-flex w-fit items-center gap-2 rounded-full bg-paper px-3 py-1 font-mono text-[11px] font-medium tracking-[0.08em] text-ink/80">
+                    <span className="size-1.5 rounded-full bg-accent" />
+                    {step.n}
+                  </p>
                   <h3 id={`hww-step-${step.n}`} className="mt-5 text-[clamp(1.5rem,2.1vw,2.05rem)] leading-[1.12] font-normal tracking-[-0.03em] text-ink">
                     {step.headline}
                   </h3>
@@ -228,7 +231,7 @@ export default function HowWeWork() {
                   <p className="sr-only">{INCLUDES_LABEL}</p>
                   <ul className="mt-6 flex flex-wrap gap-1.5">
                     {step.includes.map((item) => (
-                      <li key={item} className="rounded-md border border-line bg-paper/60 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] text-ink/80">
+                      <li key={item} className="rounded-full bg-paper/80 px-3 py-1 font-mono text-[10.5px] tracking-[0.03em] text-ink/75">
                         {item}
                       </li>
                     ))}
