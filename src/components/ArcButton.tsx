@@ -1,30 +1,29 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-// Pill CTA: on hover/focus pill-shaped layers slide in from the left
-// (coral, then amber, then dark ink), so their rounded leading edges read as arcs,
-// and the dark ink settles as the fill. On leave only the dark layer slides back out;
-// the colors reset hidden beneath it.
-const SWEEP = ["#ec544b", "#fcb401"]; // coral, amber
-const INK = "#0f1a14"; // deep ink (final fill)
+// Pill CTA (ArcButton):
+// Resting state: dark green (main brand color).
+// On hover: 2-3 layers of color slide in sequentially from the left
+// (light green, then amber, settling on dull orange as the final fill).
+// On leave: the orange layer slides back out to the left over 450ms,
+// cleanly revealing the resting dark green button face underneath.
+const SWEEP = ["#2bb673", "#fcb401"]; // Layer 1: fresh light green, Layer 2: golden amber
+const HOVER_FILL = "var(--secondary, #d96543)"; // Layer 3: dull secondary orange (final fill on hover)
 
-// Literal classes so Tailwind compiles them: sweep layers step 50ms apart, ink follows one step later.
+// Literal classes so Tailwind compiles them: sweep layers step ~50ms apart, orange fill settles right after.
 const DELAYS = [
   "group-hover:delay-0",
   "group-hover:delay-[50ms]",
-  "group-hover:delay-[100ms]",
-  "group-hover:delay-[150ms]",
-  "group-hover:delay-[200ms]",
-  "group-hover:delay-[250ms]",
+  "group-hover:delay-[110ms]",
+  "group-hover:delay-[170ms]",
 ];
 
 const TONES = {
-  accent: "bg-accent text-white transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
-  primary: "bg-primary text-white transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
+  primary: "bg-primary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
+  accent: "bg-primary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
   secondary:
-    "bg-card text-foreground border border-line shadow-[0_1px_2px_rgb(15_26_20/0.06)] transition-colors duration-300 hover:delay-200 hover:text-white hover:border-transparent focus-visible:text-white",
-  coral: "bg-coral text-white transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
-  amber: "bg-amber text-foreground transition-colors duration-300 hover:delay-200 hover:text-white focus-visible:text-white",
+    "bg-card text-foreground border border-line shadow-[0_1px_2px_rgb(15_26_20/0.06)] transition-colors duration-300 hover:text-white hover:border-transparent focus-visible:text-white",
+  orange: "bg-secondary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
 };
 
 const SIZES = {
@@ -51,25 +50,27 @@ type Props = {
   arrow?: boolean;
   className?: string;
   sweep?: string[];
+  hoverFill?: string;
 };
 
 export default function ArcButton({
   href,
   children,
-  tone = "accent",
+  tone = "primary",
   size = "md",
   arrow = false,
   className = "",
   sweep = SWEEP,
+  hoverFill = HOVER_FILL,
 }: Props) {
   const layers = [
     ...sweep.map((color, i) => ({
       color,
-      classes: `duration-0 group-hover:duration-600 ${DELAYS[i] ?? ""}`,
+      classes: `duration-0 group-hover:duration-500 ${DELAYS[i] ?? ""}`,
     })),
     {
-      color: INK,
-      classes: `duration-500 group-hover:duration-600 ${DELAYS[sweep.length] ?? ""}`,
+      color: hoverFill,
+      classes: `duration-500 group-hover:duration-500 ${DELAYS[sweep.length] ?? ""}`,
     },
   ];
 

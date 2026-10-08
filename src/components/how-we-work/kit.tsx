@@ -16,7 +16,10 @@ export const C = {
   ink: "var(--ink)",
   paper: "var(--paper)",
   primary: "var(--primary)",
+  lightGreen: "var(--light-green)",
+  lightGreenSoft: "var(--light-green-soft)",
   accent: "var(--accent)",
+  secondary: "var(--secondary)",
   line: "var(--line)",
   muted: "var(--muted)",
   card: "var(--card)",
@@ -187,8 +190,8 @@ export function Mark({ name, x, y, size = 16, color, opacity }: { name: MarkName
   return <path d={MARKS[name]} transform={transform} fill={color ?? MARK_COLOR[name]} opacity={opacity} />;
 }
 
-/** A round check badge: deep green when `k` reaches 1, its tick drawing on as k goes 0 → 1. */
-export function Check({ x, y, r = 7, k, color = C.primary }: { x: number; y: number; r?: number; k: number; color?: string }) {
+/** A round check badge: light green when `k` reaches 1, its tick drawing on as k goes 0 → 1. */
+export function Check({ x, y, r = 7, k, color = C.lightGreen }: { x: number; y: number; r?: number; k: number; color?: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
       <circle r={r} fill={k > 0 ? color : C.card} stroke={k > 0 ? color : C.line} opacity={k > 0 ? 0.25 + 0.75 * clamp01(k * 2) : 1} />

@@ -72,11 +72,11 @@ export default function GrowthScreen() {
       ctx.font = `500 ${8.6 * u}px ${p.monoFont}`;
       const chipW = ctx.measureText(chip).width + 10 * u;
       const chipX = pad + kpiW + 7 * u;
-      ctx.fillStyle = "#dfe8e2";
+      ctx.fillStyle = p.lightGreenSoft || "#d8f5e6";
       ctx.beginPath();
       ctx.roundRect(chipX, 29.5 * u, chipW, 13 * u, 6.5 * u);
       ctx.fill();
-      ctx.fillStyle = p.primary;
+      ctx.fillStyle = p.lightGreen || p.primary;
       ctx.fillText(chip, chipX + 5 * u, 36.5 * u);
       ctx.fillStyle = p.muted;
       ctx.fillText("vs last qtr", chipX + chipW + 6 * u, 36.5 * u);

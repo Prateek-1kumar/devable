@@ -94,7 +94,7 @@ function Panel({ t }: { t: number }) {
           return (
             <g key={`c${i}`}>
               <path d={d} fill="none" stroke={C.ink} strokeOpacity={0.12 * artIn} />
-              <Trace d={d} k={send} stroke={mix(C.accent, C.primary, done)} opacity={lerp(0.85, 0.45, done)} />
+              <Trace d={d} k={send} stroke={mix(C.accent, C.lightGreen, done)} opacity={lerp(0.85, 0.45, done)} />
               <Pulse points={route} k={t < sendAt(i) ? -1 : t > litAt(i) ? 2 : send} r={2.6} />
             </g>
           );
@@ -107,7 +107,7 @@ function Panel({ t }: { t: number }) {
           <Mono x={ART.x + 30} y={ART.y + 22.5} size={9}>
             Article
           </Mono>
-          <Mono x={ART.x + ART.w - 14} y={ART.y + 22.5} size={9} fill={C.primary} textAnchor="end">
+          <Mono x={ART.x + ART.w - 14} y={ART.y + 22.5} size={9} fill={C.lightGreen} textAnchor="end">
             Published
           </Mono>
           <text x={ART.x + 14} y={ART.y + 46} fontSize={13.5} fontWeight={600} letterSpacing="-0.01em" fill={C.ink}>
@@ -118,8 +118,8 @@ function Panel({ t }: { t: number }) {
           </text>
           <line x1={ART.x + 14} x2={ART.x + ART.w - 14} y1={ART.y + 75} y2={ART.y + 75} stroke={C.hair} />
           {/* The counter. */}
-          <circle cx={ART.x + 17} cy={ART.y + 87.5} r={3} fill={mix(mix(C.line, C.accent, distributing), C.primary, allLive)} />
-          <Mono x={ART.x + 27} y={ART.y + 91} size={9} letterSpacing="0.05em" fill={mix(C.ink, C.primary, allLive)}>
+          <circle cx={ART.x + 17} cy={ART.y + 87.5} r={3} fill={mix(mix(C.line, C.accent, distributing), C.lightGreen, allLive)} />
+          <Mono x={ART.x + 27} y={ART.y + 91} size={9} letterSpacing="0.05em" fill={mix(C.ink, C.lightGreen, allLive)}>
             {`Live in ${live}/4 channels`}
           </Mono>
         </g>
@@ -253,8 +253,8 @@ function ChatGPT({ t }: { t: number }) {
         <g>
           <Line>Cited</Line>
           <g opacity={cite} transform={`translate(38 ${-10 + (1 - cite) * 3})`}>
-            <rect width={20} height={14} rx={4} fill={mix(C.accentWash, C.primarySoft, done)} stroke={mix(C.accentLine, "transparent", done)} />
-            <text x={10} y={10.5} fontFamily="var(--font-mono)" fontSize={9} textAnchor="middle" fill={mix(C.accent, C.primary, done)}>
+            <rect width={20} height={14} rx={4} fill={mix(C.accentWash, C.lightGreenSoft, done)} stroke={mix(C.accentLine, "transparent", done)} />
+            <text x={10} y={10.5} fontFamily="var(--font-mono)" fontSize={9} textAnchor="middle" fill={mix(C.accent, C.lightGreen, done)}>
               1
             </text>
           </g>

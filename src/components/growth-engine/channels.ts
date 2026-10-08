@@ -11,7 +11,7 @@ export const CHANNELS = [
     short: "Content",
     glyph: "code",
     line: "Docs, tutorials and deep dives developers actually bookmark.",
-    color: "var(--primary)",
+    color: "var(--light-green)",
     band: "primary",
   },
   {

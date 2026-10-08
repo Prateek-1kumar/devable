@@ -130,7 +130,7 @@ function Panel({ t }: { t: number }) {
         return (
           <g key={s.label}>
             <line x1={DOT_X} x2={DOT_X} y1={y0} y2={y1} stroke={C.line} />
-            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={lerp(y0, y1, k)} stroke={C.primary} strokeOpacity={0.55} opacity={k > 0 ? 1 : 0} />
+            <line x1={DOT_X} x2={DOT_X} y1={y0} y2={lerp(y0, y1, k)} stroke={C.lightGreen} strokeOpacity={0.7} opacity={k > 0 ? 1 : 0} />
           </g>
         );
       })}
@@ -232,9 +232,9 @@ function Panel({ t }: { t: number }) {
         )}
         {/* ✓ runs */}
         <g opacity={runs * o} transform={`translate(${CODE_BOX.x + CODE_BOX.w - 10} ${CODE_BOX.y + 5}) ${rise(runs)}`}>
-          <rect x={-56} width={56} height={17} rx={8.5} fill={C.primarySoft} />
-          <path d="M-46 8.6 l2.6 2.6 l4.8 -5" fill="none" stroke={C.primary} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          <Mono x={-34} y={11.8} size={9} fill={C.primary}>
+          <rect x={-56} width={56} height={17} rx={8.5} fill={C.lightGreenSoft} />
+          <path d="M-46 8.6 l2.6 2.6 l4.8 -5" fill="none" stroke={C.lightGreen} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Mono x={-34} y={11.8} size={9} fill={C.lightGreen}>
             runs
           </Mono>
         </g>
@@ -244,8 +244,8 @@ function Panel({ t }: { t: number }) {
       <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill="none" stroke={C.line} strokeDasharray="3 3" opacity={(1 - badge) * o * 0.8} />
       <g opacity={badge * o} transform={rise(badge)}>
         <rect x={IN} y={BADGE_Y - 12} width={DOC.w - 28} height={24} rx={12} fill={C.card} stroke={C.line} />
-        <circle cx={IN + 12} cy={BADGE_Y} r={9} fill={C.primarySoft} />
-        <text x={IN + 12} y={BADGE_Y + 3.3} fontSize={9} fontWeight={650} fill={C.primary} textAnchor="middle">
+        <circle cx={IN + 12} cy={BADGE_Y} r={9} fill={C.lightGreenSoft} />
+        <text x={IN + 12} y={BADGE_Y + 3.3} fontSize={9} fontWeight={650} fill={C.lightGreen} textAnchor="middle">
           MC
         </text>
         <text x={IN + 27} y={BADGE_Y + 4} fontSize={11.5} fontWeight={550} fill={C.ink}>

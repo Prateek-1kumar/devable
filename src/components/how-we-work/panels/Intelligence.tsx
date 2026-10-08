@@ -167,7 +167,7 @@ function Panel({ t }: { t: number }) {
               <Mono x={COL.x + 1} y={y + 1} size={9} fill={lit > 0.5 ? C.ink : C.muted}>
                 {grp.label}
               </Mono>
-              <circle cx={COL.x + grp.label.length * 6.3 + 10} cy={y - 2} r={2.5} fill={C.primary} opacity={fin} />
+              <circle cx={COL.x + grp.label.length * 6.3 + 10} cy={y - 2} r={2.5} fill={C.lightGreen} opacity={fin} />
               {grp.items.map((it, i) => {
                 const x = COL.x + i * (TILE + TGAP);
                 return (
@@ -210,7 +210,7 @@ function Panel({ t }: { t: number }) {
                     {f.label}
                   </text>
                   {f.value && (
-                    <text x={CARD.x + CARD.w - PAD} y={y} fontSize={12} fontWeight={600} fill={C.primary} textAnchor="end" opacity={ramp(t, f.at + 0.25, 0.4)}>
+                    <text x={CARD.x + CARD.w - PAD} y={y} fontSize={12} fontWeight={600} fill={C.lightGreen} textAnchor="end" opacity={ramp(t, f.at + 0.25, 0.4)}>
                       {f.value}
                     </text>
                   )}
@@ -232,7 +232,7 @@ function StatusLine({ t, done }: { t: number; done: number }) {
   return (
     <g>
       <circle cx={x + 4} cy={STATUS_Y - 4} r={4 + 2.5 * breathe} fill={C.accent} opacity={(0.14 + 0.06 * breathe) * (1 - done) * ramp(t, 0.6, 0.3)} />
-      <circle cx={x + 4} cy={STATUS_Y - 4} r={3.5} fill={done > 0.5 ? C.primary : C.accent} opacity={ramp(t, 0.6, 0.3)} />
+      <circle cx={x + 4} cy={STATUS_Y - 4} r={3.5} fill={done > 0.5 ? C.lightGreen : C.accent} opacity={ramp(t, 0.6, 0.3)} />
       {STATUSES.map((s, i) => {
         const inK = ramp(t, s.at, 0.25, easeOut);
         const outK = i === STATUSES.length - 1 ? ramp(t, DONE - 0.1, 0.2) : ramp(t, s.at + s.dur - 0.12, 0.18);
@@ -245,7 +245,7 @@ function StatusLine({ t, done }: { t: number; done: number }) {
         );
       })}
       {done > 0 && (
-        <text x={x + 16} y={STATUS_Y + (1 - done) * 5} fontSize={12.5} fontWeight={600} fill={C.primary} opacity={done}>
+        <text x={x + 16} y={STATUS_Y + (1 - done) * 5} fontSize={12.5} fontWeight={600} fill={C.lightGreen} opacity={done}>
           Product model complete
         </text>
       )}
@@ -261,7 +261,7 @@ function ProgressDots({ t }: { t: number }) {
       {STATUSES.map((s, i) => {
         const on = ramp(t, s.at, 0.2);
         const off = ramp(t, s.at + s.dur - 0.1, 0.2);
-        const fill = off > 0.5 ? C.primary : on > 0.5 ? C.accent : C.line;
+        const fill = off > 0.5 ? C.lightGreen : on > 0.5 ? C.accent : C.line;
         return <circle key={i} cx={x0 + i * 11} cy={DOTS_Y} r={on > 0.5 && off < 0.5 ? 3 : 2.5} fill={fill} />;
       })}
     </g>
@@ -296,8 +296,8 @@ function Terminal({ t, k }: { t: number; k: number }) {
         ✓ installed in 4.1s
       </text>
       <g opacity={l3} transform={`translate(0 ${(1 - l3) * 4})`}>
-        <rect x={x + 6} y={y + 69} width={w - 12} height={19} rx={5} fill={C.primarySoft} />
-        <text x={x + 12} y={y + 82} {...mono} fill={C.primary} fontWeight={600}>
+        <rect x={x + 6} y={y + 69} width={w - 12} height={19} rx={5} fill={C.lightGreenSoft} />
+        <text x={x + 12} y={y + 82} {...mono} fill={C.lightGreen} fontWeight={600}>
           ✓ app running
         </text>
         <text x={x + w - 12} y={y + 82} {...mono} fill={C.muted} textAnchor="end">

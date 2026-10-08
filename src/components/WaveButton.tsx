@@ -9,10 +9,10 @@ import type { ReactNode } from "react";
 // Color roles follow the palette: primary is the coral accent (ink text) flooded
 // by deep green; secondary is a white face flooded by deep green.
 const TONES = {
-  primary: { face: "bg-accent text-ink", wave: "text-primary", ink: "group-hover:text-white group-focus-visible:text-white" },
+  primary: { face: "bg-primary text-white", wave: "text-secondary", ink: "group-hover:text-white group-focus-visible:text-white" },
   secondary: {
     face: "bg-white text-ink shadow-[0_0_0_1px_rgb(15_26_20/0.1),0_1px_2px_rgb(15_26_20/0.06)]",
-    wave: "text-primary",
+    wave: "text-secondary",
     ink: "group-hover:text-white group-focus-visible:text-white",
   },
 };

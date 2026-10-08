@@ -183,7 +183,7 @@ export function Caption({ n, text, at }: { n: string; text: string; at: Vector3 
       const u = CARD_PX / DESIGN_ZOOM;
       const badge = 18 * u;
       const y = h / 2;
-      ctx.fillStyle = p.primary;
+      ctx.fillStyle = p.lightGreen || p.primary;
       ctx.beginPath();
       ctx.roundRect(u, y - badge / 2, badge, badge, 4 * u);
       ctx.fill();

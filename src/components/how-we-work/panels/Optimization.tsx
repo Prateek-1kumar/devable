@@ -103,7 +103,7 @@ function Panel({ t }: { t: number }) {
       })}
       <g opacity={done * o} transform={rise(done)}>
         <Check x={CARD.x + CARD.w - 18 - monoW("3 next actions") - 9} y={CARD.y + 26.5} r={5.5} k={done} />
-        <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} fill={C.primary} textAnchor="end">
+        <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} fill={C.lightGreen} textAnchor="end">
           3 next actions
         </Mono>
       </g>
@@ -180,7 +180,7 @@ function SignalView({ s, t, o }: { s: Signal; t: number; o: number }) {
       <g opacity={o}>
         {ring < 1 && <circle cx={px} cy={py} r={4 + 9 * ring} fill="none" stroke={C.accentLine} opacity={1 - ring} />}
         <circle cx={px} cy={py} r={4} fill={C.accent} stroke={C.card} strokeWidth={1.2} opacity={reached * (1 - green)} />
-        <circle cx={px} cy={py} r={4} fill={C.primary} stroke={C.card} strokeWidth={1.2} opacity={green} />
+        <circle cx={px} cy={py} r={4} fill={C.lightGreen} stroke={C.card} strokeWidth={1.2} opacity={green} />
       </g>
       {show > 0 && (
         <g opacity={show} transform={rise(pill)}>
@@ -190,16 +190,16 @@ function SignalView({ s, t, o }: { s: Signal; t: number; o: number }) {
           <text x={x + 33} y={PILL_Y + 20.2} fontSize={12} fontWeight={500} fill={C.ink}>
             {s.text}
           </text>
-          {/* Next action chip: coral while proposed, deep green once queued. */}
+          {/* Next action chip: coral while proposed, light green once queued. */}
           <g opacity={chip} transform={`translate(${x + 10} ${PILL_Y + 31 + (1 - chip) * 4})`}>
             <rect width={chipW} height={21} rx={10.5} fill={C.accentWash} stroke={C.accentLine} opacity={1 - green} />
-            <rect width={chipW} height={21} rx={10.5} fill={C.primarySoft} opacity={green} />
+            <rect width={chipW} height={21} rx={10.5} fill={C.lightGreenSoft} opacity={green} />
             <text x={10} y={14.6} fontSize={11.5} fontWeight={550} fill={C.accent} opacity={1 - green}>
               {`→ ${s.action}`}
             </text>
             <g opacity={green}>
               <Check x={14} y={10.5} r={5.5} k={green} />
-              <text x={24} y={14.6} fontSize={11.5} fontWeight={550} fill={C.primary}>
+              <text x={24} y={14.6} fontSize={11.5} fontWeight={550} fill={C.lightGreen}>
                 {s.action}
               </text>
             </g>

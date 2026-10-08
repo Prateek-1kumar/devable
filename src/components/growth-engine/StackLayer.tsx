@@ -35,9 +35,18 @@ export default function StackLayer({ index }: Props) {
   const raised = hovered || focused;
 
   const slab = useMemo(() => boxFaces(SLAB, { top: TOP }), []);
-  const strip = useMemo(() => boxFaces(p.primary), [p]);
+  const strip = useMemo(() => boxFaces(p.lightGreen || p.primary), [p]);
   const colors = useMemo(
-    () => ({ slab: new Color(SLAB), top: new Color(TOP), warm: new Color(WARM), strip: new Color(p.primary), on: new Color(p.accent), a: new Color(), b: new Color(), c: new Color() }),
+    () => ({
+      slab: new Color(SLAB),
+      top: new Color(TOP),
+      warm: new Color(WARM),
+      strip: new Color(p.lightGreen || p.primary),
+      on: new Color(p.accent),
+      a: new Color(),
+      b: new Color(),
+      c: new Color(),
+    }),
     [p],
   );
   const pointer = useRef(0);
