@@ -109,36 +109,87 @@ export default function HowWeWork() {
       </header>
 
       <div className="mt-16 grid gap-10 lg:mt-20 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
-        {/* The nav: a hairline with the steps along it; the active one gets an ink tick and full-strength text. */}
+        {/* The nav: vertically centered in the viewport with smooth tactile beads that adapt the site UI. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
-          <div className="sticky" style={{ top: STICK }}>
-            <ol className="border-l border-ink/10">
+          <div className="sticky top-[max(112px,calc(50vh-170px))]">
+            <ol className="relative pl-6 space-y-1.5">
+              {/* The vertical string / cord connecting the beads */}
+              <div
+                aria-hidden="true"
+                className="absolute left-[7px] top-4 bottom-4 w-[1.5px] -translate-x-1/2 bg-gradient-to-b from-transparent via-line to-transparent"
+              />
+
               {STEPS.map((step, i) => {
                 const on = i === active;
                 return (
-                  <li key={step.n} className="relative">
+                  <li key={step.n} className="group relative">
+                    {/* The bead on the vertical thread */}
                     <span
                       aria-hidden="true"
-                      className={`absolute top-0 -left-px h-full w-0.5 bg-ink transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${on ? "scale-y-100" : "scale-y-0"}`}
+                      className={`absolute left-[7px] top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                        on
+                          ? "h-5 w-2.5 rounded-full bg-primary ring-4 ring-primary-soft shadow-[0_2px_8px_rgba(31,77,58,0.25)]"
+                          : i < active
+                          ? "h-2.5 w-2.5 rounded-full bg-light-green ring-2 ring-light-green-soft shadow-xs"
+                          : "h-2 w-2 rounded-full bg-card border border-ink/20 shadow-xs group-hover:scale-125 group-hover:border-secondary/60 group-hover:bg-secondary-soft/50"
+                      }`}
                     />
+
                     <button
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className={`flex w-full items-baseline gap-3 py-3 pl-5 text-left transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                        on ? "text-ink" : "text-muted hover:text-ink"
+                      className={`flex w-full items-center gap-3 rounded-full py-2 px-3.5 text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                        on
+                          ? "bg-card/90 shadow-[0_2px_12px_-4px_rgba(15,26,20,0.08)] border border-line/80 text-ink"
+                          : "text-muted hover:text-ink hover:bg-card/40 border border-transparent"
                       }`}
                     >
-                      <span className={`font-mono text-[11px] tracking-[0.08em] transition-colors duration-300 ${on ? "text-accent" : ""}`}>{step.n}</span>
-                      <span className="text-[0.95rem] tracking-[-0.01em]">{step.title}</span>
+                      <span
+                        className={`font-mono text-[11px] font-medium tracking-[0.08em] transition-colors duration-300 ${
+                          on ? "text-secondary font-semibold" : "text-muted/80 group-hover:text-ink"
+                        }`}
+                      >
+                        {step.n}
+                      </span>
+                      <span
+                        className={`text-[0.93rem] tracking-[-0.01em] transition-colors duration-300 ${
+                          on ? "font-semibold text-ink" : "font-normal text-muted group-hover:text-ink"
+                        }`}
+                      >
+                        {step.title}
+                      </span>
                     </button>
                   </li>
                 );
               })}
             </ol>
-            <p className="mt-6 pl-5 font-mono text-[11px] tracking-[0.12em] text-muted uppercase" aria-hidden="true">
-              <span className="text-ink">{STEPS[active].n}</span> / 0{STEPS.length}
-            </p>
+
+            {/* Step counter pill with micro progress beads */}
+            <div className="mt-5 pl-6">
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-line/80 bg-card/70 px-3.5 py-1.5 shadow-xs backdrop-blur-xs">
+                <div className="flex items-center gap-1.5" aria-hidden="true">
+                  {STEPS.map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-400 ${
+                        idx === active
+                          ? "w-3 bg-secondary"
+                          : idx < active
+                          ? "w-1.5 bg-light-green"
+                          : "w-1.5 bg-line"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="h-3 w-px bg-line" aria-hidden="true" />
+                <p className="font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
+                  <span className="font-semibold text-ink">{STEPS[active].n}</span>
+                  <span className="mx-1 text-muted/60">/</span>
+                  <span>0{STEPS.length}</span>
+                </p>
+              </div>
+            </div>
           </div>
         </nav>
 
