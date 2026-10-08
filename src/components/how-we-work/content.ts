@@ -32,7 +32,7 @@ export const STEPS = [
       { label: "Competitors mapped", value: 8, format: int },
     ],
     panel:
-      "Animation: product docs, the GitHub repo, sales calls, Reddit threads, competitor sites and existing content feed a product model that confirms ICP, positioning, competitor gaps and a visibility baseline, then places the product in an open space on a positioning map.",
+      "Animation: sources like docs, the GitHub repo, sales calls, Reddit, competitors and Google light up one by one and feed a product model, which briefly runs the product's quickstart in a terminal and then checks off who it's for, core use cases, the competitor landscape, the visibility baseline, content gaps and where it wins.",
   },
   {
     n: "02",
@@ -45,7 +45,7 @@ export const STEPS = [
       { label: "AI citation gap", value: 38, format: pct },
     ],
     panel:
-      "Animation: Google Search, AI answers, Reddit, developer communities and creators are scored on impact and effort and re-sorted by priority, then a six-week content roadmap fills with articles.",
+      "Animation: a growth plan finds four specific opportunities (a vector-DB search query on Google and ChatGPT, creators for the v2 launch, r/LocalLLaMA, and LangChain and LlamaIndex guides), ranks them by impact, and turns them into an engine mix that shifts towards creators when the v2 launch comes up.",
   },
   {
     n: "03",
@@ -64,7 +64,7 @@ export const STEPS = [
       { label: "Avg. time on page", value: 272, format: (v: number) => `${Math.floor(v / 60)}:${String(Math.round(v) % 60).padStart(2, "0")}` },
     ],
     panel:
-      "Animation: a content brief with a target query, audience and outline becomes a published technical article with a code example and a comparison table, and its SEO and AI-readiness scores rise until it is marked optimized.",
+      "Animation: a production checklist ticks off brief, research, tested code and an engineer's technical review while the article beside it fills in with a title, a working code example and a Reviewed by an engineer badge, then gets published.",
   },
   {
     n: "04",
@@ -83,7 +83,7 @@ export const STEPS = [
       { label: "AI citations", value: 43, format: pct },
     ],
     panel:
-      "Animation: the published article fans out to Google, where it climbs to the second result, to ChatGPT and Perplexity answers that cite it, to a Reddit thread gaining upvotes, to a creator video and to social posts.",
+      "Animation: one published article gets picked up by four channels in turn (it ranks #2 on Google, ChatGPT cites it, a r/devops thread recommends it, and a creator posts about it on X) until it is live in 4 of 4 channels.",
   },
   {
     n: "05",
@@ -96,7 +96,7 @@ export const STEPS = [
       { label: "Content refreshed", value: 9, format: int },
     ],
     panel:
-      "Animation: a dashboard shows organic and AI-referred traffic and pipeline rising week over week; an insight flags a comparison page losing rank, the page is refreshed as version two, and the loop starts again.",
+      "Animation: a 12-week traffic chart draws itself through a launch-week spike and keeps rising; as it passes key weeks a signal appears (page climbing from #9 to #3, a new AI prompt gap, a creator performing 3x better) that turns into a next action (double down, write an answer page, rebook).",
   },
 ] as const satisfies readonly {
   n: string;

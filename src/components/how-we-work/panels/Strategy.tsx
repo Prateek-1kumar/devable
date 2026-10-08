@@ -1,230 +1,488 @@
-import { STEPS } from "../content";
-import { C, Card, Check, DATA, Mark, Mono, PanelSvg, blip, clamp01, easeOut, lerp, outro, ramp } from "../kit";
+import {
+  C,
+  Card,
+  Check,
+  DATA,
+  Mark,
+  Mono,
+  PanelSvg,
+  blip,
+  clamp01,
+  easeOut,
+  lerp,
+  outro,
+  ramp,
+} from "../kit";
 import type { MarkName } from "../marks";
 import type { PanelModule } from "../PanelPlayer";
 
-// 02 Growth Strategy. Beginning: five channels sit unscored in a priority
-// matrix. Work: each is scored on impact and effort, given a tier, and the rows
-// re-sort by priority, AI answers rising to the top. Result: a four-week content
-// roadmap fills week by week with articles aimed at the winning channels.
+// 02 Growth Strategy. A growth plan built from specific opportunities.
+// Work: four opportunities are found one at a time, each tagged with its
+// channel, then re-ranked by impact; the engine mix is derived from the list.
+// Result: a v2 launch lands, the creator opportunity rises to #1 and the mix
+// re-balances towards creators, with a quiet coral note on what changed.
 
-const DURATION = 9;
-const SETTLE = 7.5;
+const DURATION = 9.8;
+const SETTLE = 8.1;
 
-type Tier = "P1" | "P2" | "P3";
-const CHANNELS: { label: string; mark: MarkName; impact: number; effort: number; score: number; tier: Tier; rank: number }[] = [
-  { label: "Google Search", mark: "google", impact: 8.2, effort: 5.8, score: 7.4, tier: "P1", rank: 1 },
-  { label: "AI answers", mark: "chatgpt", impact: 9.0, effort: 3.4, score: 9.1, tier: "P1", rank: 0 },
-  { label: "Reddit", mark: "reddit", impact: 5.8, effort: 4.2, score: 6.2, tier: "P2", rank: 3 },
-  { label: "Dev communities", mark: "hackernews", impact: 6.6, effort: 3.8, score: 6.8, tier: "P2", rank: 2 },
-  { label: "Creators", mark: "youtube", impact: 5.2, effort: 7.2, score: 4.1, tier: "P3", rank: 4 },
+// Beats.
+const FOUND_AT = (i: number) => 0.55 + i * 0.5; // rows appear
+const RANK_AT = 2.75; // re-rank by impact: the top one climbs, then the weakest sinks
+const MIX_AT = 4.2; // engine mix builds
+const MIX_FOR = 0.7;
+const EVENT_AT = 5.2; // "v2 launch" chip
+const BOOST_AT = 5.6; // creator impact rises
+const BOOST_FOR = 0.5;
+const RERANK_AT = 6.2; // creators climb to #1
+const REBAL_AT = 6.8; // mix re-balances
+const REBAL_FOR = 0.8;
+const DONE_AT = 7.65;
+// Row moves, one mover at a time; OPPS[].slots holds the slot before and after each.
+const MOVES = [
+  { at: RANK_AT, dur: 0.75 },
+  { at: RANK_AT + 0.8, dur: 0.6 },
+  { at: RERANK_AT, dur: 0.9 },
+] as const;
+
+// Engine parts, in the client's order.
+const ENGINE = [
+  { label: "Content", color: DATA.blue },
+  { label: "SEO + AI", color: DATA.teal },
+  { label: "Community", color: DATA.amber },
+  { label: "Creators", color: DATA.violet },
+] as const;
+const MIX_BEFORE = [22, 36, 25, 17];
+const MIX_AFTER = [17, 29, 20, 34];
+const CREATORS = 3;
+
+type Glyph = MarkName | "docs";
+type Opp = {
+  title: string;
+  marks: Glyph[];
+  engine: number;
+  impact: number;
+  boosted?: number;
+  slots: [number, number, number, number];
+};
+// slots: found order, top pick climbs, weakest sinks (ranked by impact), after the launch.
+const OPPS: Opp[] = [
+  {
+    title: "Launch v2 with tech creators",
+    marks: ["youtube", "x"],
+    engine: 3,
+    impact: 6.4,
+    boosted: 9.6,
+    slots: [0, 1, 3, 0],
+  },
+  {
+    title: "Own r/LocalLLaMA self-hosting",
+    marks: ["reddit"],
+    engine: 2,
+    impact: 7.8,
+    slots: [1, 2, 1, 2],
+  },
+  {
+    title: "LangChain + LlamaIndex guides",
+    marks: ["langchain", "docs"],
+    engine: 0,
+    impact: 7.1,
+    slots: [2, 3, 2, 3],
+  },
+  {
+    title: "Win “best vector DB for RAG”",
+    marks: ["google", "chatgpt"],
+    engine: 1,
+    impact: 9.2,
+    slots: [3, 0, 0, 1],
+  },
 ];
-// Beats: hold the empty matrix, score one row at a time, hold, sort, hold, plan.
-const scoreAt = (i: number) => 0.6 + i * 0.48;
-const SORT_AT = 3.4;
-const SORT_FOR = 1.0;
-const SORTED = SORT_AT + SORT_FOR;
 
-const MX = { x: 20, y: 92, w: 520, h: 228 };
-const ROW = { y: MX.y + 54, h: 32 };
-const COL = { name: 68, impact: 206, effort: 312, bar: 64, score: 458, tier: 480 };
+// Layout.
+const CARD = { x: 52, y: 40, w: 376, h: 316 };
+const L = CARD.x + 16;
+const R = CARD.x + CARD.w - 16;
+const HEAD_Y = CARD.y + 28;
+const ROWS_Y = CARD.y + 52;
+const ROW_H = 40;
+const MIX_Y = ROWS_Y + 4 * ROW_H + 10; // hairline above the mix
+const BAR = { x: L, y: MIX_Y + 27, w: R - L, h: 10 };
+const LEG_Y = BAR.y + 30;
+const COL_W = (R - L) / 4;
+const IMP = { x: 336, w: 46 };
+const STATUS_X = R - 128;
 
-const ROADMAP: { title: string; mark: MarkName }[] = [
-  { title: "pgvector vs Pinecone: benchmarks", mark: "chatgpt" },
-  { title: "Preview environments for Next.js", mark: "google" },
-  { title: "Show HN: self-hosted deploy previews", mark: "hackernews" },
-  { title: "Render vs Fly.io vs Railway costs", mark: "reddit" },
-];
-const RM = { x: 20, y: 332, w: 520, h: 172 };
-const RROW = { y: RM.y + 38, h: 30 };
-const WEEKS = { x: 332, w: 192 };
-const weekW = WEEKS.w / ROADMAP.length;
-const weekAt = (i: number) => 4.95 + i * 0.5;
-const WEEK_FOR = 0.42;
+/** A plain docs page glyph (LlamaIndex has no mark in the set; this stands for "docs"). */
+function DocsGlyph({ x, y }: { x: number; y: number }) {
+  return (
+    <g
+      transform={`translate(${x - 5.5} ${y - 6.5})`}
+      fill="none"
+      stroke={C.ink}
+      strokeWidth={1.1}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M0 1.5 Q0 0 1.5 0 H7.5 L11 3.5 V11.5 Q11 13 9.5 13 H1.5 Q0 13 0 11.5 Z" />
+      <path d="M7.5 0 V3.5 H11" />
+      <path d="M2.8 6.6 H8.2 M2.8 9.4 H6.6" />
+    </g>
+  );
+}
 
-/** A colour `k` (0..1) of the way from `from` to `to`, so state changes blend instead of snapping. */
-const mix = (to: string, from: string, k: number) => `color-mix(in srgb, ${to} ${Math.round(clamp01(k) * 100)}%, ${from})`;
+function Tile({ glyph, x, y }: { glyph: Glyph; x: number; y: number }) {
+  return (
+    <g>
+      <rect
+        x={x - 11}
+        y={y - 11}
+        width={22}
+        height={22}
+        rx={6}
+        fill={C.paper}
+      />
+      {glyph === "docs" ? (
+        <DocsGlyph x={x} y={y} />
+      ) : (
+        <Mark name={glyph} x={x} y={y} size={12} />
+      )}
+    </g>
+  );
+}
+
+/** Paint order: rows shifting by one slot, then the row jumping several (lifted on a card above them). */
+function drawKey(op: Opp, t: number) {
+  const m = MOVES.findLastIndex((mv) => t >= mv.at - 0.05);
+  if (m < 0) return 1;
+  const d = op.slots[m + 1] - op.slots[m];
+  return Math.abs(d) >= 2 ? 2 : 1;
+}
+/** The row's slot (fractional while moving). */
+const slotAt = (op: Opp, t: number) =>
+  MOVES.reduce(
+    (s, mv, m) => s + (op.slots[m + 1] - op.slots[m]) * ramp(t, mv.at, mv.dur),
+    op.slots[0],
+  );
+/** 0..1 while this row is in motion. */
+const movingAt = (op: Opp, t: number) =>
+  Math.min(
+    1,
+    MOVES.reduce(
+      (s, mv, m) =>
+        s +
+        (op.slots[m + 1] !== op.slots[m]
+          ? blip(t, mv.at, mv.dur - 0.2, 0.1)
+          : 0),
+      0,
+    ),
+  );
 
 function Panel({ t }: { t: number }) {
   const o = outro(t, DURATION);
-  const sort = ramp(t, SORT_AT, SORT_FOR);
-  const conf = ramp(t, SORTED - 0.05, 0.4) * o;
-  const scored = CHANNELS.filter((_, i) => t > scoreAt(i) + 0.4).length;
-  const planned = ROADMAP.filter((_, i) => t > weekAt(i) + WEEK_FOR).length;
-  const fills = ROADMAP.map((_, i) => ramp(t, weekAt(i), WEEK_FOR) * o);
-  const cursorX = WEEKS.x + fills.reduce((a, k) => a + k, 0) * weekW;
+  const build = ramp(t, MIX_AT, MIX_FOR, easeOut);
+  const rebal = ramp(t, REBAL_AT, REBAL_FOR);
+  const boost = ramp(t, BOOST_AT, BOOST_FOR, easeOut);
+  const event = ramp(t, EVENT_AT, 0.45, easeOut);
+  const done = ramp(t, DONE_AT, 0.4);
+  const changed = ramp(t, BOOST_AT - 0.15, 0.35);
+
+  // Status line: one message at a time, crossfading, until the launch chip takes its place.
+  const statuses = [
+    {
+      text: "Finding opportunities…",
+      on: ramp(t, 0.25, 0.3) - ramp(t, RANK_AT - 0.25, 0.25),
+    },
+    {
+      text: "Ranking by impact…",
+      on: ramp(t, RANK_AT, 0.25) - ramp(t, MIX_AT - 0.2, 0.2),
+    },
+    {
+      text: "Building the mix…",
+      on: ramp(t, MIX_AT, 0.2) - ramp(t, EVENT_AT - 0.3, 0.25),
+    },
+  ];
+  const working = 1 - ramp(t, EVENT_AT - 0.3, 0.25);
+  const pulse = 0.55 + 0.45 * Math.cos(t * Math.PI * 2 * 0.9);
+
+  const shares = MIX_BEFORE.map((v, i) => lerp(v, MIX_AFTER[i], rebal));
+  const chipW = 150;
 
   return (
-    <PanelSvg metrics={STEPS[1].metrics} t={t} metricsAt={[0.6, scoreAt(1)]} metricsFor={[2.4, 1.0]}>
-      {/* ── Channel prioritization matrix ── */}
-      <Card x={MX.x} y={MX.y} w={MX.w} h={MX.h} />
-      <g transform={`translate(${MX.x + 16} ${MX.y + 24})`}>
-        <circle cx={4} cy={-3.5} r={3} fill={C.accent} opacity={1 - clamp01(conf * 2.5)} />
-        <g opacity={conf}>
-          <Check x={4} y={-3.5} r={5.5} k={conf} />
-        </g>
-        <Mono x={16} y={0} size={9.5} fill={C.ink}>
-          Channel prioritization
-        </Mono>
-        <Mono x={MX.w - 32} y={0} size={8.8} fill={conf > 0.5 ? C.primary : C.muted} textAnchor="end">
-          {conf > 0.5 ? "Sorted by priority" : t > SORT_AT - 0.1 ? "Sorting…" : `Scoring ${Math.round(scored * o)} / 5`}
-        </Mono>
-      </g>
-      <g>
-        <Mono x={MX.x + 16} y={MX.y + 46} size={8.4}>
-          Channel
-        </Mono>
-        <Mono x={COL.impact} y={MX.y + 46} size={8.4}>
-          Impact
-        </Mono>
-        <Mono x={COL.effort} y={MX.y + 46} size={8.4}>
-          Effort
-        </Mono>
-        <Mono x={COL.score} y={MX.y + 46} size={8.4} textAnchor="end" fill={conf > 0.5 ? C.ink : C.muted}>
-          {conf > 0.5 ? "Score ↓" : "Score"}
-        </Mono>
-        <Mono x={COL.tier + 18} y={MX.y + 46} size={8.4} textAnchor="middle">
-          Tier
-        </Mono>
-      </g>
-      {[0, 1, 2, 3, 4].map((s) => (
-        <line key={s} x1={MX.x + 16} x2={MX.x + MX.w - 16} y1={ROW.y + s * ROW.h} y2={ROW.y + s * ROW.h} stroke={C.hair} />
-      ))}
-      {/* Top-priority slot: a quiet wash and a coral tick once the sort lands. */}
-      <g opacity={conf}>
-        <rect x={MX.x + 8} y={ROW.y + 2} width={MX.w - 16} height={ROW.h - 4} rx={7} fill={C.accentWash} />
-        <rect x={MX.x + 8} y={ROW.y + 9} width={2} height={ROW.h - 18} rx={1} fill={C.accent} />
-      </g>
-      {/* Rows: rising rows drawn last so they pass over the ones they overtake. */}
-      {CHANNELS.map((c, i) => ({ c, i }))
-        .sort((a, b) => a.i - a.c.rank - (b.i - b.c.rank))
-        .map(({ c, i }) => {
-          const at = scoreAt(i);
-          const lit = ramp(t, at, 0.3) * o;
-          const imp = ramp(t, at + 0.05, 0.5, easeOut) * o;
-          const eff = ramp(t, at + 0.15, 0.5, easeOut) * o;
-          const tierK = ramp(t, at + 0.45, 0.4, easeOut) * o;
-          const active = blip(t, at, 0.12, 0.2);
-          const moving = blip(t, SORT_AT, SORT_FOR - 0.4, 0.2) * (c.rank !== i ? 1 : 0);
-          const rising = c.rank < i;
-          const y = lerp(ROW.y + i * ROW.h, ROW.y + c.rank * ROW.h, sort);
-          const cy = y + ROW.h / 2;
-          const tierFill = c.tier === "P1" ? C.primary : c.tier === "P2" ? C.primarySoft : C.paper;
-          const tierText = c.tier === "P1" ? "#fff" : c.tier === "P2" ? C.primary : C.muted;
-          return (
-            <g key={c.label}>
-              {/* Lift while scoring or moving: an opaque wash, no outline. */}
-              <rect
-                x={MX.x + 8}
-                y={y + 2}
-                width={MX.w - 16}
-                height={ROW.h - 4}
-                rx={7}
-                fill={rising || active > 0 ? C.accentWash : C.card}
-                opacity={Math.max(moving, active)}
-              />
-              <rect x={MX.x + 8} y={cy - 7} width={2} height={14} rx={1} fill={C.accent} opacity={active} />
-              <g opacity={0.45 + 0.55 * lit}>
-                <rect x={MX.x + 16} y={cy - 11} width={22} height={22} rx={6} fill={C.paper} />
-                <Mark name={c.mark} x={MX.x + 27} y={cy} size={12.5} />
-                <text x={COL.name} y={cy + 4} fontSize={12} fontWeight={550} fill={C.ink}>
-                  {c.label}
-                </text>
-                {/* Impact and effort bars. */}
-                {[
-                  { x: COL.impact, v: c.impact, k: imp, color: DATA.teal },
-                  { x: COL.effort, v: c.effort, k: eff, color: DATA.slate },
-                ].map((b) => (
-                  <g key={b.x}>
-                    <rect x={b.x} y={cy - 3} width={COL.bar} height={6} rx={3} fill={C.line} opacity={0.6} />
-                    <rect x={b.x} y={cy - 3} width={(COL.bar * b.v * b.k) / 10} height={6} rx={3} fill={b.color} />
-                    <Mono x={b.x + COL.bar + 8} y={cy + 3} size={8.8} fill={C.ink} opacity={clamp01(b.k * 3)}>
-                      {(b.v * b.k).toFixed(1)}
-                    </Mono>
-                  </g>
-                ))}
-                {/* Score. */}
-                <rect x={COL.score - 22} y={cy - 3} width={22} height={6} rx={3} fill={C.line} opacity={0.6 * (1 - clamp01(imp * 4))} />
+    <PanelSvg t={t}>
+      <g opacity={o}>
+        <g opacity={ramp(t, 0, 0.35)}>
+          <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} />
+
+          {/* ── Header ── */}
+          <circle
+            cx={L + 5}
+            cy={HEAD_Y - 3.5}
+            r={5.5}
+            fill="none"
+            stroke={C.line}
+            opacity={1 - done}
+          />
+          <g opacity={done}>
+            <Check x={L + 5} y={HEAD_Y - 3.5} r={5.5} k={done} />
+          </g>
+          <Mono x={L + 18} y={HEAD_Y} size={9.5} fill={C.ink}>
+            Growth plan
+          </Mono>
+          {statuses.map((s) => (
+            <text
+              key={s.text}
+              x={STATUS_X}
+              y={HEAD_Y}
+              fontSize={11.5}
+              fill={C.muted}
+              opacity={clamp01(s.on)}
+            >
+              {s.text}
+            </text>
+          ))}
+          <circle
+            cx={STATUS_X - 9}
+            cy={HEAD_Y - 4}
+            r={3}
+            fill={C.accent}
+            opacity={working * pulse * ramp(t, 0.25, 0.3)}
+          />
+
+          {/* The launch: a quiet event chip in place of the status. */}
+          <g
+            opacity={event}
+            transform={`translate(${R - chipW} ${HEAD_Y - 15 + (1 - event) * 5})`}
+          >
+            <rect
+              width={chipW}
+              height={22}
+              rx={11}
+              fill={C.accentWash}
+              stroke={C.accentLine}
+            />
+            <circle cx={12} cy={11} r={3} fill={C.accent} />
+            <text x={22} y={15} fontSize={11.5} fill={C.ink}>
+              <tspan fontWeight={600}>v2 launch</tspan>
+              <tspan fill={C.muted}> · in 3 weeks</tspan>
+            </text>
+          </g>
+          <line x1={L} x2={R} y1={ROWS_Y - 6} y2={ROWS_Y - 6} stroke={C.hair} />
+
+          {/* ── Opportunities ── */}
+          {OPPS.map((op, i) => ({ op, i }))
+
+            .sort((a, b) => drawKey(a.op, t) - drawKey(b.op, t))
+            .map(({ op, i }) => {
+              const k = ramp(t, FOUND_AT(i), 0.45, easeOut);
+              if (k <= 0) return null;
+              const slot = slotAt(op, t);
+              const y = ROWS_Y + slot * ROW_H + (1 - k) * 5;
+              const cy = y + ROW_H / 2;
+              const fill = ramp(t, FOUND_AT(i) + 0.2, 0.55, easeOut);
+              const value = op.boosted
+                ? lerp(op.impact, op.boosted, boost)
+                : op.impact;
+              const hl = op.boosted ? changed : 0;
+              const moving = movingAt(op, t);
+              return (
+                <g key={op.title} opacity={k}>
+                  {/* Every row is opaque; the row jumping slots lifts onto a card above the rest. */}
+                  <rect
+                    x={L - 8}
+                    y={y + 3}
+                    width={R - L + 16}
+                    height={ROW_H - 6}
+                    rx={8}
+                    fill={C.card}
+                  />
+                  {drawKey(op, t) >= 2 && (
+                    <Card
+                      x={L - 8}
+                      y={y + 3}
+                      w={R - L + 16}
+                      h={ROW_H - 6}
+                      r={8}
+                      opacity={moving}
+                    />
+                  )}
+                  {/* What changed: a quiet wash and a slim coral tick. */}
+                  <rect
+                    x={L - 8}
+                    y={y + 3}
+                    width={R - L + 16}
+                    height={ROW_H - 6}
+                    rx={8}
+                    fill={C.accentWash}
+                    opacity={hl}
+                  />
+                  <rect
+                    x={L - 8}
+                    y={cy - 8}
+                    width={2}
+                    height={16}
+                    rx={1}
+                    fill={C.accent}
+                    opacity={hl}
+                  />
+                  {op.marks.map((m, j) => (
+                    <Tile
+                      key={m}
+                      glyph={m}
+                      x={L + 56 - (op.marks.length - 1 - j) * 25}
+                      y={cy}
+                    />
+                  ))}
+                  <text
+                    x={L + 76}
+                    y={cy + 4.2}
+                    fontSize={12.5}
+                    fontWeight={550}
+                    fill={C.ink}
+                  >
+                    {op.title}
+                  </text>
+                  {/* Impact: a short bar in its engine colour, and the score. */}
+                  <rect
+                    x={IMP.x}
+                    y={cy - 2.5}
+                    width={IMP.w}
+                    height={5}
+                    rx={2.5}
+                    fill={C.hair}
+                  />
+                  <rect
+                    x={IMP.x}
+                    y={cy - 2.5}
+                    width={(IMP.w * value * fill) / 10}
+                    height={5}
+                    rx={2.5}
+                    fill={ENGINE[op.engine].color}
+                  />
+                  <text
+                    x={R}
+                    y={cy + 4.2}
+                    fontSize={12}
+                    fontWeight={600}
+                    textAnchor="end"
+                    fill={C.ink}
+                    opacity={clamp01(fill * 2)}
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
+                    {(value * fill).toFixed(1)}
+                  </text>
+                </g>
+              );
+            })}
+
+          {/* ── Rank column (fixed slots; the rows move past it) ── */}
+          {[0, 1, 2, 3].map((s) => (
+            <Mono
+              key={s}
+              x={L}
+              y={ROWS_Y + s * ROW_H + ROW_H / 2 + 3.5}
+              size={9.5}
+              fill={C.muted}
+              opacity={ramp(t, FOUND_AT(s), 0.4)}
+            >
+              {`0${s + 1}`}
+            </Mono>
+          ))}
+
+          {/* ── Engine mix ── */}
+          <line x1={L} x2={R} y1={MIX_Y} y2={MIX_Y} stroke={C.hair} />
+          <Mono
+            x={L}
+            y={MIX_Y + 20}
+            size={9}
+            fill={C.muted}
+            opacity={ramp(t, MIX_AT - 0.3, 0.3)}
+          >
+            Engine mix
+          </Mono>
+          <rect
+            x={BAR.x}
+            y={BAR.y}
+            width={BAR.w}
+            height={BAR.h}
+            rx={BAR.h / 2}
+            fill={C.hair}
+          />
+          {(() => {
+            const gap = 3;
+            const usable = BAR.w - gap * 3;
+            return shares.map((s, i) => {
+              const w = (usable * s) / 100;
+              const x0 =
+                BAR.x +
+                (usable * shares.slice(0, i).reduce((a, b) => a + b, 0)) / 100 +
+                gap * i;
+              // Builds left to right: each segment fills in turn.
+              const segK = clamp01(build * 4 - i);
+              const hi = i === CREATORS ? rebal : 0;
+              return (
+                <g key={ENGINE[i].label}>
+                  <rect
+                    x={x0}
+                    y={BAR.y}
+                    width={Math.max(0, w * segK)}
+                    height={BAR.h}
+                    rx={BAR.h / 2}
+                    fill={ENGINE[i].color}
+                  />
+                  <rect
+                    x={x0 - 3}
+                    y={BAR.y - 3}
+                    width={w + 6}
+                    height={BAR.h + 6}
+                    rx={(BAR.h + 6) / 2}
+                    fill="none"
+                    stroke={C.accentLine}
+                    opacity={hi}
+                  />
+                </g>
+              );
+            });
+          })()}
+          {ENGINE.map((e, i) => {
+            const x = L + i * COL_W;
+            const k = ramp(t, MIX_AT + i * 0.12, 0.45, easeOut);
+            const delta = MIX_AFTER[i] - MIX_BEFORE[i];
+            return (
+              <g
+                key={e.label}
+                opacity={k}
+                transform={`translate(0 ${(1 - k) * 4})`}
+              >
+                <circle cx={x + 3.5} cy={LEG_Y - 3.5} r={3.5} fill={e.color} />
+                <Mono x={x + 12} y={LEG_Y} size={9} fill={C.muted}>
+                  {e.label}
+                </Mono>
                 <text
-                  x={COL.score}
-                  y={cy + 5}
+                  x={x}
+                  y={LEG_Y + 21}
                   fontSize={15}
                   fontWeight={600}
                   letterSpacing="-0.02em"
-                  textAnchor="end"
-                  fill={c.rank === 0 && conf > 0.5 ? C.accent : C.ink}
-                  opacity={clamp01(imp * 4)}
+                  fill={C.ink}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  {(c.score * imp).toFixed(1)}
+                  {`${Math.round(shares[i] * build)}%`}
                 </text>
+                {i === CREATORS && (
+                  <text
+                    x={x + 38}
+                    y={LEG_Y + 20}
+                    fontSize={11.5}
+                    fontWeight={600}
+                    fill={C.accent}
+                    opacity={ramp(t, REBAL_AT + REBAL_FOR - 0.25, 0.4)}
+                  >
+                    {`+${delta}`}
+                  </text>
+                )}
               </g>
-              {/* Tier: proposed (quiet paper chip) while scoring, crossfading to confirmed (deep green) once sorted. No outlines. */}
-              <g opacity={tierK} transform={`translate(0 ${(1 - tierK) * 4})`}>
-                <rect x={COL.tier} y={cy - 9} width={36} height={18} rx={9} fill={mix(tierFill, C.paper, conf)} />
-                <Mono x={COL.tier + 18} y={cy + 3.2} size={8.8} textAnchor="middle" fill={mix(tierText, C.ink, conf)}>
-                  {c.tier}
-                </Mono>
-              </g>
-            </g>
-          );
-        })}
-
-      {/* ── Content roadmap ── */}
-      <Card x={RM.x} y={RM.y} w={RM.w} h={RM.h} />
-      <g transform={`translate(${RM.x + 16} ${RM.y + 24})`}>
-        <circle cx={4} cy={-3.5} r={3} fill={mix(C.accent, C.line, ramp(t, weekAt(0) - 0.3, 0.3) * o)} opacity={1 - clamp01(ramp(t, weekAt(3) + WEEK_FOR, 0.4) * o * 2.5)} />
-        <g opacity={ramp(t, weekAt(3) + WEEK_FOR, 0.4) * o}>
-          <Check x={4} y={-3.5} r={5.5} k={ramp(t, weekAt(3) + WEEK_FOR, 0.4) * o} />
+            );
+          })}
         </g>
-        <Mono x={16} y={0} size={9.5} fill={C.ink}>
-          Content roadmap
-        </Mono>
-        <Mono x={124} y={0} size={8.8} fill={planned * o >= 4 ? C.primary : C.muted}>
-          {`${Math.round(planned * o)} of 4`}
-        </Mono>
-      </g>
-      {ROADMAP.map((_, w) => {
-        const x = WEEKS.x + w * weekW;
-        const now = blip(t, weekAt(w), WEEK_FOR - 0.1, 0.15) * o;
-        return (
-          <g key={w}>
-            {w > 0 && <line x1={x} x2={x} y1={RROW.y} y2={RROW.y + ROADMAP.length * RROW.h} stroke={C.hair} />}
-            <Mono x={x + weekW / 2} y={RM.y + 24} size={8.4} textAnchor="middle" fill={C.muted} opacity={1 - now}>
-              {`W${w + 1}`}
-            </Mono>
-            <Mono x={x + weekW / 2} y={RM.y + 24} size={8.4} textAnchor="middle" fill={C.accent} opacity={now}>
-              {`W${w + 1}`}
-            </Mono>
-          </g>
-        );
-      })}
-      {ROADMAP.map((r, i) => {
-        const y = RROW.y + i * RROW.h;
-        const cy = y + RROW.h / 2;
-        const k = fills[i];
-        const title = ramp(t, weekAt(i) + 0.1, 0.45, easeOut) * o;
-        const done = ramp(t, weekAt(i) + WEEK_FOR - 0.05, 0.3) * o;
-        return (
-          <g key={r.title}>
-            <line x1={RM.x + 16} x2={RM.x + RM.w - 16} y1={y} y2={y} stroke={C.hair} />
-            <g opacity={0.4 + 0.6 * title}>
-              <Mark name={r.mark} x={RM.x + 23} y={cy} size={11} />
-            </g>
-            <text x={RM.x + 38} y={cy + 4 + (1 - title) * 5} fontSize={12} fontWeight={550} fill={C.ink} opacity={title}>
-              {r.title}
-            </text>
-            {/* Skeleton until the week is planned. */}
-            <rect x={RM.x + 38} y={cy - 3} width={150} height={6} rx={3} fill={C.line} opacity={0.7 * (1 - clamp01(title * 3))} />
-            <g opacity={k > 0 ? 1 : 0}>
-              <rect x={WEEKS.x + i * weekW + 4} y={cy - 5} width={(weekW - 8) * k} height={10} rx={5} fill={mix(C.primary, C.accent, done)} />
-            </g>
-          </g>
-        );
-      })}
-      {/* The week cursor rides the leading edge of the plan, holding between weeks. */}
-      <g opacity={ramp(t, weekAt(0) - 0.3, 0.3) * (1 - ramp(t, weekAt(3) + WEEK_FOR + 0.1, 0.4))}>
-        <line x1={cursorX} x2={cursorX} y1={RROW.y} y2={RROW.y + ROADMAP.length * RROW.h} stroke={C.accent} />
-        <circle cx={cursorX} cy={RROW.y} r={2.5} fill={C.accent} />
       </g>
     </PanelSvg>
   );
