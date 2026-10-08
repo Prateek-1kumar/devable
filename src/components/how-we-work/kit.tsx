@@ -4,11 +4,11 @@ import { MARKS, MARK_COLOR, type MarkName } from "./marks";
 
 // The panels' shared kit: timeline maths and the SVG parts every panel is built
 // from. A panel is a pure function of `t` (seconds into its loop), drawn in a
-// fixed 560×520 viewBox so it scales crisply and never shifts layout.
+// fixed 480×400 viewBox so it scales crisply and never shifts layout.
 
-export const VIEW = { w: 560, h: 520 } as const;
-/** The stage below the metric strip. */
-export const STAGE = { x: 20, y: 92, w: 520, h: 412 } as const;
+export const VIEW = { w: 480, h: 400 } as const;
+/** The drawable area inside a quiet margin. */
+export const STAGE = { x: 16, y: 16, w: 448, h: 368 } as const;
 
 // ── Colour ──────────────────────────────────────────────────────────────────
 // Brand roles come from the page tokens, so panels follow globals.css.
@@ -81,7 +81,7 @@ export function PanelSvg({
   metricsFor = [1.6, 1.6],
   children,
 }: {
-  metrics: readonly Metric[];
+  metrics?: readonly Metric[];
   t: number;
   metricsAt?: readonly number[];
   metricsFor?: readonly number[];
@@ -90,14 +90,14 @@ export function PanelSvg({
   const id = useId().replace(/[^a-zA-Z0-9-]/g, "");
   return (
     <Ids.Provider value={id}>
-      <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} className="block h-auto w-full select-none" fontFamily="var(--font-sans)">
+      <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} className="block h-auto max-h-full w-full select-none" fontFamily="var(--font-sans)">
         <defs>
           <filter id={`${id}-shadow`} x="-20%" y="-20%" width="140%" height="160%">
             <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#0f1a14" floodOpacity="0.04" />
             <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#0f1a14" floodOpacity="0.05" />
           </filter>
         </defs>
-        <MetricStrip metrics={metrics} t={t} at={metricsAt} span={metricsFor} />
+        {metrics && <MetricStrip metrics={metrics} t={t} at={metricsAt} span={metricsFor} />}
         {children}
       </svg>
     </Ids.Provider>
