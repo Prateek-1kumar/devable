@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import logo from "../../public/brand/devable-logo.png";
-import WaveButton from "./WaveButton";
+import ArcButton from "./ArcButton";
 
 // ponytail: dropdown items show a chevron only; menus come when their content exists.
 const LINKS = [
@@ -33,9 +33,9 @@ export default function Navbar() {
             </li>
           ))}
         </ul>
-        <WaveButton href="#contact" size="sm" className="ml-auto md:ml-0">
+        <ArcButton href="#contact" size="sm" arrow className="ml-auto md:ml-0">
           Speak With Us
-        </WaveButton>
+        </ArcButton>
       </nav>
     </header>
   );

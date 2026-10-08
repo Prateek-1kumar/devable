@@ -1,4 +1,4 @@
-import WaveButton from "./WaveButton";
+import ArcButton from "./ArcButton";
 import ChannelParagraph from "./ChannelParagraph";
 import GrowthEngine from "./growth-engine/GrowthEngine";
 
@@ -18,10 +18,12 @@ export default function Hero() {
           style={{ animationDelay: "0.25s" }}
         />
         <div className={`mt-10 flex flex-wrap items-center gap-4 ${rise}`} style={{ animationDelay: "0.4s" }}>
-          <WaveButton href="#contact">Speak with the team</WaveButton>
-          <WaveButton href="#case-studies" tone="secondary">
+          <ArcButton href="#contact" arrow>
+            Speak with the team
+          </ArcButton>
+          <ArcButton href="#case-studies" tone="secondary">
             View case studies
-          </WaveButton>
+          </ArcButton>
         </div>
       </div>
       {/* Spans the right side and reaches in behind the text on large screens. */}
