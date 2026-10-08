@@ -1,242 +1,351 @@
 import type { ReactNode } from "react";
-import { STEPS } from "../content";
-import { C, Card, Check, Mark, Mono, PanelSvg, Pulse, Trace, blip, easeOut, lerp, outro, polyline, ramp } from "../kit";
+import { C, Card, Check, Mark, Mono, PanelSvg, Pulse, Trace, clamp01, easeOut, outro, ramp } from "../kit";
 import type { PanelModule } from "../PanelPlayer";
 
-// 01 Product Intelligence. Beginning: six real sources sit dim. Work: each one
-// syncs in turn and streams along its line into the product model, whose
-// checklist fills row by row. Result: the positioning map plots eight
-// competitors in one cluster and your dot glides alone into the open quadrant.
+// 01 Product Intelligence. Five groups of real sources sit on the left, joined
+// by thin curves to one "Product model" card. A status cycles through the work
+// while the matching source group lights its connector in coral; "Running the
+// quickstart" turns the card into a tiny terminal for a beat. Findings check off
+// one by one until the model reads complete.
 
-const DURATION = 9;
-const SETTLE = 8.3;
+const DURATION = 10;
+const SETTLE = 9.3;
 
-const SOURCES: { label: string; meta: string; icon: ReactNode }[] = [
-  { label: "Product docs", meta: "214 pages", icon: <Doc /> },
-  { label: "GitHub repo", meta: "acme/cli · 1.8k ★", icon: <Mark name="github" x={0} y={0} size={15} /> },
-  { label: "Sales calls", meta: "36 calls · 41 h", icon: <Wave /> },
-  { label: "Reddit threads", meta: "r/devops · 112", icon: <Mark name="reddit" x={0} y={0} size={15} /> },
-  { label: "Competitor sites", meta: "8 domains", icon: <Globe /> },
-  { label: "Existing content", meta: "64 posts", icon: <Mark name="googlesearchconsole" x={0} y={0} size={15} /> },
+// ── Sources ─────────────────────────────────────────────────────────────────
+const TILE = 24;
+const TGAP = 6;
+type Src = { key: string; icon: ReactNode };
+const GROUPS: { label: string; items: Src[] }[] = [
+  {
+    label: "Docs & code",
+    items: [
+      { key: "docs", icon: <Doc /> },
+      { key: "github", icon: <Mark name="github" x={0} y={0} size={14} /> },
+      { key: "changelog", icon: <Changelog /> },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      { key: "reddit", icon: <Mark name="reddit" x={0} y={0} size={14} /> },
+      { key: "hn", icon: <Mark name="hackernews" x={0} y={0} size={14} /> },
+      { key: "discord", icon: <Mark name="discord" x={0} y={0} size={14} /> },
+      { key: "x", icon: <Mark name="x" x={0} y={0} size={12} /> },
+    ],
+  },
+  {
+    label: "Calls",
+    items: [
+      { key: "gong", icon: <Monogram text="Go" /> },
+      { key: "granola", icon: <Monogram text="Gr" /> },
+      { key: "intercom", icon: <Mark name="intercom" x={0} y={0} size={14} /> },
+    ],
+  },
+  {
+    label: "Market",
+    items: [
+      { key: "sites", icon: <Globe /> },
+      { key: "g2", icon: <Mark name="g2" x={0} y={0} size={14} /> },
+    ],
+  },
+  {
+    label: "Visibility",
+    items: [
+      { key: "google", icon: <Mark name="google" x={0} y={0} size={14} /> },
+      { key: "chatgpt", icon: <Mark name="chatgpt" x={0} y={0} size={14} /> },
+      { key: "perplexity", icon: <Mark name="perplexity" x={0} y={0} size={14} /> },
+    ],
+  },
 ];
-// Six cards spread over the full stage height: 56px tall, 13.6px apart.
-const SRC = { x: 20, y: 100, w: 172, h: 56, gap: 13.6 };
-const srcY = (i: number) => SRC.y + i * (SRC.h + SRC.gap);
-const syncAt = (i: number) => 0.6 + i * 0.4;
-const FLOW = 0.6;
+const COL = { x: 40, y: 80, pitch: 54 };
+const groupY = (g: number) => COL.y + g * COL.pitch;
+const rowW = (n: number) => n * TILE + (n - 1) * TGAP;
 
-const MODEL = { x: 236, y: 100, w: 304, h: 202 };
-const ENTRY: [number, number] = [MODEL.x, MODEL.y + 58];
-const ROW = { y: MODEL.y + 66, pitch: 34 };
-const CHECKS = [
-  { label: "ICP & personas", detail: "Platform eng · 50–500" },
-  { label: "Positioning", detail: "Fastest preview envs" },
-  { label: "Competitor gaps", detail: "5/8 no self-hosting" },
-  { label: "Visibility baseline", detail: "AI 12% · 31 kw" },
-];
-const checkAt = (i: number) => 2.9 + i * 0.42;
-const READY = 4.65;
+// ── Product model card ──────────────────────────────────────────────────────
+const CARD = { x: 212, y: 74, w: 228, h: 252 };
+const PAD = 16;
+const STATUS_Y = CARD.y + 62;
+const DOTS_Y = CARD.y + 84;
+const BODY_Y = CARD.y + 104;
+const ROW = { y: BODY_Y + 22, pitch: 22 };
 
-const MAP = { x: 236, y: 316, w: 304, h: 188 };
-const PLOT = { x: MAP.x + 40, y: MAP.y + 44, w: MAP.w - 60, h: MAP.h - 76 };
-const MAP_AT = 4.9;
-// Competitors crowd the general-purpose, sales-led corner (plot units 0..1, y up).
-const RIVALS: [number, number][] = [
-  [0.14, 0.34], [0.26, 0.22], [0.2, 0.5], [0.36, 0.38], [0.1, 0.14], [0.32, 0.62], [0.42, 0.18], [0.22, 0.06],
-];
-const rivalAt = (i: number) => 5.1 + i * 0.08;
-const YOU_FROM: [number, number] = [0.5, 0.5];
-const YOU_TO: [number, number] = [0.84, 0.74];
-const YOU_AT = 6.1;
-const YOU_FOR = 0.9;
-const px = ([u, v]: [number, number]): [number, number] => [PLOT.x + u * PLOT.w, PLOT.y + (1 - v) * PLOT.h];
-
-/** Each source's line: out of its card, along a channel, into the model's entry. */
-const route = (i: number): [number, number][] => {
-  const y = srcY(i) + SRC.h / 2;
-  const mid = SRC.x + SRC.w + 22;
-  return [
-    [SRC.x + SRC.w, y],
-    [mid, y],
-    [mid, ENTRY[1]],
-    ENTRY,
-  ];
+/** Where group g's connector meets the card: a gentle fan on its left edge. */
+const entry = (g: number): [number, number] => [CARD.x, CARD.y + 92 + (g - 2) * 16];
+const start = (g: number): [number, number] => [COL.x + rowW(GROUPS[g].items.length) + 10, groupY(g) + 22];
+const curve = (g: number) => {
+  const [sx, sy] = start(g);
+  const [ex, ey] = entry(g);
+  const m = (ex - sx) * 0.55;
+  return `M${sx} ${sy} C${sx + m} ${sy} ${ex - m} ${ey} ${ex} ${ey}`;
+};
+/** Sampled points along the curve, so a Pulse can travel it. */
+const curvePts = (g: number): [number, number][] => {
+  const [sx, sy] = start(g);
+  const [ex, ey] = entry(g);
+  const m = (ex - sx) * 0.55;
+  const p = [sx, sy, sx + m, sy, ex - m, ey, ex, ey];
+  return Array.from({ length: 17 }, (_, i) => {
+    const u = i / 16;
+    const a = (1 - u) ** 3, b = 3 * (1 - u) ** 2 * u, c = 3 * (1 - u) * u * u, d = u ** 3;
+    return [a * p[0] + b * p[2] + c * p[4] + d * p[6], a * p[1] + b * p[3] + c * p[5] + d * p[7]];
+  });
 };
 
-/** Fade in with a small rise. */
-const rise = (k: number, dy = 5) => ({ opacity: k, transform: `translate(0 ${(1 - k) * dy})` });
+// ── Story ───────────────────────────────────────────────────────────────────
+// Each status: when it starts, how long it runs, which group feeds it (-1: all).
+const STATUSES: { text: string; at: number; dur: number; group: number }[] = [
+  { text: "Reading docs", at: 0.7, dur: 0.7, group: 0 },
+  { text: "Running the quickstart", at: 1.4, dur: 1.9, group: 0 },
+  { text: "Mapping use cases", at: 3.3, dur: 0.65, group: 1 },
+  { text: "Listening to sales calls", at: 3.95, dur: 0.65, group: 2 },
+  { text: "Profiling buyers & personas", at: 4.6, dur: 0.65, group: 2 },
+  { text: "Analyzing competitors", at: 5.25, dur: 0.65, group: 3 },
+  { text: "Auditing search & AI visibility", at: 5.9, dur: 0.65, group: 4 },
+  { text: "Reviewing existing content", at: 6.55, dur: 0.65, group: 4 },
+  { text: "Finding positioning gaps", at: 7.2, dur: 0.7, group: -1 },
+];
+const DONE = 7.9;
+const QUICK = STATUSES[1];
+/** When each group has finished feeding the model. */
+const groupDone = (g: number) => Math.max(...STATUSES.filter((s) => s.group === g).map((s) => s.at + s.dur));
+
+const FINDINGS: { label: string; at: number; value?: string }[] = [
+  { label: "Core use cases", at: 3.8 },
+  { label: "Who it's for", at: 5.1 },
+  { label: "Competitor landscape", at: 5.75 },
+  { label: "Visibility baseline", at: 6.4 },
+  { label: "Content gaps", at: 7.05 },
+  { label: "Where it wins", at: 7.75, value: "Self-hosting" },
+];
 
 function Panel({ t }: { t: number }) {
-  const o = outro(t, DURATION);
-  const progress = ramp(t, syncAt(0) + 0.2, READY - syncAt(0) - 0.2, (x) => x);
-  const ready = ramp(t, READY, 0.4);
-  const mapIn = ramp(t, MAP_AT, 0.45, easeOut);
-  const you = ramp(t, YOU_AT, YOU_FOR);
-  const landed = ramp(t, YOU_AT + YOU_FOR - 0.1, 0.45, easeOut);
-  const youAt = px([lerp(YOU_FROM[0], YOU_TO[0], you), lerp(YOU_FROM[1], YOU_TO[1], you)]);
+  const fade = outro(t, DURATION);
+  const cardIn = ramp(t, 0.15, 0.5, easeOut);
+  // The terminal takes over the card's body for the quickstart beat.
+  const term = Math.min(ramp(t, QUICK.at + 0.05, 0.3), 1 - ramp(t, QUICK.at + QUICK.dur - 0.3, 0.3));
+  const done = ramp(t, DONE, 0.35);
 
   return (
-    <PanelSvg metrics={STEPS[0].metrics} t={t} metricsAt={[syncAt(0), rivalAt(0)]} metricsFor={[syncAt(5) + FLOW - syncAt(0), 0.9]}>
-      {/* Lines first, so cards sit on top of them. */}
-      {SOURCES.map((_, i) => {
-        const pts = route(i);
-        const flow = ramp(t, syncAt(i) + 0.1, FLOW);
-        const lit = ramp(t, syncAt(i), 0.3) * o;
-        return (
-          <g key={i}>
-            <path d={polyline(pts)} fill="none" stroke={C.ink} strokeOpacity={0.1} strokeLinejoin="round" />
-            <Trace d={polyline(pts)} k={flow} stroke={C.primary} opacity={0.5 * o} />
-            <Pulse points={pts} k={t < syncAt(i) + 0.1 ? -1 : (t - syncAt(i) - 0.1) / FLOW} r={2.6} />
-            <circle cx={pts[0][0]} cy={pts[0][1]} r={2.5} fill={C.card} stroke={C.ink} strokeOpacity={0.25} />
-            <circle cx={pts[0][0]} cy={pts[0][1]} r={2.5} fill={C.primary} opacity={lit} />
-          </g>
-        );
-      })}
-
-      {/* Sources: quiet wash and a coral tick while syncing, full strength once synced. */}
-      {SOURCES.map((s, i) => {
-        const lit = ramp(t, syncAt(i), 0.4) * o;
-        const active = blip(t, syncAt(i), 0.12, 0.18);
-        const y = srcY(i);
-        return (
-          <g key={s.label} opacity={0.5 + 0.5 * lit}>
-            <Card x={SRC.x} y={y} w={SRC.w} h={SRC.h} />
-            <g opacity={active}>
-              <rect x={SRC.x + 0.5} y={y + 0.5} width={SRC.w - 1} height={SRC.h - 1} rx={11.5} fill={C.accentWash} stroke={C.accentLine} />
-              <rect x={SRC.x + 5} y={y + 18} width={2} height={SRC.h - 36} rx={1} fill={C.accent} />
+    <PanelSvg t={t}>
+      <g opacity={fade}>
+        {/* Connectors: quiet grey curves, the active one traced in coral. */}
+        {GROUPS.map((_, g) => {
+          const on = ramp(t, 0.35 + g * 0.06, 0.6);
+          const pts = curvePts(g);
+          const [sx, sy] = start(g);
+          const [ex, ey] = entry(g);
+          return (
+            <g key={g}>
+              <Trace d={curve(g)} k={on} stroke={C.line} width={1.2} />
+              {STATUSES.map((s, i) =>
+                s.group === g || s.group === -1 ? (
+                  <g key={i} opacity={1 - ramp(t, s.at + s.dur - 0.2, 0.25)}>
+                    <Trace d={curve(g)} k={ramp(t, s.at, 0.4, easeOut)} stroke={s.group === -1 ? C.accentLine : C.accent} width={1.2} />
+                    <Pulse points={pts} k={(t - s.at - 0.1) / Math.min(0.6, s.dur - 0.15)} r={2.4} />
+                  </g>
+                ) : null,
+              )}
+              <circle cx={sx} cy={sy} r={2} fill={C.card} stroke={C.line} opacity={on} />
+              <circle cx={ex} cy={ey} r={2} fill={C.card} stroke={C.line} opacity={on} />
             </g>
-            <rect x={SRC.x + 14} y={y + 14} width={28} height={28} rx={8} fill={C.paper} stroke={C.line} />
-            <g transform={`translate(${SRC.x + 28} ${y + 28})`}>{s.icon}</g>
-            <text x={SRC.x + 54} y={y + 25} fontSize={12} fontWeight={550} fill={C.ink}>
-              {s.label}
-            </text>
-            <Mono x={SRC.x + 54} y={y + 40} size={8.6}>
-              {s.meta}
-            </Mono>
-          </g>
-        );
-      })}
+          );
+        })}
 
-      {/* The product model. */}
-      <Card x={MODEL.x} y={MODEL.y} w={MODEL.w} h={MODEL.h} />
-      <g transform={`translate(${MODEL.x + 18} ${MODEL.y + 26})`}>
-        <g transform="translate(5 -3.5)" opacity={(1 - ready * o) * ramp(t, 0.3, 0.4)}>
-          <circle r={5} fill="none" stroke={C.line} />
-          <circle r={5} fill="none" stroke={C.accent} pathLength={1} strokeDasharray="0.3 0.7" transform={`rotate(${t * 300})`} />
-        </g>
-        <g opacity={ready * o}>
-          <Check x={5} y={-3.5} r={5.5} k={1} />
-        </g>
-        <Mono x={18} y={0} size={9.5} fill={C.ink} opacity={1 - ready * o}>
-          Building product model
-        </Mono>
-        <Mono x={18} y={0} size={9.5} fill={C.ink} opacity={ready * o}>
-          Product model ready
-        </Mono>
-        <Mono x={MODEL.w - 36} y={0} size={9.5} fill={C.muted} textAnchor="end">
-          {`${Math.round(progress * o * 100)}%`}
-        </Mono>
-      </g>
-      <rect x={MODEL.x + 18} y={MODEL.y + 40} width={MODEL.w - 36} height={3} rx={1.5} fill={C.hair} />
-      <rect x={MODEL.x + 18} y={MODEL.y + 40} width={(MODEL.w - 36) * progress * o} height={3} rx={1.5} fill={C.accent} />
-      <rect x={MODEL.x + 18} y={MODEL.y + 40} width={(MODEL.w - 36) * progress * o} height={3} rx={1.5} fill={C.primary} opacity={ready} />
-      {CHECKS.map((c, i) => {
-        const k = ramp(t, checkAt(i), 0.45) * o;
-        const y = ROW.y + i * ROW.pitch;
-        // The row being worked on: a coral dot in its empty check and a firmer label.
-        const working = blip(t, checkAt(i) - 0.45, 0.3, 0.25) * o;
-        return (
-          <g key={c.label}>
-            {i > 0 && <line x1={MODEL.x + 18} x2={MODEL.x + MODEL.w - 18} y1={y - 8} y2={y - 8} stroke={C.hair} />}
-            <Check x={MODEL.x + 27} y={y + 9} r={7} k={k} />
-            <circle cx={MODEL.x + 27} cy={y + 9} r={3} fill={C.accent} opacity={working * (1 - k)} />
-            <text x={MODEL.x + 44} y={y + 13} fontSize={12} fontWeight={550} fill={C.ink} opacity={0.45 + 0.55 * Math.max(k, working * 0.7)}>
-              {c.label}
-            </text>
-            <g {...rise(k, 4)}>
-              <Mono x={MODEL.x + MODEL.w - 18} y={y + 12.5} size={8.6} fill={C.primary} textAnchor="end">
-                {c.detail}
+        {/* Source groups */}
+        {GROUPS.map((grp, g) => {
+          const k = ramp(t, 0.05 + g * 0.07, 0.5, easeOut);
+          const active = Math.max(
+            0,
+            ...STATUSES.map((s) => (s.group === g ? Math.min(ramp(t, s.at, 0.25), 1 - ramp(t, s.at + s.dur - 0.15, 0.25)) : 0)),
+          );
+          // Back-to-back statuses on one group: keep it lit through the handover.
+          const lit = STATUSES.some((s, i) => s.group === g && STATUSES[i + 1]?.group === g && t >= s.at && t < s.at + s.dur + 0.3) ? 1 : active;
+          const fin = ramp(t, groupDone(g), 0.3);
+          const y = groupY(g);
+          return (
+            <g key={grp.label} opacity={k} transform={`translate(0 ${(1 - k) * 5})`}>
+              <Mono x={COL.x + 1} y={y + 1} size={9} fill={lit > 0.5 ? C.ink : C.muted}>
+                {grp.label}
               </Mono>
+              <circle cx={COL.x + grp.label.length * 6.3 + 10} cy={y - 2} r={2.5} fill={C.primary} opacity={fin} />
+              {grp.items.map((it, i) => {
+                const x = COL.x + i * (TILE + TGAP);
+                return (
+                  <g key={it.key} transform={`translate(${x} ${y + 10})`}>
+                    <Card x={0} y={0} w={TILE} h={TILE} r={6} shadow={false} stroke={C.line} />
+                    <rect width={TILE} height={TILE} rx={6} fill={C.accentWash} stroke={C.accentLine} opacity={lit} />
+                    <g transform={`translate(${TILE / 2} ${TILE / 2})`}>{it.icon}</g>
+                  </g>
+                );
+              })}
             </g>
-            {/* Skeleton while the row is still being worked out. */}
-            <rect x={MODEL.x + MODEL.w - 18 - 96} y={y + 6} width={96} height={6} rx={3} fill={C.hair} opacity={1 - k} />
-          </g>
-        );
-      })}
+          );
+        })}
 
-      {/* The positioning map. */}
-      <Card x={MAP.x} y={MAP.y} w={MAP.w} h={MAP.h} />
-      <Mono x={MAP.x + 18} y={MAP.y + 26} size={9.5} fill={C.ink}>
-        Positioning map
-      </Mono>
-      {/* Open-space quadrant, revealed once you land. */}
-      <rect x={PLOT.x + PLOT.w / 2} y={PLOT.y} width={PLOT.w / 2} height={PLOT.h / 2} fill={C.accentWash} opacity={landed * o} rx={6} />
-      {/* The empty grid waits quietly, then firms up as the map is plotted. */}
-      <g stroke={C.ink} strokeOpacity={0.12} opacity={0.4 + 0.6 * mapIn * o}>
-        <line x1={PLOT.x} x2={PLOT.x + PLOT.w} y1={PLOT.y + PLOT.h / 2} y2={PLOT.y + PLOT.h / 2} strokeDasharray="2 4" />
-        <line x1={PLOT.x + PLOT.w / 2} x2={PLOT.x + PLOT.w / 2} y1={PLOT.y} y2={PLOT.y + PLOT.h} strokeDasharray="2 4" />
-        <line x1={PLOT.x} x2={PLOT.x} y1={PLOT.y} y2={PLOT.y + PLOT.h} strokeOpacity={0.25} />
-        <line x1={PLOT.x} x2={PLOT.x + PLOT.w} y1={PLOT.y + PLOT.h} y2={PLOT.y + PLOT.h} strokeOpacity={0.25} />
-      </g>
-      <g {...rise(mapIn * o)}>
-        <Mono x={PLOT.x + PLOT.w} y={PLOT.y + PLOT.h + 18} size={8.4} textAnchor="end">
-          Developer-first →
-        </Mono>
-        <Mono x={0} y={0} size={8.4} textAnchor="end" transform={`translate(${PLOT.x - 12} ${PLOT.y}) rotate(-90)`}>
-          Self-serve →
-        </Mono>
-      </g>
-      {/* Competitor cluster. */}
-      {RIVALS.map((r, i) => {
-        const k = ramp(t, rivalAt(i), 0.4, easeOut) * o;
-        const [x, y] = px(r);
-        return <circle key={i} cx={x} cy={y} r={2.5 + 1.5 * k} fill={C.sage} opacity={0.9 * k} />;
-      })}
-      <g {...rise(ramp(t, rivalAt(7) + 0.3, 0.4, easeOut) * o, 4)}>
-        <Mono x={px([0.26, 0.86])[0]} y={px([0.26, 0.86])[1]} size={8.4} textAnchor="middle">
-          Incumbents
-        </Mono>
-      </g>
-      {/* You: rises out of the middle and glides alone into the open quadrant. */}
-      <g opacity={ramp(t, YOU_AT - 0.35, 0.35) * o}>
-        <circle cx={youAt[0]} cy={youAt[1]} r={7 + 7 * landed} fill={C.accent} opacity={0.14} />
-        <circle cx={youAt[0]} cy={youAt[1]} r={5} fill={C.accent} stroke={C.card} />
-        <g {...rise(landed, 4)}>
-          <rect x={youAt[0] - 82} y={youAt[1] - 10} width={66} height={20} rx={10} fill={C.ink} />
-          <Mono x={youAt[0] - 49} y={youAt[1] + 3} size={8.4} fill="#fff" textAnchor="middle">
-            You · open
+        {/* Product model card */}
+        <g opacity={cardIn} transform={`translate(0 ${(1 - cardIn) * 6})`}>
+          <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} r={12} />
+          <Mono x={CARD.x + PAD} y={CARD.y + 24} size={9} fill={C.muted}>
+            Product model
           </Mono>
+          <Mono x={CARD.x + CARD.w - PAD} y={CARD.y + 24} size={9} fill={C.muted} textAnchor="end">
+            acme.dev
+          </Mono>
+          <line x1={CARD.x} x2={CARD.x + CARD.w} y1={CARD.y + 38} y2={CARD.y + 38} stroke={C.hair} />
+
+          <StatusLine t={t} done={done} />
+          <ProgressDots t={t} />
+
+          <line x1={CARD.x + PAD} x2={CARD.x + CARD.w - PAD} y1={BODY_Y} y2={BODY_Y} stroke={C.hair} />
+
+          {/* Findings fill in as the work lands. */}
+          <g opacity={1 - term}>
+            {FINDINGS.map((f, i) => {
+              const k = ramp(t, f.at, 0.45, easeOut);
+              const y = ROW.y + i * ROW.pitch;
+              return (
+                <g key={f.label}>
+                  <Check x={CARD.x + PAD + 7} y={y - 4} r={7} k={k} />
+                  <text x={CARD.x + PAD + 22} y={y} fontSize={12} fill={C.ink} opacity={0.38 + 0.62 * k}>
+                    {f.label}
+                  </text>
+                  {f.value && (
+                    <text x={CARD.x + CARD.w - PAD} y={y} fontSize={12} fontWeight={600} fill={C.primary} textAnchor="end" opacity={ramp(t, f.at + 0.25, 0.4)}>
+                      {f.value}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+          <Terminal t={t} k={term} />
         </g>
       </g>
     </PanelSvg>
   );
 }
 
-function Doc() {
+/** The cycling status: a coral dot and one short line, crossfading with a small rise. */
+function StatusLine({ t, done }: { t: number; done: number }) {
+  const x = CARD.x + PAD;
+  const breathe = 0.5 + 0.5 * Math.sin(t * 4.2);
   return (
-    <g fill="none" stroke={C.ink} strokeWidth={1.3} strokeLinejoin="round" transform="translate(-6 -7.5)">
-      <path d="M1 1h7.5L12 4.5V14H1z" />
-      <path d="M8.5 1v3.5H12M3.5 8h6M3.5 10.8h6" strokeLinecap="round" />
+    <g>
+      <circle cx={x + 4} cy={STATUS_Y - 4} r={4 + 2.5 * breathe} fill={C.accent} opacity={(0.14 + 0.06 * breathe) * (1 - done) * ramp(t, 0.6, 0.3)} />
+      <circle cx={x + 4} cy={STATUS_Y - 4} r={3.5} fill={done > 0.5 ? C.primary : C.accent} opacity={ramp(t, 0.6, 0.3)} />
+      {STATUSES.map((s, i) => {
+        const inK = ramp(t, s.at, 0.25, easeOut);
+        const outK = i === STATUSES.length - 1 ? ramp(t, DONE - 0.1, 0.2) : ramp(t, s.at + s.dur - 0.12, 0.18);
+        const o = Math.min(inK, 1 - outK);
+        if (o <= 0) return null;
+        return (
+          <text key={s.text} x={x + 16} y={STATUS_Y + (1 - inK) * 5} fontSize={12.5} fontWeight={500} fill={C.ink} opacity={o}>
+            {s.text}
+          </text>
+        );
+      })}
+      {done > 0 && (
+        <text x={x + 16} y={STATUS_Y + (1 - done) * 5} fontSize={12.5} fontWeight={600} fill={C.primary} opacity={done}>
+          Product model complete
+        </text>
+      )}
     </g>
   );
 }
-function Wave() {
-  const bars = [3, 7, 11, 6, 9, 4, 8];
+
+/** One dot per status: green when done, coral while active, grey ahead. */
+function ProgressDots({ t }: { t: number }) {
+  const x0 = CARD.x + PAD + 16;
   return (
-    <g stroke={C.ink} strokeWidth={1.5} strokeLinecap="round">
-      {bars.map((h, i) => (
-        <line key={i} x1={-7.5 + i * 2.5} x2={-7.5 + i * 2.5} y1={-h / 2} y2={h / 2} />
+    <g opacity={ramp(t, 0.6, 0.3)}>
+      {STATUSES.map((s, i) => {
+        const on = ramp(t, s.at, 0.2);
+        const off = ramp(t, s.at + s.dur - 0.1, 0.2);
+        const fill = off > 0.5 ? C.primary : on > 0.5 ? C.accent : C.line;
+        return <circle key={i} cx={x0 + i * 11} cy={DOTS_Y} r={on > 0.5 && off < 0.5 ? 3 : 2.5} fill={fill} />;
+      })}
+    </g>
+  );
+}
+
+/** The quickstart beat: the card's body becomes a tiny terminal. */
+function Terminal({ t, k }: { t: number; k: number }) {
+  if (k <= 0) return null;
+  const x = CARD.x + PAD;
+  const y = BODY_Y + 14;
+  const w = CARD.w - PAD * 2;
+  const h = 96;
+  const cmd = "npx acme init";
+  const typed = cmd.slice(0, Math.round(clamp01((t - (QUICK.at + 0.3)) / 0.55) * cmd.length));
+  const typing = typed.length < cmd.length;
+  const l2 = ramp(t, QUICK.at + 0.85, 0.2);
+  const l3 = ramp(t, QUICK.at + 1.0, 0.3, easeOut);
+  const mono = { fontFamily: "var(--font-mono)", fontSize: 11 } as const;
+  const cw = 6.6; // approx. mono advance at 11px
+  return (
+    <g opacity={k} transform={`translate(0 ${(1 - k) * 5})`}>
+      <rect x={x} y={y} width={w} height={h} rx={8} fill={C.accentWash} stroke={C.accentLine} />
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={x + 12 + i * 9} cy={y + 12} r={2.6} fill={C.line} />
+      ))}
+      <text x={x + 12} y={y + 40} {...mono} fill={C.muted}>
+        $ <tspan fill={C.ink}>{typed}</tspan>
+      </text>
+      {typing || l2 === 0 ? <rect x={x + 12 + (typed.length + 2) * cw} y={y + 31} width={6} height={11} rx={1} fill={C.accent} opacity={0.8} /> : null}
+      <text x={x + 12} y={y + 61} {...mono} fill={C.muted} opacity={l2}>
+        ✓ installed in 4.1s
+      </text>
+      <g opacity={l3} transform={`translate(0 ${(1 - l3) * 4})`}>
+        <rect x={x + 6} y={y + 69} width={w - 12} height={19} rx={5} fill={C.primarySoft} />
+        <text x={x + 12} y={y + 82} {...mono} fill={C.primary} fontWeight={600}>
+          ✓ app running
+        </text>
+        <text x={x + w - 12} y={y + 82} {...mono} fill={C.muted} textAnchor="end">
+          :3000
+        </text>
+      </g>
+    </g>
+  );
+}
+
+// ── Glyph tiles (sources without a mark of their own) ───────────────────────
+function Doc() {
+  return (
+    <g fill="none" stroke={C.ink} strokeWidth={1.2} strokeLinejoin="round" transform="translate(-5.5 -7)">
+      <path d="M1 1h6.5L11 4.5V13H1z" />
+      <path d="M7.5 1v3.5H11M3.5 7.5h5M3.5 10h5" strokeLinecap="round" />
+    </g>
+  );
+}
+/** A changelog: a little timeline of releases. */
+function Changelog() {
+  return (
+    <g stroke={C.ink} strokeWidth={1.2} strokeLinecap="round" fill="none">
+      <path d="M-4.5 -6v12" strokeOpacity={0.45} />
+      {[-4.5, 0, 4.5].map((y) => (
+        <g key={y}>
+          <circle cx={-4.5} cy={y} r={1.6} fill={C.card} />
+          <path d={`M-1 ${y}h${y === 0 ? 5 : 6.5}`} />
+        </g>
       ))}
     </g>
   );
 }
 function Globe() {
   return (
-    <g fill="none" stroke={C.ink} strokeWidth={1.2}>
+    <g fill="none" stroke={C.ink} strokeWidth={1.1}>
       <circle r={6.5} />
       <ellipse rx={2.8} ry={6.5} />
-      <path d="M-6.5 0h13M-5.6 -3.3h11.2M-5.6 3.3h11.2" />
+      <path d="M-6.5 0h13" />
     </g>
+  );
+}
+/** A plain two-letter monogram for tools without a mark in the set. */
+function Monogram({ text }: { text: string }) {
+  return (
+    <text y={3.6} textAnchor="middle" fontSize={10} fontWeight={600} letterSpacing="-0.02em" fill={C.ink}>
+      {text}
+    </text>
   );
 }
 
