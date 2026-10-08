@@ -1,28 +1,64 @@
 import ClientProof from "./ClientProof";
+import { LogoCloud } from "@/components/ui/logo-cloud-2";
 
-/** Embedded execution: who we are on the left, client proof on the right. */
+const OPERATOR_AVATARS = [
+  { src: "/clients/people/landingai.jpg", alt: "Operator Priya Raman" },
+  { src: "/clients/people/glean.jpg", alt: "Operator Marcus Bell" },
+  { src: "/clients/people/webai.jpg", alt: "Operator Elena Park" },
+  { src: "/clients/people/orqai.jpg", alt: "Operator Daan Visser" },
+  { src: "/clients/people/langwatch.jpg", alt: "Operator Sofia Lindqvist" },
+];
+
+/**
+ * Embedded execution:
+ * Upper half: Logo cloud grid with tech partners / client stack.
+ * Lower half: Editorial value proposition on the left, interactive client proof card on the right.
+ */
 export default function EmbeddedExecution() {
   return (
-    <section className="grid items-center gap-12 px-6 py-24 sm:px-12 lg:grid-cols-2 lg:px-20 xl:px-28">
-      <div>
-        {/* Dark pill, then a deep green badge beside a coral pill; the live badge matches the pill height. */}
-        <h2 className="flex flex-col items-start gap-[0.12em] font-heading text-2xl leading-none font-bold tracking-[-0.03em] whitespace-nowrap sm:text-3xl xl:text-4xl">
-          <span className="rounded-full bg-foreground px-[0.55em] py-[0.3em] text-white">We plug into your team</span>
-          <span className="flex items-center gap-[0.12em]">
-            {/* Live badge: a deep green scalloped flower turning slowly. */}
-            <span aria-hidden="true" className="relative grid size-[1.6em] shrink-0 place-items-center">
-              <svg viewBox="0 0 100 100" className="absolute inset-0 size-full animate-[spin_14s_linear_infinite] fill-primary motion-reduce:animate-none">
-                <path d="M65.7 12.1 Q89.6 10.4 87.9 34.3 Q106.0 50.0 87.9 65.7 Q89.6 89.6 65.7 87.9 Q50.0 106.0 34.3 87.9 Q10.4 89.6 12.1 65.7 Q-6.0 50.0 12.1 34.3 Q10.4 10.4 34.3 12.1 Q50.0 -6.0 65.7 12.1Z" />
-              </svg>
-            </span>
-            <span className="rounded-full bg-coral px-[0.55em] py-[0.3em] text-foreground">and own the execution.</span>
-          </span>
-        </h2>
-        <p className="mt-8 max-w-xl text-base leading-relaxed text-foreground/75 sm:text-lg">
-          We are a team of engineers, technical writers, creators, and marketers building growth and distribution for AI-native and developer companies.
-        </p>
+    <section id="embedded-execution" className="relative py-10 sm:py-14 lg:py-16">
+      {/* Upper half: Logo Cloud */}
+      <div className="relative mx-auto max-w-5xl px-6 sm:px-10 lg:px-8">
+        <LogoCloud />
       </div>
-      <ClientProof />
+
+      {/* Lower half: Two-column layout matching inspiration */}
+      <div className="mx-auto mt-8 max-w-6xl px-6 sm:mt-10 lg:mt-12 lg:px-12">
+        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+          {/* Left Column: Clean editorial typography */}
+          <div className="max-w-xl">
+            <h2 className="text-[clamp(1.85rem,2.8vw,2.65rem)] leading-[1.12] font-medium tracking-[-0.035em] text-ink">
+              We embed into your team to own the execution.
+            </h2>
+            <p className="mt-4 text-[0.96rem] leading-relaxed text-muted sm:text-[1.02rem]">
+              We are a team of engineers, technical writers, creators, and marketers building growth and distribution for AI-native and developer companies.
+            </p>
+
+            {/* Overlapping operator avatars */}
+            <div className="mt-6 flex items-center gap-3.5 pt-1">
+              <div className="flex -space-x-2 overflow-hidden py-0.5">
+                {OPERATOR_AVATARS.map((op, i) => (
+                  <img
+                    key={i}
+                    src={op.src}
+                    alt={op.alt}
+                    className="inline-block size-8 sm:size-9 rounded-full ring-2 ring-paper object-cover grayscale-[20%] transition-transform duration-200 hover:scale-110 hover:z-10"
+                  />
+                ))}
+              </div>
+              <p className="text-xs sm:text-[0.82rem] font-medium text-muted">
+                <span className="font-semibold text-ink">15+</span> specialized technical operators
+              </p>
+            </div>
+          </div>
+
+          {/* Right Column: Client Testimonial Card */}
+          <div className="flex justify-center lg:justify-end">
+            <ClientProof />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
+

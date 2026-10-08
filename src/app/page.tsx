@@ -7,7 +7,7 @@ import HowWeWork from "@/components/how-we-work/HowWeWork";
 
 export default function Home() {
   return (
-    <main>
+    <main className="overflow-x-clip">
       <Hero />
       <EmbeddedExecution />
       <HowWeWork />

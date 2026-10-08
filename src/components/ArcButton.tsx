@@ -3,19 +3,28 @@ import type { ReactNode } from "react";
 
 // Pill CTA (ArcButton):
 // Resting state: dark green (main brand color).
-// On hover: 2-3 layers of color slide in sequentially from the left
-// (light green, then amber, settling on dull orange as the final fill).
-// On leave: the orange layer slides back out to the left over 450ms,
+// On hover: multi-chromatic color wave slides in sequentially from the left
+// (fresh light green, electric cyan, vibrant indigo, bright rose, warm golden amber,
+// settling on dull secondary orange as the final fill).
+// On leave: the orange layer slides back out to the left over 500ms,
 // cleanly revealing the resting dark green button face underneath.
-const SWEEP = ["#2bb673", "#fcb401"]; // Layer 1: fresh light green, Layer 2: golden amber
-const HOVER_FILL = "var(--secondary, #d96543)"; // Layer 3: dull secondary orange (final fill on hover)
+const SWEEP = [
+  "#2bb673", // Layer 1: fresh light green
+  "#06b6d4", // Layer 2: electric cyan
+  "#6366f1", // Layer 3: vibrant indigo
+  "#ec4899", // Layer 4: bright rose
+  "#fbbf24", // Layer 5: warm golden amber
+];
+const HOVER_FILL = "var(--secondary, #d96543)"; // Final Layer: dull secondary orange
 
-// Literal classes so Tailwind compiles them: sweep layers step ~50ms apart, orange fill settles right after.
+// Step delays ~40ms apart so the color wave ripples across the button smoothly
 const DELAYS = [
   "group-hover:delay-0",
-  "group-hover:delay-[50ms]",
-  "group-hover:delay-[110ms]",
-  "group-hover:delay-[170ms]",
+  "group-hover:delay-[40ms]",
+  "group-hover:delay-[80ms]",
+  "group-hover:delay-[120ms]",
+  "group-hover:delay-[160ms]",
+  "group-hover:delay-[200ms]",
 ];
 
 const TONES = {
