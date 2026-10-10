@@ -114,11 +114,11 @@ export default function HowWeWork() {
         </p>
       </header>
 
-      <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
-        {/* The nav: vertically centered in the viewport, minimal clean typography. */}
+      <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(13rem,20%)_minmax(0,1fr)] lg:gap-[3.5vw]">
+        {/* The nav: vertically centered in the viewport, prominent readable typography. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
           <div className="sticky top-[max(112px,calc(50vh-140px))]">
-            <ol className="space-y-1">
+            <ol className="space-y-2">
               {STEPS.map((step, i) => {
                 const on = i === active;
                 return (
@@ -127,18 +127,22 @@ export default function HowWeWork() {
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className="group flex w-full items-center py-2.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-light-green"
+                      className={`group flex w-full items-center rounded-lg px-3.5 py-3 text-left transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        on
+                          ? "bg-primary/[0.12] border border-primary/30 shadow-[0_1px_3px_rgb(25_231_110/0.08)]"
+                          : "border border-transparent hover:bg-ink/[0.03]"
+                      }`}
                     >
                       <span
-                        className={`font-mono text-[11px] tracking-[0.08em] transition-colors duration-300 ${
-                          on ? "text-light-green font-semibold" : "text-muted/60 group-hover:text-ink/80"
+                        className={`font-mono text-[13px] tracking-[0.08em] transition-colors duration-200 ${
+                          on ? "font-bold text-primary" : "font-semibold text-ink/40 group-hover:text-ink/70"
                         }`}
                       >
                         {step.n}
                       </span>
                       <span
-                        className={`ml-3.5 text-[0.95rem] tracking-[-0.015em] transition-colors duration-300 ${
-                          on ? "font-semibold text-ink" : "font-normal text-muted group-hover:text-ink"
+                        className={`ml-3.5 text-[1.06rem] tracking-[-0.015em] transition-colors duration-200 ${
+                          on ? "font-bold text-ink" : "font-medium text-ink/70 group-hover:text-ink"
                         }`}
                       >
                         {step.title}

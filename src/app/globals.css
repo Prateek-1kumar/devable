@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand: dark green is the main color, dull orange is secondary (appears on hover),
+  /* Brand: vibrant green (#19e76e) is the primary color, dull orange is secondary (appears on hover),
      and light green is used for the visuals.
      These tokens are the single source of truth across CSS, Tailwind, 3D WebGL, and SVG visuals. */
   --ink: #172c21; /* primary text, outlines, dark bands */
   --paper: #f7f7f7; /* warm off-white page */
-  --primary: #26644b; /* dark green: main brand color (slightly lightened for clarity) */
+  --primary: #19e76e; /* vibrant brand green */
   --secondary: #d96543; /* slightly dull/matte orange: secondary brand color */
   --accent: var(--secondary); /* secondary orange for active highlights & hover states */
-  --light-green: #2bb673; /* fresh light green: for visuals in hero and how-we-work */
+  --light-green: #19e76e; /* fresh light green: for visuals in hero and how-we-work */
   --line: #e9e7e1; /* borders, hairlines */
   --muted: #6b7570; /* secondary text */
   --card: #ffffff; /* cards and panels */
 
   /* Tints derived from the above for quiet fills. */
-  --primary-soft: #dfe8e2;
+  --primary-soft: #d8f8e5;
   --secondary-soft: #fbe6de;
   --accent-soft: var(--secondary-soft);
-  --light-green-soft: #d8f5e6;
+  --light-green-soft: #d8f8e5;
   --sage: #8fa898; /* the one muted channel tint */
+  --hero-bg: #1db85e; /* radiant brand green container */
+  --hero-dots: #000000; /* subtle dark grid dots */
 
   /* Legacy & semantic names, mapped onto the brand so all sections follow it. */
   --background: #ffffff; /* page is pure white; off-white (#f3f1eb) is for cards and panels */
@@ -49,6 +51,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-light-green: var(--light-green);
   --color-light-green-soft: var(--light-green-soft);
+  --color-hero-bg: var(--hero-bg);
+  --color-hero-dots: var(--hero-dots);
   --color-line: var(--line);
   --color-muted: var(--muted);
   --color-card: var(--card);
@@ -57,7 +61,6 @@
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-forest: var(--forest);
-  --color-accent: var(--accent);
   --color-lime: var(--lime);
   --color-coral: var(--coral);
   --color-amber: var(--amber);

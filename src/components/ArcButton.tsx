@@ -1,23 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-// Pill CTA (ArcButton):
-// Resting state: dark green (main brand color).
-// On hover: multi-chromatic color wave slides in sequentially from the left
-// (fresh light green, electric cyan, vibrant indigo, bright rose, warm golden amber,
-// settling on dull secondary orange as the final fill).
-// On leave: the orange layer slides back out to the left over 500ms,
-// cleanly revealing the resting dark green button face underneath.
-const SWEEP = [
-  "#2bb673", // Layer 1: fresh light green
-  "#06b6d4", // Layer 2: electric cyan
-  "#6366f1", // Layer 3: vibrant indigo
-  "#ec4899", // Layer 4: bright rose
-  "#fbbf24", // Layer 5: warm golden amber
-];
-const HOVER_FILL = "var(--secondary, #d96543)"; // Final Layer: dull secondary orange
+// Rectangular button with small border radius:
+// Resting state: black with white text.
+// On hover: fills with the primary green (#19E76E) with dark text.
+const SWEEP: string[] = [];
+const HOVER_FILL = "var(--primary, #19E76E)";
 
-// Step delays ~40ms apart so the color wave ripples across the button smoothly
+// Step delays for smooth transition
 const DELAYS = [
   "group-hover:delay-0",
   "group-hover:delay-[40ms]",
@@ -28,16 +18,19 @@ const DELAYS = [
 ];
 
 const TONES = {
-  primary: "bg-primary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
-  accent: "bg-primary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
+  primary:
+    "bg-black text-white shadow-sm transition-colors duration-300 group-hover:text-black group-focus-visible:text-black",
+  accent:
+    "bg-black text-white shadow-sm transition-colors duration-300 group-hover:text-black group-focus-visible:text-black",
   secondary:
-    "bg-card text-foreground border border-line shadow-[0_1px_2px_rgb(15_26_20/0.06)] transition-colors duration-300 hover:text-white hover:border-transparent focus-visible:text-white",
-  orange: "bg-secondary text-white transition-colors duration-300 hover:text-white focus-visible:text-white",
+    "bg-white text-black border border-black/15 shadow-sm transition-colors duration-300 group-hover:text-black group-focus-visible:text-black",
+  orange:
+    "bg-secondary text-white transition-colors duration-300 group-hover:text-white focus-visible:text-white",
 };
 
 const SIZES = {
-  md: "gap-2.5 px-6 py-2.5 text-[1rem]",
-  sm: "gap-2 px-4 py-2 text-[0.92rem]",
+  md: "gap-2.5 px-6 py-2.5 text-[0.95rem] rounded-[6px]",
+  sm: "gap-2 px-4 py-2 text-[0.88rem] rounded-[6px]",
 };
 
 function Arrow() {
@@ -75,25 +68,25 @@ export default function ArcButton({
   const layers = [
     ...sweep.map((color, i) => ({
       color,
-      classes: `duration-0 group-hover:duration-500 ${DELAYS[i] ?? ""}`,
+      classes: `duration-0 group-hover:duration-300 ${DELAYS[i] ?? ""}`,
     })),
     {
       color: hoverFill,
-      classes: `duration-500 group-hover:duration-500 ${DELAYS[sweep.length] ?? ""}`,
+      classes: `duration-300 group-hover:duration-300 ${DELAYS[sweep.length] ?? ""}`,
     },
   ];
 
   return (
     <Link
       href={href}
-      className={`group relative isolate inline-flex items-center justify-center overflow-hidden rounded-full font-medium tracking-wide outline-offset-4 ${TONES[tone]} ${SIZES[size]} ${className}`}
+      className={`group relative isolate inline-flex items-center justify-center overflow-hidden font-medium tracking-wide outline-offset-4 ${TONES[tone]} ${SIZES[size]} ${className}`}
     >
       {layers.map(({ color, classes }, i) => (
         <span
           key={i}
           aria-hidden="true"
           style={{ backgroundColor: color }}
-          className={`absolute inset-0 -z-10 -translate-x-full rounded-full transition-transform ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-0 group-focus-visible:translate-x-0 motion-reduce:transition-none ${classes}`}
+          className={`absolute inset-0 -z-10 -translate-x-full rounded-[6px] transition-transform ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-0 group-focus-visible:translate-x-0 motion-reduce:transition-none ${classes}`}
         />
       ))}
       <span className="relative z-10 transition-colors duration-300">{children}</span>

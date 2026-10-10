@@ -12,27 +12,28 @@ const OPERATORS = ["landingai", "glean", "webai", "orqai", "langwatch"];
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
-      {/* The first viewport as one framed panel: claim and logos on solid deep green, with a quiet terminal-like
-          grid of mint pixels flickering at the edges and fading out behind the text. */}
-      <div className="relative isolate mx-auto max-w-6xl overflow-hidden bg-[#163a2c] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
+      {/* The first viewport as one framed panel: radiant emerald green with soft ambient lighting and flickering grid */}
+      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#1db85e] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14 shadow-2xl">
+        {/* Soft, natural ambient glow from the top */}
+        <div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(25,231,110,0.35),transparent_75%)]" />
         <FlickeringGrid
-          className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_38%,transparent_20%,black_85%)]"
-          squareSize={3}
+          className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_75%_65%_at_50%_38%,rgba(0,0,0,0.3)_0%,black_90%)]"
+          squareSize={2.8}
           gridGap={5}
-          color="#3ddc97"
-          maxOpacity={0.32}
-          flickerChance={0.12}
+          colors={["#ffffff", "#e6fbf0", "#bbf7d0", "#86efac"]}
+          maxOpacity={0.45}
+          flickerChance={0.15}
         />
         <div className="mx-auto max-w-4xl text-center text-white">
-          <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
+          <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em] text-white [text-shadow:_0_2px_12px_rgb(0_0_0_/_25%)]">
             Growth Marketing for AI&#8209;Native DevTools and Platforms
           </h1>
-          <p className="mx-auto mt-6 max-w-[36rem] text-lg leading-relaxed tracking-[-0.01em] text-white sm:text-xl">
+          <p className="mx-auto mt-6 max-w-[36rem] text-lg leading-relaxed tracking-[-0.01em] text-white/95 [text-shadow:_0_1px_8px_rgb(0_0_0_/_20%)] sm:text-xl">
             We build visibility and pipeline through technical content, organic search, AI visibility, Reddit, and
             creator distribution.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <ArcButton href="#contact" arrow>
+            <ArcButton href="#contact" arrow tone="primary">
               Speak with the team
             </ArcButton>
             <ArcButton href="#case-studies" tone="secondary">
@@ -42,7 +43,7 @@ export default function Hero() {
         </div>
 
         <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
-          <p className="mb-5 text-center text-sm text-white/95">Trusted by AI-native dev tools and platforms</p>
+          <p className="mb-5 text-center text-sm font-medium text-white/95 [text-shadow:_0_1px_6px_rgb(0_0_0_/_20%)]">Trusted by AI-native dev tools and platforms</p>
           <LogoCloud className="bg-card" />
         </div>
       </div>
