@@ -5,7 +5,7 @@
      and light green is used for the visuals.
      These tokens are the single source of truth across CSS, Tailwind, 3D WebGL, and SVG visuals. */
   --ink: #172c21; /* primary text, outlines, dark bands */
-  --paper: #eef2e9; /* warm off-white page */
+  --paper: #f7f7f7; /* warm off-white page */
   --primary: #26644b; /* dark green: main brand color (slightly lightened for clarity) */
   --secondary: #d96543; /* slightly dull/matte orange: secondary brand color */
   --accent: var(--secondary); /* secondary orange for active highlights & hover states */
@@ -22,7 +22,7 @@
   --sage: #8fa898; /* the one muted channel tint */
 
   /* Legacy & semantic names, mapped onto the brand so all sections follow it. */
-  --background: var(--paper);
+  --background: #ffffff; /* page is pure white; off-white (#f3f1eb) is for cards and panels */
   --surface: #ebe8e0; /* soft warm panels */
   --foreground: var(--ink);
   --ceramic: #fbfaf6;
