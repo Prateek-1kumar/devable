@@ -1,19 +1,28 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform, type Variants } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
+
+// Client proof, typographic and quiet: one card, the quote in large even type,
+// services as small monospace labels with square swatches in the hero's channel
+// colors (the site's pixel-block language), and an index of the five clients
+// underneath whose hairlines fill as each quote plays.
+//
+// ponytail: quotes, names, roles and photos are SAMPLE CONTENT for layout only.
+// Replace them with real, approved client quotes and photos before launch.
 
 type Service = "Social Media" | "GEO" | "Influencer Marketing" | "Reddit";
 const SERVICE_COLOR: Record<Service, string> = {
-  "Social Media": CHANNELS[0].color,
-  GEO: CHANNELS[1].color,
+  "Social Media": CHANNELS[0].color, // content
+  GEO: CHANNELS[1].color, // search + AI visibility
   Reddit: CHANNELS[2].color,
-  "Influencer Marketing": CHANNELS[3].color,
+  "Influencer Marketing": CHANNELS[3].color, // creators
 };
 
 type Client = {
   company: string;
+  /** Logo file in /public; without one the company name is set as a wordmark. */
   logo?: string;
   services: Service[];
   quote: string;
@@ -61,158 +70,193 @@ const CLIENTS: Client[] = [
   },
 ];
 
-const HOLD_SECONDS = 7;
+const HOLD = 7; // seconds each quote plays before the next
+const EASE = [0.22, 1, 0.36, 1] as const;
 
-function ChevronLeft() {
+// The quote rises in word by word with a whisper of blur; everything else cross-fades.
+const words: Variants = {
+  enter: {},
+  center: { transition: { staggerChildren: 0.014 } },
+  exit: { opacity: 0, transition: { duration: 0.18, ease: "easeIn" } },
+};
+const word: Variants = {
+  enter: { opacity: 0, y: "0.35em", filter: "blur(3px)" },
+  center: { opacity: 1, y: "0em", filter: "blur(0px)", transition: { duration: 0.5, ease: EASE } },
+};
+const fade: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: 0.45, ease: EASE, delay: 0.08 } },
+  exit: { opacity: 0, transition: { duration: 0.18 } },
+};
+
+/**
+ * A client logo at a steady visual weight, sized from its natural aspect. Falls
+ * back to the name as a wordmark when there is no file or it fails to load,
+ * including a failure that happened before React hydrated.
+ */
+function Logo({ client, area }: { client: Client; area: number }) {
+  const img = useRef<HTMLImageElement>(null);
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [failed, setFailed] = useState(!client.logo);
+  useEffect(() => {
+    const el = img.current;
+    if (el?.complete) {
+      if (el.naturalWidth > 0) setRatio(el.naturalWidth / el.naturalHeight);
+      else setFailed(true);
+    }
+  }, []);
+  if (failed) return <span className="font-heading text-[1.2rem] font-semibold tracking-[-0.03em] text-foreground">{client.company}</span>;
+  const height = ratio ? Math.sqrt(area / ratio) : 26;
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 12L6 8L10 4" />
+    // eslint-disable-next-line @next/next/no-img-element -- sized from its natural aspect once loaded
+    <img
+      ref={img}
+      src={client.logo}
+      alt={client.company}
+      style={{ height, width: ratio ? height * ratio : "auto", opacity: ratio ? 1 : 0 }}
+      className="transition-opacity duration-300"
+      onLoad={(e) => setRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function Arrow({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className={`size-3.5 ${flip ? "rotate-180" : ""}`}>
+      <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function ChevronRight() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 4L10 8L6 12" />
-    </svg>
-  );
-}
+const control =
+  "grid size-9 place-items-center rounded-[8px] border border-foreground/12 text-foreground/70 transition-colors hover:border-foreground/35 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40";
+const mono = "font-mono text-[0.68rem] tracking-[0.14em] uppercase";
 
 export default function ClientProof() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const reduced = useReducedMotion();
   const client = CLIENTS[active];
+  const progress = useMotionValue(0);
+  const fill = useTransform(progress, (v) => `${v * 100}%`);
 
   const go = (i: number) => {
-    setActive((i + CLIENTS.length) % CLIENTS.length);
+    const next = (i + CLIENTS.length) % CLIENTS.length;
+    if (next !== active) setActive(next);
   };
 
+  // Each quote plays for HOLD seconds, its hairline filling, then the next one comes in.
+  // Hover or focus pauses it where it is; reduced motion never autoplays.
   useEffect(() => {
-    if (paused) return;
-    const timer = setInterval(() => {
-      setActive((prev) => (prev + 1) % CLIENTS.length);
-    }, HOLD_SECONDS * 1000);
-    return () => clearInterval(timer);
-  }, [paused, active]);
+    if (reduced) return;
+    progress.set(0);
+  }, [active, reduced, progress]);
+  useEffect(() => {
+    if (reduced || paused) return;
+    const remaining = HOLD * (1 - progress.get());
+    const controls = animate(progress, 1, {
+      duration: remaining,
+      ease: "linear",
+      onComplete: () => setActive((a) => (a + 1) % CLIENTS.length),
+    });
+    return () => controls.stop();
+  }, [active, paused, reduced, progress]);
 
   return (
     <div
-      className="w-full max-w-[36rem]"
+      className="w-full"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="relative border border-line bg-card p-6 sm:p-7 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] flex flex-col justify-between h-[430px] sm:h-[405px]">
-        <div className="relative flex-1 flex flex-col justify-between">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={active}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              className="flex-1 flex flex-col justify-between"
-            >
-              <div>
-                {/* Top row: Client Logo / Brand + Service Badges */}
-                <div className="flex min-h-7 items-center justify-between gap-4">
-                  {client.logo ? (
-                    <img
-                      src={client.logo}
-                      alt={client.company}
-                      className="h-5.5 w-auto max-w-[115px] object-contain opacity-90"
-                    />
-                  ) : (
-                    <span className="font-heading text-base sm:text-lg font-bold tracking-tight text-ink">
-                      {client.company}
-                    </span>
-                  )}
-
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    {client.services.map((service) => (
-                      <span
-                        key={service}
-                        className="flex items-center gap-1.5 rounded-full bg-paper px-2.5 py-0.5 font-mono text-[9.5px] sm:text-[10px] tracking-[0.04em] text-muted uppercase"
-                      >
-                        <span
-                          className="size-1.5 rounded-full"
-                          style={{ backgroundColor: SERVICE_COLOR[service] }}
-                        />
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Testimonial Quote container: generous room for up to 5 lines without cutting or bleeding */}
-                <div className="mt-4 sm:mt-5 h-[145px] sm:h-[135px] flex items-start">
-                  <blockquote className="text-[0.98rem] sm:text-[1.06rem] leading-[1.46] font-normal tracking-[-0.012em] text-ink">
-                    “{client.quote}”
-                  </blockquote>
-                </div>
-              </div>
-
-              {/* Author info */}
-              <div className="border-t border-line/70 pt-3.5 sm:pt-4 flex items-center gap-3">
-                <img
-                  src={client.person.photo}
-                  alt={client.person.name}
-                  className="size-9.5 sm:size-10 rounded-full object-cover grayscale-[20%]"
-                />
-                <div>
-                  <p className="font-semibold text-ink text-[0.88rem] sm:text-[0.92rem]">
-                    {client.person.name}
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-muted">
-                    {client.person.role}, {client.company}
-                  </p>
-                </div>
-              </div>
+      <motion.figure
+        layout
+        transition={{ layout: { duration: 0.5, ease: EASE } }}
+        aria-roledescription="carousel"
+        className="rounded-[14px] border border-foreground/[0.09] bg-white px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
+      >
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div key={active} initial="enter" animate="center" exit="exit">
+            <motion.div variants={fade} className="flex min-h-9 items-center justify-between gap-6">
+              <Logo client={client} area={1600} />
+              <ul className="flex flex-wrap justify-end gap-x-5 gap-y-1">
+                {client.services.map((service) => (
+                  <li key={service} className={`flex items-center gap-2 text-foreground/60 ${mono}`}>
+                    <span className="size-[7px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
+                    {service}
+                  </li>
+                ))}
+              </ul>
             </motion.div>
-          </AnimatePresence>
-        </div>
 
-        {/* Bottom controls: Pagination dots on left, Arrow buttons on right */}
-        <div className="mt-4 flex items-center justify-between pt-1">
-          {/* Dots pagination */}
-          <div className="flex items-center gap-1.5">
-            {CLIENTS.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={`Go to testimonial ${i + 1}`}
-                onClick={() => go(i)}
-                className={`transition-all duration-300 rounded-full ${
-                  i === active
-                    ? "w-4 h-1.5 bg-ink"
-                    : "size-1.5 bg-line hover:bg-muted/50"
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Previous / Next buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              aria-label="Previous testimonial"
-              onClick={() => go(active - 1)}
-              className="grid size-7.5 sm:size-8 place-items-center rounded-full border border-line bg-paper/60 text-muted transition-colors hover:border-ink/30 hover:bg-card hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/30"
+            <motion.blockquote
+              variants={reduced ? fade : words}
+              className="mt-10 text-[1.25rem] leading-[1.45] font-normal tracking-[-0.02em] text-foreground sm:text-[1.4rem]"
             >
-              <ChevronLeft />
+              {reduced
+                ? `“${client.quote}”`
+                : `“${client.quote}”`.split(" ").map((w, i) => (
+                    <motion.span key={i} variants={word} className="inline-block whitespace-pre">
+                      {w}{" "}
+                    </motion.span>
+                  ))}
+            </motion.blockquote>
+
+            <motion.figcaption variants={fade} className="mt-10 flex items-center gap-3.5 border-t border-foreground/[0.08] pt-6 pr-24">
+              {/* pr-24 keeps the person clear of the prev/next controls on the same line. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- sample photo, swapped for the real one */}
+              <img src={client.person.photo} alt="" className="size-11 rounded-[6px] object-cover grayscale-[35%]" />
+              <span className="text-[0.95rem] leading-snug">
+                <span className="block font-medium text-foreground">{client.person.name}</span>
+                <span className="block text-foreground/55">
+                  {client.person.role}, {client.company}
+                </span>
+              </span>
+            </motion.figcaption>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Controls sit outside the transition, on the attribution line. */}
+        <div className="relative">
+          {/* Centered on the 44px photo row that ends right above this line. */}
+          <div className="absolute right-0 bottom-1 flex items-center gap-2">
+            <button type="button" aria-label="Previous client" onClick={() => go(active - 1)} className={control}>
+              <Arrow flip />
             </button>
-            <button
-              type="button"
-              aria-label="Next testimonial"
-              onClick={() => go(active + 1)}
-              className="grid size-7.5 sm:size-8 place-items-center rounded-full border border-line bg-paper/60 text-muted transition-colors hover:border-ink/30 hover:bg-card hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/30"
-            >
-              <ChevronRight />
+            <button type="button" aria-label="Next client" onClick={() => go(active + 1)} className={control}>
+              <Arrow />
             </button>
           </div>
         </div>
+      </motion.figure>
+
+      {/* The index: every client by name, the playing one's hairline filling; past ones full, upcoming empty. */}
+      <div role="tablist" aria-label="Clients" className="mt-5 grid grid-cols-5 gap-3">
+        {CLIENTS.map((c, i) => {
+          const on = i === active;
+          return (
+            <button
+              key={c.company}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => go(i)}
+              className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
+            >
+              <span className={`block truncate transition-colors duration-300 ${mono} ${on ? "text-foreground" : "text-foreground/40 group-hover:text-foreground/70"}`}>
+                {String(i + 1).padStart(2, "0")} {c.company}
+              </span>
+              <span className="relative mt-2.5 block h-px bg-foreground/[0.12]">
+                <motion.span
+                  className="absolute inset-y-0 left-0 bg-foreground"
+                  style={{ width: on ? (reduced ? "100%" : fill) : i < active ? "100%" : "0%" }}
+                />
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
