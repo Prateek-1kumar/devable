@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { CHANNELS } from "./growth-engine/channels";
 
 // Client proof, typographic and quiet: one card, the quote in large even type,
-// services as small monospace labels with square swatches in the hero's channel
-// colors (the site's pixel-block language), and an index of the five clients
-// underneath whose hairlines fill as each quote plays.
+// services as small rounded pills with dots in the hero's channel
+// colors, and an index of the five clients underneath whose bar fills as each
+// quote plays.
 //
 // ponytail: quotes, names, roles and photos are SAMPLE CONTENT for layout only.
 // Replace them with real, approved client quotes and photos before launch.
@@ -131,11 +131,9 @@ function Arrow({ flip = false }: { flip?: boolean }) {
 
 const control =
   "grid size-9 place-items-center rounded-[8px] border border-foreground/12 text-foreground/70 transition-colors hover:border-foreground/35 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground/40";
-const mono = "font-mono text-[0.68rem] tracking-[0.14em] uppercase";
 
 export default function ClientProof() {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
   const reduced = useReducedMotion();
   const client = CLIENTS[active];
   const progress = useMotionValue(0);
@@ -147,13 +145,13 @@ export default function ClientProof() {
   };
 
   // Each quote plays for HOLD seconds, its hairline filling, then the next one comes in.
-  // Hover or focus pauses it where it is; reduced motion never autoplays.
+  // It keeps playing under the cursor; reduced motion never autoplays.
   useEffect(() => {
     if (reduced) return;
     progress.set(0);
   }, [active, reduced, progress]);
   useEffect(() => {
-    if (reduced || paused) return;
+    if (reduced) return;
     const remaining = HOLD * (1 - progress.get());
     const controls = animate(progress, 1, {
       duration: remaining,
@@ -161,30 +159,24 @@ export default function ClientProof() {
       onComplete: () => setActive((a) => (a + 1) % CLIENTS.length),
     });
     return () => controls.stop();
-  }, [active, paused, reduced, progress]);
+  }, [active, reduced, progress]);
 
   return (
-    <div
-      className="w-full"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
-    >
+    <div className="w-full">
       <motion.figure
         layout
         transition={{ layout: { duration: 0.5, ease: EASE } }}
         aria-roledescription="carousel"
-        className="rounded-[14px] border border-foreground/[0.07] bg-[#f3f1eb] px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
+        className="rounded-[18px] bg-[#f8f7f3] px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div key={active} initial="enter" animate="center" exit="exit">
             <motion.div variants={fade} className="flex min-h-9 items-center justify-between gap-6">
-              <Logo client={client} area={1600} />
-              <ul className="flex flex-wrap justify-end gap-x-5 gap-y-1">
+              <Logo client={client} area={2600} />
+              <ul className="flex flex-wrap justify-end gap-2">
                 {client.services.map((service) => (
-                  <li key={service} className={`flex items-center gap-2 text-foreground/60 ${mono}`}>
-                    <span className="size-[7px]" style={{ backgroundColor: SERVICE_COLOR[service] }} />
+                  <li key={service} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[0.8rem] font-medium text-foreground/70 shadow-[0_1px_2px_rgb(23_44_33/0.06)]">
+                    <span className="size-1.5 rounded-full" style={{ backgroundColor: SERVICE_COLOR[service] }} />
                     {service}
                   </li>
                 ))}
@@ -232,8 +224,8 @@ export default function ClientProof() {
         </div>
       </motion.figure>
 
-      {/* The index: every client by name, the playing one's hairline filling; past ones full, upcoming empty. */}
-      <div role="tablist" aria-label="Clients" className="mt-5 grid grid-cols-5 gap-3">
+      {/* The index: every client by name over a rounded bar; only the playing one fills, the rest stay quiet. */}
+      <div role="tablist" aria-label="Clients" className="mt-6 grid grid-cols-5 gap-2.5">
         {CLIENTS.map((c, i) => {
           const on = i === active;
           return (
@@ -243,16 +235,13 @@ export default function ClientProof() {
               role="tab"
               aria-selected={on}
               onClick={() => go(i)}
-              className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
+              className="group cursor-pointer rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground/40"
             >
-              <span className={`block truncate transition-colors duration-300 ${mono} ${on ? "text-foreground" : "text-foreground/40 group-hover:text-foreground/70"}`}>
-                {String(i + 1).padStart(2, "0")} {c.company}
+              <span className={`block truncate text-[0.82rem] font-medium tracking-[-0.01em] transition-colors duration-300 ${on ? "text-foreground" : "text-foreground/35 group-hover:text-foreground/65"}`}>
+                {c.company}
               </span>
-              <span className="relative mt-2.5 block h-px bg-foreground/[0.12]">
-                <motion.span
-                  className="absolute inset-y-0 left-0 bg-foreground"
-                  style={{ width: on ? (reduced ? "100%" : fill) : i < active ? "100%" : "0%" }}
-                />
+              <span className="relative mt-2 block h-[3px] overflow-hidden rounded-full bg-foreground/[0.08]">
+                <motion.span className="absolute inset-y-0 left-0 rounded-full bg-foreground" style={{ width: on ? (reduced ? "100%" : fill) : "0%" }} />
               </span>
             </button>
           );
