@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
-import PanelPlayer, { type PlayMode } from "./PanelPlayer";
+import PanelPlayer from "./PanelPlayer";
 import { PANELS } from "./panels";
 
 const DESKTOP_QUERY = "(min-width: 1024px)";
@@ -34,9 +34,6 @@ export default function HowWeWork() {
   const reduced = useMedia(reducedMedia);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
-  const [runs, setRuns] = useState(() => STEPS.map(() => 0));
-  const [inView, setInView] = useState(() => STEPS.map(() => false));
-  const cards = useRef<(HTMLElement | null)[]>([]);
   // Zero-height markers where each card sits in the document flow.
   const marks = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -54,7 +51,6 @@ export default function HowWeWork() {
       if (next !== activeRef.current) {
         activeRef.current = next;
         setActive(next);
-        setRuns((r) => r.map((v, i) => (i === next ? v + 1 : v)));
       }
     };
     const onScroll = () => {
@@ -70,24 +66,6 @@ export default function HowWeWork() {
     };
   }, [desktop]);
 
-  // Which cards are on screen: desktop plays the active one only while visible; small screens play each in view.
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) =>
-        setInView((prev) => {
-          const next = [...prev];
-          for (const entry of entries) {
-            const i = cards.current.indexOf(entry.target as HTMLElement);
-            if (i >= 0) next[i] = entry.isIntersecting;
-          }
-          return next;
-        }),
-      { threshold: 0.3 },
-    );
-    cards.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
   const go = (i: number) => {
     const el = marks.current[i];
     if (!el) return;
@@ -97,8 +75,6 @@ export default function HowWeWork() {
       behavior: reduced ? "auto" : "smooth",
     });
   };
-
-  const mode: PlayMode = reduced ? "still" : "loop";
 
   return (
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
@@ -159,9 +135,6 @@ export default function HowWeWork() {
                 }}
               />
               <article
-                ref={(el) => {
-                  cards.current[i] = el;
-                }}
                 aria-labelledby={`hww-step-${step.n}`}
                 style={
                   {
@@ -171,14 +144,14 @@ export default function HowWeWork() {
                 }
                 className={`grid overflow-hidden rounded-2xl border border-line bg-card shadow-none lg:sticky lg:h-[min(36rem,calc(100svh-10rem))] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] transition-opacity duration-200 ${
                   i < active ? "lg:opacity-0 lg:pointer-events-none" : "lg:opacity-100"
-                } ${i < STEPS.length - 1 ? "mb-8 lg:mb-[36vh]" : "mb-8 lg:mb-[50vh]"}`}
+                } ${i < STEPS.length - 1 ? "mb-8 lg:mb-[36vh]" : "lg:mb-0"}`}
               >
                 {/* The live visual on a warm dotted canvas. */}
                 <div
                   aria-hidden="true"
                   className="flex items-center justify-center border-b border-line bg-[#f4f6f4] bg-[radial-gradient(#d5dcd7_1px,transparent_1px)] [background-size:16px_16px] p-5 sm:p-8 lg:border-r lg:border-b-0"
                 >
-                  <PanelPlayer panel={PANELS[i]} mode={mode} playing={desktop ? i === active && inView[i] : inView[i]} run={runs[i]} />
+                  <PanelPlayer panel={PANELS[i]} still={reduced} />
                 </div>
                 {/* The copy. */}
                 <div className="flex flex-col justify-center overflow-y-auto p-7 sm:p-10 xl:p-12">
@@ -203,6 +176,8 @@ export default function HowWeWork() {
               </article>
             </Fragment>
           ))}
+          {/* Scroll room for the last card to hold its sticky slot (a bottom margin can't: sticky stops at the margin box). */}
+          <div aria-hidden="true" className="hidden lg:block lg:h-[50vh]" />
         </div>
       </div>
     </section>
