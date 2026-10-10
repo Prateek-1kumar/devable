@@ -22,7 +22,7 @@
   --sage: #8fa898; /* the one muted channel tint */
 
   /* Legacy & semantic names, mapped onto the brand so all sections follow it. */
-  --background: var(--paper);
+  --background: #ffffff; /* page is pure white; off-white (#f3f1eb) is for cards and panels */
   --surface: #ebe8e0; /* soft warm panels */
   --foreground: var(--ink);
   --ceramic: #fbfaf6;

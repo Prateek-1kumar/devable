@@ -29,13 +29,13 @@ type Cell = {
 
 // ── Tuning knobs ─────────────────────────────────────────────
 // Visibility
-const MAX_ALPHA = 0.8; // peak opacity of any shape (0–1)
+const MAX_ALPHA = 1; // peak opacity of any shape (0–1)
 
 // Center cluster
-const CLUSTER_RADIUS = 18; // in grid cells; area (≈ count) grows with the square
-const CLUSTER_DENSITY_EDGE = 0.35; // fill chance at the cluster's edge
-const CLUSTER_DENSITY_CENTER = 0.8; // fill chance at the cluster's center
-const CLUSTER_AREA = 0.4; // center wanders within the middle 40% of the area
+const CLUSTER_RADIUS = 30; // in grid cells; area (≈ count) grows with the square
+const CLUSTER_DENSITY_EDGE = 0.5; // fill chance at the cluster's edge
+const CLUSTER_DENSITY_CENTER = 0.9; // fill chance at the cluster's center
+const CLUSTER_AREA = 0.6; // center wanders within the middle 60% of the area
 
 // Cursor reveal
 const CURSOR_RADIUS = 400; // px

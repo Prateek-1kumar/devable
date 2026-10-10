@@ -33,13 +33,11 @@ export function LogoCloud({ className, ...props }: LogoCloudProps) {
   return (
     <div
       className={cn(
-        "relative grid grid-cols-2 border-x border-line md:grid-cols-4",
+        "relative grid grid-cols-2 border border-line md:grid-cols-4",
         className
       )}
       {...props}
     >
-      <div className="-translate-x-1/2 -top-px pointer-events-none absolute left-1/2 w-screen border-t border-line" />
-
       {/* 1. LandingAI */}
       <LogoCard
         className="relative border-r border-b border-line bg-surface/30"
@@ -130,8 +128,6 @@ export function LogoCloud({ className, ...props }: LogoCloudProps) {
           alt: "Confident AI Logo",
         }}
       />
-
-      <div className="-translate-x-1/2 -bottom-px pointer-events-none absolute left-1/2 w-screen border-b border-line" />
     </div>
   );
 }

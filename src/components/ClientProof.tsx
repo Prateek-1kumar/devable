@@ -175,7 +175,7 @@ export default function ClientProof() {
         layout
         transition={{ layout: { duration: 0.5, ease: EASE } }}
         aria-roledescription="carousel"
-        className="rounded-[14px] border border-foreground/[0.09] bg-white px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
+        className="rounded-[14px] border border-foreground/[0.07] bg-[#f3f1eb] px-8 pt-8 pb-7 sm:px-10 sm:pt-10"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div key={active} initial="enter" animate="center" exit="exit">
