@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 export type PanelModule = {
   /** Loop length in seconds. */
   duration: number;
-  /** The settled final frame (story complete, before the loop's fade-out): the still and the end of a play-once. */
+  /** The frame shown when motion is reduced. */
   settle: number;
   Panel: ComponentType<{ t: number }>;
 };
@@ -21,14 +21,8 @@ type Props = {
   run: number;
 };
 
-/**
- * After completion (at `settle`), the card remains in that completed state
- * for 15 seconds before smoothly replaying if it is still in the viewport.
- */
-const HOLD_SECONDS = 15;
-
 export default function PanelPlayer({ panel, mode, playing, run }: Props) {
-  const { settle, Panel } = panel;
+  const { duration, settle, Panel } = panel;
   const [t, setT] = useState(0);
   const clock = useRef({ t: 0, run, hasStarted: false });
 
@@ -46,20 +40,11 @@ export default function PanelPlayer({ panel, mode, playing, run }: Props) {
       c.hasStarted = true;
     }
 
-    const totalCycle = settle + HOLD_SECONDS;
-
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      c.t += Math.min(now - last, 100) / 1000;
+      c.t = (c.t + Math.min(now - last, 100) / 1000) % duration;
       last = now;
-
-      // After holding the complete state for 15s, replay if still in viewport
-      if (c.t >= totalCycle) {
-        c.t = 0;
-      }
-
-      // Advance t smoothly through totalCycle (settle + 15s hold) so continuous flow animations run
       setT(c.t);
 
       raf = requestAnimationFrame(tick);
@@ -67,7 +52,7 @@ export default function PanelPlayer({ panel, mode, playing, run }: Props) {
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [mode, playing, run, settle]);
+  }, [mode, playing, run, duration]);
 
   return <Panel t={mode === "still" ? settle : !playing ? 0 : t} />;
 }

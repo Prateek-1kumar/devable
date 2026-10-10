@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <main className="overflow-x-clip">
       <Hero />
-      <GrowthSystem />
+      {/* <GrowthSystem /> */}
       <HowWeWork />
     </main>
   );

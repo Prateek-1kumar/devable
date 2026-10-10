@@ -176,7 +176,7 @@ export default function HowWeWork() {
                 {/* The live visual on a warm dotted canvas. */}
                 <div
                   aria-hidden="true"
-                  className="flex items-center justify-center border-b border-line bg-[#f3f1eb] bg-[radial-gradient(#dcd8cd_1px,transparent_1px)] [background-size:16px_16px] p-5 sm:p-8 lg:border-r lg:border-b-0"
+                  className="flex items-center justify-center border-b border-line bg-[#f4f6f4] bg-[radial-gradient(#d5dcd7_1px,transparent_1px)] [background-size:16px_16px] p-5 sm:p-8 lg:border-r lg:border-b-0"
                 >
                   <PanelPlayer panel={PANELS[i]} mode={mode} playing={desktop ? i === active && inView[i] : inView[i]} run={runs[i]} />
                 </div>
