@@ -1,6 +1,6 @@
 import ArcButton from "./ArcButton";
 import ClientProof from "./ClientProof";
-import { ShaderBackground } from "./ui/static-mesh-gradient-sunset";
+import { FlickeringGrid } from "./ui/flickering-grid";
 import { LogoCloud } from "./ui/logo-cloud-2";
 
 // ponytail: sample faces until real team photos exist.
@@ -12,9 +12,17 @@ const OPERATORS = ["landingai", "glean", "webai", "orqai", "langwatch"];
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
-      {/* The first viewport as one framed panel: claim and logos together on a still brand-colored mesh gradient. */}
-      <div className="relative isolate mx-auto max-w-6xl overflow-hidden bg-primary px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
-        <ShaderBackground className="absolute inset-0 -z-10" />
+      {/* The first viewport as one framed panel: claim and logos on solid deep green, with a quiet terminal-like
+          grid of mint pixels flickering at the edges and fading out behind the text. */}
+      <div className="relative isolate mx-auto max-w-6xl overflow-hidden bg-[#163a2c] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
+        <FlickeringGrid
+          className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_38%,transparent_20%,black_85%)]"
+          squareSize={3}
+          gridGap={5}
+          color="#3ddc97"
+          maxOpacity={0.32}
+          flickerChance={0.12}
+        />
         <div className="mx-auto max-w-4xl text-center text-white">
           <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
             Growth Marketing for AI&#8209;Native DevTools and Platforms
