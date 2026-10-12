@@ -165,7 +165,7 @@ export default function HowWeWork() {
                   <p className="sr-only">{INCLUDES_LABEL}</p>
                   <ul className="mt-6 flex flex-wrap gap-1.5">
                     {step.includes.map((item) => (
-                      <li key={item} className="rounded-full bg-paper/80 px-3 py-1 font-mono text-[10.5px] tracking-[0.03em] text-ink/75">
+                      <li key={item} className="rounded-full border border-ink/12 bg-paper px-3 py-1.5 font-mono text-[11.5px] tracking-[0.02em] text-ink">
                         {item}
                       </li>
                     ))}
