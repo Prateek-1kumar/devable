@@ -40,9 +40,9 @@ export default function ChannelProblems() {
     <section aria-labelledby="channel-problems-title" className="bg-[#0b0b0b] px-6 py-16 sm:px-12 lg:py-20 xl:px-[6vw]">
       <h2
         id="channel-problems-title"
-        className="max-w-[34ch] text-[clamp(1.6rem,2.4vw,2.25rem)] leading-[1.14] font-normal tracking-[-0.03em] text-white"
+        className="max-w-[60ch] text-[clamp(1.6rem,2.4vw,2.25rem)] leading-[1.14] font-normal tracking-[-0.03em] text-white"
       >
-        {TITLE} <span className="text-white/45">{SUBTITLE}</span>
+        {TITLE} <span className="block text-white/45">{SUBTITLE}</span>
       </h2>
 
       <div className="mt-10 grid gap-px overflow-hidden rounded-md border border-white/10 bg-white/10 md:grid-cols-2 lg:mt-12 xl:grid-cols-4">
@@ -75,8 +75,7 @@ function ProblemCard({ index, title, body }: { index: number; title: string; bod
       className="flex flex-col bg-black"
     >
       <div className="px-6 pt-6">
-        <span className="font-mono text-xs tracking-[0.08em] text-primary">{String(index + 1).padStart(2, "0")}</span>
-        <h3 className="mt-2 text-[1.05rem] font-medium tracking-[-0.015em] text-white">{title}</h3>
+        <h3 className="text-[1.05rem] font-medium tracking-[-0.015em] text-white">{title}</h3>
         <p className="mt-2 text-[0.875rem] leading-[1.55] text-white/55">{body}</p>
       </div>
       <div ref={box} aria-hidden="true" className="relative min-h-[230px] flex-1">

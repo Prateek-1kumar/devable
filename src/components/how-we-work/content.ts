@@ -1,7 +1,7 @@
 export const EYEBROW = "How we work";
 export const TITLE = "A growth engine built around your product.";
 export const INTRO =
-  "From product understanding and growth strategy through to execution and optimization, we run a connected growth engine across content, organic search, AI visibility, Reddit, developer communities, and creator distribution. The goal: build visibility that compounds into pipeline.";
+  "One connected engine across content, search, AI visibility, Reddit, communities, and creators, built so visibility compounds into pipeline.";
 export const INCLUDES_LABEL = "Includes";
 export const NAV_LABEL = "How we work steps";
 

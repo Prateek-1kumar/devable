@@ -78,16 +78,15 @@ export default function HowWeWork() {
 
   return (
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
-      <header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start lg:gap-12 xl:gap-20">
+      {/* Headline and subtitle stacked on one left edge so they read as a single thought. */}
+      <header className="max-w-[44rem]">
         <h2
           id="how-we-work-title"
           className="max-w-[18ch] text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.14] font-normal tracking-[-0.03em] text-ink"
         >
           {TITLE}
         </h2>
-        <p className="w-full max-w-2xl text-[0.95rem] leading-relaxed text-muted sm:text-[1rem] lg:ml-auto lg:pt-1 lg:text-right xl:max-w-3xl">
-          {INTRO}
-        </p>
+        <p className="mt-4 max-w-[34rem] text-[1rem] leading-[1.6] text-pretty text-muted sm:text-[1.05rem]">{INTRO}</p>
       </header>
 
       <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(14.5rem,22%)_minmax(0,1fr)] lg:gap-[3.5vw]">
