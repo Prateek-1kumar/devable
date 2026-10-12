@@ -11,6 +11,7 @@ interface FlickeringGridProps {
   gridGap?: number;
   flickerChance?: number;
   color?: string;
+  colors?: string[];
   width?: number;
   height?: number;
   className?: string;
@@ -22,6 +23,7 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
   gridGap = 6,
   flickerChance = 0.3,
   color = "rgb(0, 0, 0)",
+  colors,
   width,
   height,
   className,
@@ -32,17 +34,21 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
   const [isInView, setIsInView] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
-  const memoizedColor = useMemo(() => {
-    if (typeof window === "undefined") return "rgba(0, 0, 0,";
+  const memoizedColors = useMemo(() => {
+    const list = colors && colors.length > 0 ? colors : [color];
+    if (typeof window === "undefined") return list.map(() => "rgba(0, 0, 0,");
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 1;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return "rgba(255, 0, 0,";
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 1, 1);
-    const [r, g, b] = Array.from(ctx.getImageData(0, 0, 1, 1).data);
-    return `rgba(${r}, ${g}, ${b},`;
-  }, [color]);
+    if (!ctx) return list.map(() => "rgba(255, 0, 0,");
+    return list.map((c) => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = c;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = Array.from(ctx.getImageData(0, 0, 1, 1).data);
+      return `rgba(${r}, ${g}, ${b},`;
+    });
+  }, [color, colors]);
 
   const setupCanvas = useCallback(
     (canvas: HTMLCanvasElement, width: number, height: number) => {
@@ -55,13 +61,15 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
       const rows = Math.floor(height / (squareSize + gridGap));
 
       const squares = new Float32Array(cols * rows);
+      const colorAssignments = new Uint8Array(cols * rows);
       for (let i = 0; i < squares.length; i++) {
         squares[i] = Math.random() * maxOpacity;
+        colorAssignments[i] = Math.floor(Math.random() * memoizedColors.length);
       }
 
-      return { cols, rows, squares, dpr };
+      return { cols, rows, squares, colors: colorAssignments, dpr };
     },
-    [squareSize, gridGap, maxOpacity],
+    [squareSize, gridGap, maxOpacity, memoizedColors.length],
   );
 
   const updateSquares = useCallback(
@@ -76,17 +84,28 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
   );
 
   const drawGrid = useCallback(
-    (ctx: CanvasRenderingContext2D, width: number, height: number, cols: number, rows: number, squares: Float32Array, dpr: number) => {
+    (
+      ctx: CanvasRenderingContext2D,
+      width: number,
+      height: number,
+      cols: number,
+      rows: number,
+      squares: Float32Array,
+      colorAssignments: Uint8Array,
+      dpr: number,
+    ) => {
       ctx.clearRect(0, 0, width, height);
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
-          const opacity = squares[i * rows + j];
-          ctx.fillStyle = `${memoizedColor}${opacity})`;
+          const idx = i * rows + j;
+          const opacity = squares[idx];
+          const colorPrefix = memoizedColors[colorAssignments[idx] % memoizedColors.length];
+          ctx.fillStyle = `${colorPrefix}${opacity})`;
           ctx.fillRect(i * (squareSize + gridGap) * dpr, j * (squareSize + gridGap) * dpr, squareSize * dpr, squareSize * dpr);
         }
       }
     },
-    [memoizedColor, squareSize, gridGap],
+    [memoizedColors, squareSize, gridGap],
   );
 
   useEffect(() => {
@@ -102,7 +121,7 @@ const FlickeringGrid: React.FC<FlickeringGridProps> = ({
     let gridParams: ReturnType<typeof setupCanvas>;
 
     const drawStill = () =>
-      drawGrid(ctx, canvas.width, canvas.height, gridParams.cols, gridParams.rows, gridParams.squares, gridParams.dpr);
+      drawGrid(ctx, canvas.width, canvas.height, gridParams.cols, gridParams.rows, gridParams.squares, gridParams.colors, gridParams.dpr);
 
     const updateCanvasSize = () => {
       const newWidth = width || container.clientWidth;

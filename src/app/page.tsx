@@ -1,4 +1,5 @@
 // import FallingPill from "@/components/FallingPill";
+import ChannelProblems from "@/components/channel-problems/ChannelProblems";
 import GrowthSystem from "@/components/growth-system/GrowthSystem";
 import Hero from "@/components/Hero";
 import HowWeWork from "@/components/how-we-work/HowWeWork";
@@ -9,7 +10,8 @@ export default function Home() {
   return (
     <main className="overflow-x-clip">
       <Hero />
-      <GrowthSystem />
+      <ChannelProblems />
+      {/* <GrowthSystem /> */}
       <HowWeWork />
     </main>
   );

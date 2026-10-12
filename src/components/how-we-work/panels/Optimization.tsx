@@ -1,394 +1,275 @@
-import { C, Card, Check, Mark, Mono, PanelSvg, easeInOut, easeOut, lerp, outro, polyline, ramp, usePanelId } from "../kit";
-import type { MarkName } from "../marks";
+import type { ReactNode } from "react";
+import { C, Mark, Mono, PanelSvg, clamp01, easeInOut, easeOut, lerp, ramp, usePanelId } from "../kit";
 import type { PanelModule } from "../PanelPlayer";
 
-// 05 Optimization Loop. One chart card: twelve weeks of organic sessions draw
-// calmly left → right, with a spike at launch week (W3) and steady compounding
-// growth thereafter. As the line reaches key weeks, 3 real learning signals pop up
-// with their leader lines and turn into next actions.
-// Crucially, all signals and actions remain permanently visible through the settle
-// period so the compounding story is clear, soothing, and complete.
+// 05 Optimization Loop. A radar that never stops turning. Its four quadrants are
+// the loop's stages (measure, diagnose, improve, scale) and one sweep is one
+// lap. As the arm passes a signal it lights and says what it found, and the
+// findings chain: a top performer and a gap are diagnosed, the gap gets an
+// answer page, the winner gets doubled down on. The centre reads out the metric
+// each stage moves; a completed lap pulses it, because the gains compound.
+// Circular, so the loop has no seam.
 
-const DURATION = 27.0;
-const SETTLE = 12.0;
+const DURATION = 16;
+const CX = 240;
+const CY = 200;
+const R = 150;
 
-type Pt = readonly [number, number];
+/** A point at `deg` clockwise from 12 o'clock, `r` from the centre. */
+// Rounded so server and client trig agree to the digit (no hydration mismatch).
+const at = (deg: number, r: number) =>
+  [Math.round((CX + r * Math.sin((deg * Math.PI) / 180)) * 100) / 100, Math.round((CY - r * Math.cos((deg * Math.PI) / 180)) * 100) / 100] as const;
 
-// ── Layout ────────────────────────────────────────────────────────────────────
-const CARD = { x: 52, y: 44, w: 376, h: 304 };
-const PLOT = { x: 74, y: 165, w: 332, h: 110 };
-const BASE = PLOT.y + PLOT.h; // y = 275
-
-// 12 weeks of traffic data showing launch spike at W3 then compounding growth
-const VALS = [12, 16, 54, 32, 40, 48, 56, 66, 77, 88, 100, 114];
-const MAX_VAL = 120;
-const wx = (i: number) => PLOT.x + (i * PLOT.w) / (VALS.length - 1);
-const vy = (v: number) => BASE - (v / MAX_VAL) * PLOT.h;
-const PTS: Pt[] = VALS.map((v, i) => [wx(i), vy(v)]);
-const LAUNCH = 2; // W3 (0-indexed: index 2)
-
-// Paced progress through the 12 weeks
-const LEGS = [
-  { at: 0.4, dur: 3.2, from: 0, to: 4 }, // W1 to W5 (signals 1 appears)
-  { at: 4.2, dur: 2.8, from: 4, to: 7 }, // W5 to W8 (signal 2 appears)
-  { at: 7.4, dur: 2.6, from: 7, to: 10 }, // W8 to W11 (signal 3 appears)
-  { at: 10.2, dur: 1.0, from: 10, to: 11 }, // W11 to W12 (compounding peak)
+const QUARTER = DURATION / 4;
+const STAGES = [
+  { name: "Measure", sub: ["Visibility, engagement,", "pipeline"] },
+  { name: "Diagnose", sub: ["Gaps and top", "performers"] },
+  { name: "Improve", sub: ["Refresh, redistribute,", "rebalance"] },
+  { name: "Scale", sub: ["Increase what", "works"] },
+];
+/** What the centre reads out while each stage is swept (from the steps' metrics). */
+const METRICS = [
+  { label: "Search visibility", value: 38, format: (v: number) => `+${Math.round(v)}%` },
+  { label: "Share of voice", value: 34, format: (v: number) => `${Math.round(v)}%` },
+  { label: "Content refreshed", value: 9, format: (v: number) => `${Math.round(v)} pages` },
+  { label: "Pipeline influenced", value: 61, format: (v: number) => `+${Math.round(v)}%` },
 ];
 
-function progress(t: number) {
-  if (t < 0.4) return 0;
-  let p = 0;
-  for (const l of LEGS) {
-    if (t >= l.at) {
-      p = lerp(l.from, l.to, ramp(t, l.at, l.dur, easeInOut));
-    }
-  }
-  return Math.min(VALS.length - 1, p);
-}
-
-type Signal = {
-  week: number;
-  at: number;
-  mark: MarkName;
-  text: string;
-  action: string;
-  cardX: number;
-  cardY: number;
-  cardW: number;
-  cardH?: number;
-  leaderX?: number;
-};
-
-// 3 organic, asymmetrically aligned signal cards staggered naturally across the chart negative space
+type Tone = "good" | "gap";
+type Signal = { deg: number; r: number; tone: Tone; text?: string; icon?: ReactNode; side?: "left" | "right" };
 const SIGNALS: Signal[] = [
-  {
-    week: 4, // W5 (px = 194.7, py = 238.3)
-    at: 3.6,
-    mark: "googlesearchconsole",
-    text: "Page #9 → #3",
-    action: "Double down",
-    cardX: 64,
-    cardY: 106,
-    cardW: 104,
-    cardH: 43,
-    leaderX: 148,
-  },
-  {
-    week: 7, // W8 (px = 285.3, py = 214.5)
-    at: 6.8,
-    mark: "chatgpt",
-    text: "AI prompt gap",
-    action: "Write answer",
-    cardX: 184,
-    cardY: 88,
-    cardW: 108,
-    cardH: 44,
-    leaderX: 262,
-  },
-  {
-    week: 10, // W11 (px = 375.8, py = 183.3)
-    at: 9.8,
-    mark: "youtube",
-    text: "Creator 3× reach",
-    action: "Rebook creator",
-    cardX: 304,
-    cardY: 96,
-    cardW: 114,
-    cardH: 43,
-    leaderX: 370,
-  },
+  // Measure: this week's numbers come in.
+  { deg: 38, r: 74, tone: "good", text: "Weekly data synced", icon: <Bars />, side: "right" },
+  { deg: 58, r: 128, tone: "good" },
+  { deg: 76, r: 104, tone: "good" },
+  // Diagnose: a top performer and a gap.
+  { deg: 106, r: 112, tone: "good", text: "Setup guide: #9 → #3", icon: <Mark name="google" x={0} y={0} size={9} />, side: "right" },
+  { deg: 152, r: 84, tone: "gap", text: "Gap: not cited in ChatGPT", icon: <Mark name="chatgpt" x={0} y={0} size={9} />, side: "right" },
+  // Improve: close the gap.
+  { deg: 222, r: 104, tone: "good", text: "Answer page for the gap", icon: <Refresh />, side: "left" },
+  { deg: 252, r: 60, tone: "good" },
+  // Scale: back the winner.
+  { deg: 300, r: 118, tone: "good", text: "Doubling down on guides", icon: <Trend />, side: "left" },
+  { deg: 334, r: 76, tone: "good" },
 ];
 
-const STATUS = [
-  { text: "Tracking rankings…", from: 0.4, to: 4.6 },
-  { text: "Auditing AI prompts…", from: 4.6, to: 7.8 },
-  { text: "Comparing creators…", from: 7.8, to: 11.0 },
-];
-const DONE_AT = 11.2;
-
-/** The smooth polyline up to fractional week `p`. */
-function upTo(p: number): Pt[] {
-  const n = Math.floor(p);
-  const pts = PTS.slice(0, n + 1);
-  if (p > n && n + 1 < PTS.length) {
-    pts.push([
-      lerp(PTS[n][0], PTS[n + 1][0], p - n),
-      lerp(PTS[n][1], PTS[n + 1][1], p - n),
-    ]);
-  }
-  return pts;
-}
+const GOOD = C.green;
+const GAP = C.accent;
+const RING = "color-mix(in srgb, var(--ink) 9%, transparent)";
+const AXIS = "color-mix(in srgb, var(--ink) 7%, transparent)";
+const TRAIL = 70;
+const SLICES = 28;
 
 function Panel({ t }: { t: number }) {
-  const o = outro(t, DURATION);
-  const grad = usePanelId("opt-area");
-  const p = progress(t);
-  const pts = upTo(p);
-  const tip = pts[pts.length - 1] ?? PTS[0];
-  const drawing = LEGS.some((l) => t >= l.at && t < l.at + l.dur);
-  const done = ramp(t, DONE_AT, 0.4, easeOut);
+  const tt = t % DURATION;
+  const sweep = (tt / DURATION) * 360;
+  const stage = Math.floor(sweep / 90);
+  const glowId = usePanelId("hub");
+  const readout = usePanelId("readout");
+  // Each lap closes as the arm crosses 12 o'clock: the result pulses.
+  const lapPulse = Math.max(1 - ramp(tt, 0, 1.4), ramp(tt, DURATION - 0.25, 0.25));
+  /** Seconds since the arm last passed `deg`. */
+  const age = (deg: number) => (((tt - (deg / 360) * DURATION) % DURATION) + DURATION) % DURATION;
 
   return (
     <PanelSvg t={t}>
       <defs>
-        <linearGradient id={grad} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="var(--accent)" stopOpacity={0.18} />
-          <stop offset="1" stopColor="var(--accent)" stopOpacity={0.0} />
-        </linearGradient>
+        <radialGradient id={glowId}>
+          <stop offset="0.55" stopColor="var(--light-green-soft)" stopOpacity="0.9" />
+          <stop offset="1" stopColor="var(--light-green-soft)" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      <g opacity={o}>
-        <Card x={CARD.x} y={CARD.y} w={CARD.w} h={CARD.h} />
+      {/* The instrument: a quiet face, rings, axes that split the four stages, and tick marks. */}
+      <circle cx={CX} cy={CY} r={R} fill={C.card} stroke={C.line} />
+      {[0.25, 0.5, 0.75].map((k) => (
+        <circle key={k} cx={CX} cy={CY} r={R * k} fill="none" stroke={RING} />
+      ))}
+      {[0, 90, 45, 135].map((d) => {
+        const [x1, y1] = at(d, R);
+        const [x2, y2] = at(d + 180, R);
+        return <line key={d} x1={x1} y1={y1} x2={x2} y2={y2} stroke={AXIS} strokeDasharray={d % 90 ? "2 4" : undefined} />;
+      })}
+      {Array.from({ length: 36 }, (_, i) => {
+        const [x1, y1] = at(i * 10, R);
+        const [x2, y2] = at(i * 10, R - (i % 9 === 0 ? 8 : 4));
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={RING} strokeWidth={i % 9 === 0 ? 1.4 : 1} />;
+      })}
 
-        {/* ── Header ── */}
-        <Mark name="googleanalytics" x={CARD.x + 25} y={CARD.y + 26} size={14} />
-        <text
-          x={CARD.x + 40}
-          y={CARD.y + 30.5}
-          fontSize={12.5}
-          fontWeight={550}
-          fill={C.ink}
-        >
-          Organic sessions
-        </text>
-
-        {/* Status messages while running */}
-        {done <= 0 && t < STATUS[0].from && (
+      {/* The sweep: a fading wedge trailing the arm. */}
+      {Array.from({ length: SLICES }, (_, j) => {
+        const a1 = sweep - (j + 1) * (TRAIL / SLICES);
+        const a2 = sweep - j * (TRAIL / SLICES);
+        const [x1, y1] = at(a1, R);
+        const [x2, y2] = at(a2, R);
+        return <path key={j} d={`M${CX} ${CY} L${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} Z`} fill={C.accent} opacity={0.13 * (1 - j / SLICES) ** 1.6} />;
+      })}
+      {(() => {
+        const [x, y] = at(sweep, R);
+        return (
           <g>
-            <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={5} fill={C.accent} opacity={0.2} />
-            <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={2.5} fill={C.accent} />
-            <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} textAnchor="end">
-              {STATUS[0].text}
+            <line x1={CX} y1={CY} x2={x} y2={y} stroke={C.accent} strokeOpacity={0.7} strokeWidth={1.2} />
+            <circle cx={x} cy={y} r={2.6} fill={C.accent} />
+          </g>
+        );
+      })()}
+
+      {/* Stage labels and their copy in the corners; the stage being swept is lit. */}
+      {STAGES.map((st, i) => {
+        const right = i < 2;
+        const top = i === 0 || i === 3;
+        const x = right ? CX + 122 : CX - 122;
+        const y = top ? 64 : 318;
+        const anchor = right ? "start" : "end";
+        const on = i === stage ? Math.min(ramp(tt - i * QUARTER, 0, 0.4), 1 - ramp(tt - i * QUARTER, QUARTER - 0.3, 0.3)) : 0;
+        return (
+          <g key={st.name}>
+            <circle cx={right ? x - 7 : x + 7} cy={y - 3} r={2.4} fill={C.accent} opacity={on} />
+            <Mono x={x} y={y} size={8} letterSpacing="0.16em" fill={C.ink} opacity={0.55 + 0.45 * on} textAnchor={anchor}>
+              {`0${i + 1} ${st.name}`}
             </Mono>
+            <text x={x} y={y + 16} fontSize={9.5} fill={C.muted} opacity={0.75 + 0.25 * on} textAnchor={anchor}>
+              {st.sub.map((line, j) => (
+                <tspan key={line} x={x} dy={j ? 13 : 0}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
           </g>
-        )}
-        {STATUS.map((s) => {
-          const k = Math.min(ramp(t, s.from, 0.3), 1 - ramp(t, s.to - 0.25, 0.25));
-          if (k <= 0) return null;
-          return (
-            <g key={s.text} opacity={k}>
-              <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={5} fill={C.accent} opacity={0.2} />
-              <circle cx={CARD.x + CARD.w - 146} cy={CARD.y + 26.5} r={2.5} fill={C.accent} />
-              <Mono x={CARD.x + CARD.w - 18} y={CARD.y + 30} size={9.5} textAnchor="end">
-                {s.text}
-              </Mono>
-            </g>
-          );
-        })}
+        );
+      })}
 
-        {/* Settled state in header: glowing brand presence */}
-        <g opacity={done} transform={`translate(0 ${(1 - done) * 4})`}>
-          <Check x={CARD.x + CARD.w - 156} y={CARD.y + 26.5} r={5.5} k={done} color={C.lightGreen} />
-          <Mono
-            x={CARD.x + CARD.w - 18}
-            y={CARD.y + 30}
-            size={9.5}
-            fill={C.lightGreen}
-            fontWeight={600}
-            textAnchor="end"
-          >
-            3 actions compounding
-          </Mono>
-        </g>
-
-        {/* Header divider line */}
-        <line x1={CARD.x} x2={CARD.x + CARD.w} y1={CARD.y + 38} y2={CARD.y + 38} stroke={C.hair} />
-
-        {/* Subtle grid lines & axes */}
-        {[30, 70, 105].map((v) => (
-          <line
-            key={v}
-            x1={PLOT.x}
-            x2={PLOT.x + PLOT.w}
-            y1={vy(v)}
-            y2={vy(v)}
-            stroke={C.hair}
-            strokeDasharray="2 4"
-          />
-        ))}
-        <line x1={PLOT.x} x2={PLOT.x + PLOT.w} y1={BASE} y2={BASE} stroke={C.hair} />
-        <Mono x={PLOT.x} y={BASE + 18} size={9} textAnchor="middle">
-          W1
-        </Mono>
-        <Mono x={PLOT.x + PLOT.w} y={BASE + 18} size={9} textAnchor="middle">
-          W12
-        </Mono>
-
-        {/* Launch week marker at W3: ALWAYS visible */}
-        <g>
-          <line
-            x1={PTS[LAUNCH][0]}
-            x2={PTS[LAUNCH][0]}
-            y1={PTS[LAUNCH][1] + 6}
-            y2={BASE}
-            stroke={C.hair}
-            strokeDasharray="2 3"
-          />
-          <Mono
-            x={PTS[LAUNCH][0]}
-            y={PTS[LAUNCH][1] - 12}
-            size={8.5}
-            fill={C.muted}
-            textAnchor="middle"
-          >
-            Launch week
-          </Mono>
-          <Mono x={PTS[LAUNCH][0]} y={BASE + 18} size={9} textAnchor="middle">
-            W3
-          </Mono>
-        </g>
-
-        {/* Baseline curve: ALWAYS visible so chart is never an empty void */}
-        <path
-          d={polyline(PTS)}
-          fill="none"
-          stroke={C.hair}
-          strokeWidth={1.5}
-          strokeDasharray="3 3"
-        />
-
-        {/* The active organic traffic curve & soft area fill */}
-        {pts.length > 1 && (
-          <g>
-            <path
-              d={`${polyline(pts)} L${tip[0]} ${BASE} L${PLOT.x} ${BASE} Z`}
-              fill={`url(#${grad})`}
-            />
-            <path
-              d={polyline(pts)}
-              fill="none"
-              stroke={C.accent}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+      {/* Signals: they flare as the arm passes, then fade like afterglow. */}
+      {SIGNALS.map((s, i) => {
+        const a = age(s.deg);
+        const flare = 1 - ramp(a, 0, 0.6);
+        const glow = 0.22 + 0.78 * Math.exp(-a / 3.5);
+        const color = s.tone === "gap" ? GAP : GOOD;
+        const [x, y] = at(s.deg, s.r);
+        return (
+          <g key={i}>
+            <circle cx={x} cy={y} r={4 + flare * 8} fill={color} opacity={0.12 * glow + flare * 0.15} />
+            <circle cx={x} cy={y} r={s.text ? 3.6 : 2.6} fill={color} opacity={glow} />
           </g>
-        )}
+        );
+      })}
 
-        {/* Pen tip tracking curve head */}
-        {p > 0 && (
-          <g transform={`translate(${tip[0]} ${tip[1]})`}>
-            <circle r={7} fill={C.accent} opacity={drawing ? 0.18 : 0.08} />
-            <circle r={3.5} fill={C.accent} stroke={C.card} strokeWidth={1.2} />
-          </g>
-        )}
+      <Hub tt={tt} pulse={lapPulse} glowId={glowId} clip={readout} />
 
-        {/* 3 Persistent Signal popovers and leaders: ALWAYS visible */}
-        {SIGNALS.map((s) => (
-          <SignalCard key={s.text} s={s} t={t} />
-        ))}
-      </g>
+      {/* Callouts: what each signal means, shown for a few seconds after it is found. */}
+      {SIGNALS.map((s, i) => {
+        if (!s.text) return null;
+        const a = age(s.deg);
+        const k = Math.min(ramp(a, 0.05, 0.35), 1 - ramp(a, 3.4, 0.6));
+        if (k <= 0) return null;
+        const [x, y] = at(s.deg, s.r);
+        return <Callout key={i} x={x} y={y} side={s.side!} text={s.text} icon={s.icon} tone={s.tone} k={k} />;
+      })}
     </PanelSvg>
   );
 }
 
-/** A signal popover card and its connection to the traffic line. */
-function SignalCard({ s, t }: { s: Signal; t: number }) {
-  const [px, py] = PTS[s.week];
-  const reached = ramp(t, s.at - 0.1, 0.4, easeOut);
-  const green = ramp(t, s.at + 0.8, 0.4, easeOut);
-  const cardY = s.cardY;
-  const cardH = s.cardH ?? 44;
-  const leaderX = s.leaderX ?? s.cardX + s.cardW / 2;
-
+/**
+ * The live readout: the metric the current stage moves. On each new stage the
+ * old value rolls up out of a small window while the new one rolls in and counts
+ * up; the label crossfades and the pager dash glides to the stage. A completed
+ * lap pulses the whole hub green.
+ */
+function Hub({ tt, pulse, glowId, clip }: { tt: number; pulse: number; glowId: string; clip: string }) {
+  const q = Math.floor(tt / QUARTER);
+  const lt = tt - q * QUARTER;
+  const prev = (q + METRICS.length - 1) % METRICS.length;
+  const roll = easeInOut(clamp01(lt / 0.55));
+  const count = easeOut(clamp01(lt / 1.1));
+  const cur = METRICS[q];
+  const old = METRICS[prev];
+  const RH = 16;
+  const dash = lerp(prev, prev + 1, roll);
+  // Pager marks: the one under the dash widens; the row stays centred.
+  const widths = METRICS.map((_, i) => {
+    const d = Math.abs(dash - i) % METRICS.length;
+    return 3 + 8 * clamp01(1 - Math.min(d, METRICS.length - d));
+  });
+  const total = widths.reduce((a, w) => a + w, 0) + 4 * (METRICS.length - 1);
   return (
     <g>
-      {/* Dashed vertical leader line from card down to data point */}
-      {reached > 0 && (
-        <>
-          <line
-            x1={leaderX}
-            x2={px}
-            y1={cardY + cardH}
-            y2={py - 6}
-            stroke={green > 0.5 ? C.lightGreen : C.accent}
-            strokeWidth={1}
-            strokeDasharray="2 3"
-            opacity={reached * 0.75}
-          />
+      <circle cx={CX} cy={CY} r={60 + pulse * 6} fill={`url(#${glowId})`} opacity={pulse} />
+      <circle cx={CX} cy={CY} r={46} fill={C.card} stroke={C.line} />
+      <circle cx={CX} cy={CY} r={46} fill="none" stroke="color-mix(in srgb, var(--primary) 45%, var(--line))" opacity={pulse} />
+      <Mono x={CX} y={CY - 20} size={6.5} letterSpacing="0.18em" fill={C.muted} textAnchor="middle">
+        This month
+      </Mono>
 
-          {/* Anchor pin dot at the base of the card */}
-          <circle
-            cx={leaderX}
-            cy={cardY + cardH}
-            r={1.8}
-            fill={green > 0.5 ? C.lightGreen : C.accent}
-            opacity={reached * 0.75}
-          />
-
-          {/* Point on the traffic curve: pulses coral, then settles to light green check dot */}
-          <circle
-            cx={px}
-            cy={py}
-            r={4.2}
-            fill={green > 0.5 ? C.lightGreen : C.accent}
-            stroke={C.card}
-            strokeWidth={1.4}
-          />
-        </>
-      )}
-
-      {/* Popover card: clean borderless surface, ZERO harsh inner strokes */}
-      <g>
-        <rect
-          x={s.cardX}
-          y={cardY}
-          width={s.cardW}
-          height={cardH}
-          rx={8}
-          fill={green > 0.5 ? C.card : reached > 0 ? C.accentWash : C.paper}
-        />
-
-        {/* Header: source mark + signal description */}
-        <Mark name={s.mark} x={s.cardX + 13} y={cardY + 14} size={11} />
-        <text
-          x={s.cardX + 24}
-          y={cardY + 17}
-          fontSize={10}
-          fontWeight={550}
-          fill={C.ink}
-        >
-          {s.text}
+      {/* The value, rolling through a window like an odometer. */}
+      <clipPath id={clip}>
+        <rect x={CX - 44} y={CY - 13} width={88} height={RH + 6} />
+      </clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <text x={CX} y={CY + 4 - roll * RH} fontSize={19} fontWeight={600} letterSpacing="-0.03em" fill={C.ink} textAnchor="middle" opacity={1 - roll}>
+          {old.format(old.value)}
         </text>
-
-        {/* Next action pill: clean borderless pill */}
-        <g transform={`translate(${s.cardX + 7} ${cardY + 24})`}>
-          <rect
-            width={s.cardW - 14}
-            height={16}
-            rx={8}
-            fill={green > 0.5 ? C.lightGreenSoft : reached > 0 ? C.accentWash : C.card}
-          />
-          {green < 0.5 ? (
-            <text
-              x={(s.cardW - 14) / 2}
-              y={11.2}
-              fontSize={9}
-              fontWeight={600}
-              fill={reached > 0 ? C.accent : C.muted}
-              textAnchor="middle"
-            >
-              {reached > 0 ? `→ ${s.action}` : s.action}
-            </text>
-          ) : (
-            <g>
-              <Check x={11} y={8} r={4.5} k={green} color={C.lightGreen} />
-              <text
-                x={19}
-                y={11.2}
-                fontSize={9}
-                fontWeight={600}
-                fill={C.lightGreen}
-              >
-                {s.action}
-              </text>
-            </g>
-          )}
-        </g>
+        <text x={CX} y={CY + 4 + (1 - roll) * RH} fontSize={19} fontWeight={600} letterSpacing="-0.03em" fill={C.ink} textAnchor="middle" opacity={roll}>
+          {cur.format(cur.value * (0.55 + 0.45 * count))}
+        </text>
       </g>
+      <text x={CX} y={CY + 19} fontSize={7.5} fill={C.muted} textAnchor="middle" opacity={1 - roll}>
+        {old.label}
+      </text>
+      <text x={CX} y={CY + 19} fontSize={7.5} fill={C.muted} textAnchor="middle" opacity={roll}>
+        {cur.label}
+      </text>
+
+      {/* Pager: one mark per stage; the dash glides to the current one. */}
+      {widths.map((w, i) => {
+        const x = CX - total / 2 + widths.slice(0, i).reduce((a, v) => a + v + 4, 0);
+        return <rect key={i} x={x} y={CY + 26} width={w} height={3} rx={1.5} fill={w > 7 ? C.ink : C.line} />;
+      })}
     </g>
   );
 }
 
-const optimization: PanelModule = { duration: DURATION, settle: SETTLE, Panel };
+/** A small floating label beside a signal: icon tile + text, settling in as k → 1. */
+function Callout({ x, y, side, text, icon, tone, k }: { x: number; y: number; side: "left" | "right"; text: string; icon?: ReactNode; tone: Tone; k: number }) {
+  const w = Math.round(text.length * 9 * 0.53 + 34);
+  const h = 22;
+  const lx = side === "right" ? Math.min(x + 12, 472 - w) : Math.max(x - 12 - w, 8);
+  const ly = y - h / 2;
+  const shift = (1 - k) * (side === "right" ? -4 : 4);
+  return (
+    <g opacity={k} transform={`translate(${shift} 0)`}>
+      <line x1={x} y1={y} x2={side === "right" ? lx : lx + w} y2={y} stroke={tone === "gap" ? C.accentLine : "color-mix(in srgb, var(--primary) 40%, var(--line))"} />
+      <rect x={lx} y={ly} width={w} height={h} rx={6} fill={C.card} stroke={C.line} filter="drop-shadow(0 2px 6px rgb(15 26 20 / 0.08))" />
+      <circle cx={lx + 12} cy={y} r={7} fill={C.paper} stroke={C.hair} />
+      <g transform={`translate(${lx + 12} ${y})`}>{icon}</g>
+      <text x={lx + 24} y={y + 3.2} fontSize={9} fill={C.ink}>
+        {text}
+      </text>
+    </g>
+  );
+}
+
+// ── Glyphs (centred on 0,0, about 9 units) ──────────────────────────────────
+const line = { fill: "none", stroke: C.ink, strokeWidth: 1.1, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+function Bars() {
+  return <path d="M-3.5 3.5V0.5M0 3.5V-1.5M3.5 3.5V-3.5" {...line} />;
+}
+function Refresh() {
+  return (
+    <g {...line}>
+      <path d="M3.6 -1A3.7 3.7 0 1 0 2.9 2.3" />
+      <path d="M3.9 -3.7V-0.8H1" />
+    </g>
+  );
+}
+function Trend() {
+  return (
+    <g {...line}>
+      <path d="M-4 3L-1 0L1 2L4 -2" />
+      <path d="M1.5 -2H4V0.5" />
+    </g>
+  );
+}
+
+// The still frame (reduced motion): mid-diagnose, both findings showing.
+const optimization: PanelModule = { duration: DURATION, settle: (160 / 360) * DURATION, Panel };
 export default optimization;

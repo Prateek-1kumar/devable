@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { INCLUDES_LABEL, INTRO, NAV_LABEL, STEPS, TITLE } from "./content";
-import PanelPlayer, { type PlayMode } from "./PanelPlayer";
+import PanelPlayer from "./PanelPlayer";
 import { PANELS } from "./panels";
 
 const DESKTOP_QUERY = "(min-width: 1024px)";
@@ -34,9 +34,6 @@ export default function HowWeWork() {
   const reduced = useMedia(reducedMedia);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
-  const [runs, setRuns] = useState(() => STEPS.map(() => 0));
-  const [inView, setInView] = useState(() => STEPS.map(() => false));
-  const cards = useRef<(HTMLElement | null)[]>([]);
   // Zero-height markers where each card sits in the document flow.
   const marks = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -54,7 +51,6 @@ export default function HowWeWork() {
       if (next !== activeRef.current) {
         activeRef.current = next;
         setActive(next);
-        setRuns((r) => r.map((v, i) => (i === next ? v + 1 : v)));
       }
     };
     const onScroll = () => {
@@ -70,24 +66,6 @@ export default function HowWeWork() {
     };
   }, [desktop]);
 
-  // Which cards are on screen: desktop plays the active one only while visible; small screens play each in view.
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) =>
-        setInView((prev) => {
-          const next = [...prev];
-          for (const entry of entries) {
-            const i = cards.current.indexOf(entry.target as HTMLElement);
-            if (i >= 0) next[i] = entry.isIntersecting;
-          }
-          return next;
-        }),
-      { threshold: 0.3 },
-    );
-    cards.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
   const go = (i: number) => {
     const el = marks.current[i];
     if (!el) return;
@@ -98,27 +76,24 @@ export default function HowWeWork() {
     });
   };
 
-  const mode: PlayMode = reduced ? "still" : "loop";
-
   return (
     <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
-      <header className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:items-start lg:gap-12 xl:gap-20">
+      {/* Headline and subtitle stacked on one left edge so they read as a single thought. */}
+      <header className="max-w-[44rem]">
         <h2
           id="how-we-work-title"
           className="max-w-[18ch] text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.14] font-normal tracking-[-0.03em] text-ink"
         >
           {TITLE}
         </h2>
-        <p className="w-full max-w-2xl text-[0.95rem] leading-relaxed text-muted sm:text-[1rem] lg:ml-auto lg:pt-1 lg:text-right xl:max-w-3xl">
-          {INTRO}
-        </p>
+        <p className="mt-4 max-w-[34rem] text-[1rem] leading-[1.6] text-pretty text-muted sm:text-[1.05rem]">{INTRO}</p>
       </header>
 
-      <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(10rem,18%)_minmax(0,1fr)] lg:gap-[3vw]">
-        {/* The nav: vertically centered in the viewport, minimal clean typography. */}
+      <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-[minmax(14.5rem,22%)_minmax(0,1fr)] lg:gap-[3.5vw]">
+        {/* The nav: vertically centered in the viewport, 3-D tactile spring navigation. */}
         <nav aria-label={NAV_LABEL} className="hidden lg:block">
           <div className="sticky top-[max(112px,calc(50vh-140px))]">
-            <ol className="space-y-1">
+            <ol className="space-y-2">
               {STEPS.map((step, i) => {
                 const on = i === active;
                 return (
@@ -127,18 +102,20 @@ export default function HowWeWork() {
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className="group flex w-full items-center py-2.5 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-light-green"
+                      className={`relative flex w-full items-center rounded-lg py-3 pr-4 pl-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        on ? "bg-[#eef5f0]" : "bg-transparent hover:bg-ink/[0.03]"
+                      }`}
                     >
+                      {/* Active marker: a short deep-green bar that grows in from the middle. */}
                       <span
-                        className={`font-mono text-[11px] tracking-[0.08em] transition-colors duration-300 ${
-                          on ? "text-light-green font-semibold" : "text-muted/60 group-hover:text-ink/80"
+                        aria-hidden="true"
+                        className={`absolute top-1/2 left-3.5 h-4 w-[3px] -translate-y-1/2 rounded-full bg-[#1a7f47] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                          on ? "scale-y-100" : "scale-y-0"
                         }`}
-                      >
-                        {step.n}
-                      </span>
+                      />
                       <span
-                        className={`ml-3.5 text-[0.95rem] tracking-[-0.015em] transition-colors duration-300 ${
-                          on ? "font-semibold text-ink" : "font-normal text-muted group-hover:text-ink"
+                        className={`text-[1.06rem] font-medium tracking-[-0.015em] transition-colors duration-200 ${
+                          on ? "text-ink" : "text-ink/50 hover:text-ink/80"
                         }`}
                       >
                         {step.title}
@@ -162,9 +139,6 @@ export default function HowWeWork() {
                 }}
               />
               <article
-                ref={(el) => {
-                  cards.current[i] = el;
-                }}
                 aria-labelledby={`hww-step-${step.n}`}
                 style={
                   {
@@ -174,14 +148,14 @@ export default function HowWeWork() {
                 }
                 className={`grid overflow-hidden rounded-2xl border border-line bg-card shadow-none lg:sticky lg:h-[min(36rem,calc(100svh-10rem))] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] transition-opacity duration-200 ${
                   i < active ? "lg:opacity-0 lg:pointer-events-none" : "lg:opacity-100"
-                } ${i < STEPS.length - 1 ? "mb-8 lg:mb-[36vh]" : "mb-8 lg:mb-[50vh]"}`}
+                } ${i < STEPS.length - 1 ? "mb-8 lg:mb-[36vh]" : "lg:mb-0"}`}
               >
                 {/* The live visual on a warm dotted canvas. */}
                 <div
                   aria-hidden="true"
-                  className="flex items-center justify-center border-b border-line bg-[#f3f1eb] bg-[radial-gradient(#dcd8cd_1px,transparent_1px)] [background-size:16px_16px] p-5 sm:p-8 lg:border-r lg:border-b-0"
+                  className="flex items-center justify-center border-b border-line bg-[#f4f6f4] bg-[radial-gradient(#d5dcd7_1px,transparent_1px)] [background-size:16px_16px] p-5 sm:p-8 lg:border-r lg:border-b-0"
                 >
-                  <PanelPlayer panel={PANELS[i]} mode={mode} playing={desktop ? i === active && inView[i] : inView[i]} run={runs[i]} />
+                  <PanelPlayer panel={PANELS[i]} still={reduced} />
                 </div>
                 {/* The copy. */}
                 <div className="flex flex-col justify-center overflow-y-auto p-7 sm:p-10 xl:p-12">
@@ -196,7 +170,7 @@ export default function HowWeWork() {
                   <p className="sr-only">{INCLUDES_LABEL}</p>
                   <ul className="mt-6 flex flex-wrap gap-1.5">
                     {step.includes.map((item) => (
-                      <li key={item} className="rounded-full bg-paper/80 px-3 py-1 font-mono text-[10.5px] tracking-[0.03em] text-ink/75">
+                      <li key={item} className="rounded-full border border-ink/12 bg-paper px-3 py-1.5 font-mono text-[11.5px] tracking-[0.02em] text-ink">
                         {item}
                       </li>
                     ))}
@@ -206,6 +180,8 @@ export default function HowWeWork() {
               </article>
             </Fragment>
           ))}
+          {/* Scroll room for the last card to hold its sticky slot (a bottom margin can't: sticky stops at the margin box). */}
+          <div aria-hidden="true" className="hidden lg:block lg:h-[50vh]" />
         </div>
       </div>
     </section>

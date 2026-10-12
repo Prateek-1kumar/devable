@@ -1,6 +1,6 @@
 import ArcButton from "./ArcButton";
 import ClientProof from "./ClientProof";
-import { FlickeringGrid } from "./ui/flickering-grid";
+import { BackgroundShapes } from "./ui/background-shapes";
 import { LogoCloud } from "./ui/logo-cloud-2";
 
 // ponytail: sample faces until real team photos exist.
@@ -12,27 +12,27 @@ const OPERATORS = ["landingai", "glean", "webai", "orqai", "langwatch"];
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
-      {/* The first viewport as one framed panel: claim and logos on solid deep green, with a quiet terminal-like
-          grid of mint pixels flickering at the edges and fading out behind the text. */}
-      <div className="relative isolate mx-auto max-w-6xl overflow-hidden bg-[#163a2c] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
-        <FlickeringGrid
-          className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_38%,transparent_20%,black_85%)]"
-          squareSize={3}
-          gridGap={5}
-          color="#3ddc97"
-          maxOpacity={0.32}
-          flickerChance={0.12}
+      {/* The first viewport as one framed panel: warm off-white, set apart from the white page, with green
+          shapes flickering around the edges and faded out behind the copy. */}
+      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl border border-line bg-[#f4f2eb] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14 shadow-[0_24px_60px_-30px_rgb(23_44_33_/_25%)]">
+        <BackgroundShapes
+          width={1200}
+          height={780}
+          cellSize={28}
+          strokeWidth={8}
+          colors={["#3fae64"]}
+          className="absolute inset-0 -z-10 h-full w-full opacity-70 [mask-image:radial-gradient(ellipse_62%_58%_at_50%_42%,transparent_40%,black_95%)]"
         />
-        <div className="mx-auto max-w-4xl text-center text-white">
+        <div className="mx-auto max-w-4xl text-center text-ink">
           <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
             Growth Marketing for AI&#8209;Native DevTools and Platforms
           </h1>
-          <p className="mx-auto mt-6 max-w-[36rem] text-lg leading-relaxed tracking-[-0.01em] text-white sm:text-xl">
+          <p className="mx-auto mt-6 max-w-[36rem] text-lg leading-relaxed tracking-[-0.01em] text-ink/70 sm:text-xl">
             We build visibility and pipeline through technical content, organic search, AI visibility, Reddit, and
             creator distribution.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <ArcButton href="#contact" arrow>
+            <ArcButton href="#contact" arrow tone="primary">
               Speak with the team
             </ArcButton>
             <ArcButton href="#case-studies" tone="secondary">
@@ -42,7 +42,7 @@ export default function Hero() {
         </div>
 
         <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
-          <p className="mb-5 text-center text-sm text-white/95">Trusted by AI-native dev tools and platforms</p>
+          <p className="mb-5 text-center text-sm font-medium text-muted">Trusted by AI-native dev tools and platforms</p>
           <LogoCloud className="bg-card" />
         </div>
       </div>

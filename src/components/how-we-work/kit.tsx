@@ -26,6 +26,8 @@ export const C = {
   primarySoft: "var(--primary-soft)",
   accentSoft: "var(--accent-soft)",
   sage: "var(--sage)",
+  /** Deep brand green: readable on white, for verified/complete states. */
+  green: "color-mix(in srgb, var(--primary) 70%, var(--ink))",
   /** Quiet active-state outline: coral at low strength, never a heavy border. */
   accentLine: "color-mix(in srgb, var(--accent) 38%, transparent)",
   /** Quiet active-state wash. */
@@ -287,6 +289,39 @@ export function Lines({ x, y, widths, gap = 8, h = 4, fill = C.line, k = 1 }: { 
       {widths.map((w, i) => (
         <rect key={i} x={x} y={y + i * gap} width={w * clamp01(k * widths.length - i)} height={h} rx={h / 2} fill={fill} />
       ))}
+    </g>
+  );
+}
+
+/** A live status: a coral dot sending out a slow, soft ring. */
+export function Beacon({ x, y, t }: { x: number; y: number; t: number }) {
+  const k = (t / 2) % 1;
+  return (
+    <g>
+      <circle cx={x} cy={y} r={2.8 + k * 5} fill="none" stroke={C.accent} strokeWidth={1} opacity={(1 - k) * 0.45} />
+      <circle cx={x} cy={y} r={2.8} fill={C.accent} />
+    </g>
+  );
+}
+
+/** A verified finding: a pale green disc whose deep green tick draws on as k → 1. */
+export function Tick({ x, y, k }: { x: number; y: number; k: number }) {
+  if (k <= 0) return null;
+  return (
+    <g transform={`translate(${x} ${y})`} opacity={clamp01(k * 2)}>
+      <circle r={6.5} fill="var(--light-green-soft)" />
+      <path d="M-2.8 0.1 L-0.8 2.1 L3 -1.9" fill="none" stroke={C.green} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - k} />
+    </g>
+  );
+}
+
+/** A finding being re-checked: a slow coral arc on a hairline track. */
+export function Spinner({ x, y, t, opacity }: { x: number; y: number; t: number; opacity: number }) {
+  if (opacity <= 0) return null;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${(t * 200) % 360})`} opacity={opacity}>
+      <circle r={5.5} fill="none" stroke={C.hair} strokeWidth={1.4} />
+      <circle r={5.5} fill="none" stroke={C.accent} strokeWidth={1.4} strokeLinecap="round" pathLength={1} strokeDasharray="0.28 1" />
     </g>
   );
 }
