@@ -102,15 +102,20 @@ export default function HowWeWork() {
                       type="button"
                       onClick={() => go(i)}
                       aria-current={on ? "step" : undefined}
-                      className={`flex w-full items-center rounded-xl px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        on
-                          ? "bg-primary text-ink shadow-sm"
-                          : "bg-transparent text-ink/65 hover:text-ink hover:bg-ink/[0.04]"
+                      className={`relative flex w-full items-center rounded-lg py-3 pr-4 pl-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        on ? "bg-[#eef5f0]" : "bg-transparent hover:bg-ink/[0.03]"
                       }`}
                     >
+                      {/* Active marker: a short deep-green bar that grows in from the middle. */}
                       <span
-                        className={`text-[1.06rem] tracking-[-0.015em] ${
-                          on ? "font-bold text-ink" : "font-medium text-ink/70"
+                        aria-hidden="true"
+                        className={`absolute top-1/2 left-3.5 h-4 w-[3px] -translate-y-1/2 rounded-full bg-[#1a7f47] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                          on ? "scale-y-100" : "scale-y-0"
+                        }`}
+                      />
+                      <span
+                        className={`text-[1.06rem] font-medium tracking-[-0.015em] transition-colors duration-200 ${
+                          on ? "text-ink" : "text-ink/50 hover:text-ink/80"
                         }`}
                       >
                         {step.title}
