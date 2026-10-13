@@ -41,7 +41,7 @@ export function NavBody({ children, className, visible }: { children: React.Reac
       transition={SPRING}
       style={{ minWidth: 860 }}
       className={cn(
-        "relative z-[60] mx-auto hidden max-w-7xl flex-row items-center justify-between rounded-full px-4 py-2.5 transition-colors lg:flex",
+        "relative z-[60] mx-auto hidden max-w-7xl flex-row items-center justify-between rounded-[14px] px-4 py-2.5 transition-colors lg:flex",
         visible ? "bg-white/80" : "bg-transparent",
         className,
       )}

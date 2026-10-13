@@ -14,7 +14,7 @@ export default function Hero() {
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
       {/* The first viewport as one framed panel: warm off-white, set apart from the white page, over a quiet
           field of squares where green glows spread like compounding reach, eased back behind the copy. */}
-      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl border border-line bg-[#f4f2eb] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14 shadow-[0_24px_60px_-30px_rgb(23_44_33_/_25%)]">
+      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#f9f8f4] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
         <SignalGrid className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_40%,rgb(0_0_0_/_0.15)_25%,black_80%)]" />
         <div className="mx-auto max-w-4xl text-center text-ink">
           <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
