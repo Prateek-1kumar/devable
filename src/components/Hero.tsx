@@ -1,6 +1,6 @@
 import ArcButton from "./ArcButton";
 import ClientProof from "./ClientProof";
-import { BackgroundShapes } from "./ui/background-shapes";
+import { SignalGrid } from "./ui/signal-grid";
 import { LogoCloud } from "./ui/logo-cloud-2";
 
 // ponytail: sample faces until real team photos exist.
@@ -12,17 +12,10 @@ const OPERATORS = ["landingai", "glean", "webai", "orqai", "langwatch"];
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
-      {/* The first viewport as one framed panel: warm off-white, set apart from the white page, with green
-          shapes flickering around the edges and faded out behind the copy. */}
+      {/* The first viewport as one framed panel: warm off-white, set apart from the white page, over a quiet
+          field of squares where green glows spread like compounding reach, eased back behind the copy. */}
       <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl border border-line bg-[#f4f2eb] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14 shadow-[0_24px_60px_-30px_rgb(23_44_33_/_25%)]">
-        <BackgroundShapes
-          width={1200}
-          height={780}
-          cellSize={28}
-          strokeWidth={8}
-          colors={["#3fae64"]}
-          className="absolute inset-0 -z-10 h-full w-full opacity-70 [mask-image:radial-gradient(ellipse_62%_58%_at_50%_42%,transparent_40%,black_95%)]"
-        />
+        <SignalGrid className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_40%,rgb(0_0_0_/_0.15)_25%,black_80%)]" />
         <div className="mx-auto max-w-4xl text-center text-ink">
           <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
             Growth Marketing for AI&#8209;Native DevTools and Platforms
