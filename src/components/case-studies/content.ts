@@ -2,6 +2,9 @@ export const TITLE = "See our work in action.";
 export const INTRO =
   "We partner with AI and developer companies to build visibility and reach audiences through technical content, search, communities, and creators.";
 
+// ponytail: points at this section until a case studies index page exists.
+export const VIEW_ALL_HREF = "#case-studies";
+
 export type Metric = { value: string; label: string };
 
 export type CaseStudy = {
