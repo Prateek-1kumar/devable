@@ -2,18 +2,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 // Rectangular button with small border radius.
-// With an arrow: a green icon box sits in the right end; on hover it grows left until it fills the
-// button, the label turns black exactly where the green reaches it, and the arrow loops out and back in.
-// Without one: the fill simply eases to green with black text. Shape and size never change.
+// Black primary: a plain fill with an inline arrow; on hover it eases to a soft mint with ink text and the
+// arrow nudges right. The light and outline tones on dark sections keep the icon-box slide when given an
+// arrow. Shape and size never change.
 const EASE =
   "transition-[background-color,border-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]";
 const GROW =
   "ease-[cubic-bezier(0.65,0,0.35,1)] duration-500 motion-reduce:duration-0";
 
 const TONES = {
-  primary: `bg-black text-white shadow-sm hover:bg-primary hover:text-black focus-visible:bg-primary focus-visible:text-black ${EASE}`,
-  accent: `bg-black text-white shadow-sm hover:bg-primary hover:text-black focus-visible:bg-primary focus-visible:text-black ${EASE}`,
-  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-[#dff5e7] hover:bg-[#dff5e7] focus-visible:border-[#dff5e7] focus-visible:bg-[#dff5e7] ${EASE}`,
+  primary: `bg-black text-white shadow-sm hover:bg-[#c4ecd3] hover:text-ink focus-visible:bg-[#c4ecd3] focus-visible:text-ink ${EASE}`,
+  accent: `bg-black text-white shadow-sm hover:bg-[#c4ecd3] hover:text-ink focus-visible:bg-[#c4ecd3] focus-visible:text-ink ${EASE}`,
+  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-[#c4ecd3] hover:bg-[#c4ecd3] focus-visible:border-[#c4ecd3] focus-visible:bg-[#c4ecd3] ${EASE}`,
   orange: "bg-secondary text-white",
   // For dark sections: a white button, and a quiet outline.
   light: `bg-white text-black hover:bg-primary focus-visible:bg-primary ${EASE}`,
@@ -24,8 +24,6 @@ const TONES = {
 
 // With an arrow the green layer does the filling, so the base keeps its own fill and label color underneath.
 const SLIDE_TONES: Partial<Record<keyof typeof TONES, string>> = {
-  primary: "bg-black text-white shadow-sm",
-  accent: "bg-black text-white shadow-sm",
   light: "bg-white text-black",
   outline:
     "border border-white/20 text-white transition-colors duration-500 hover:border-primary focus-visible:border-primary",
@@ -86,7 +84,7 @@ function IconSlide({
           full button on hover, so the black text is revealed exactly where the green has reached. */}
       <span
         aria-hidden="true"
-        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-ink transition-[clip-path,background-color] group-hover:bg-[#dff5e7] group-focus-visible:bg-[#dff5e7] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
+        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-ink transition-[clip-path,background-color] group-hover:bg-[#c4ecd3] group-focus-visible:bg-[#c4ecd3] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
       >
         {children}
       </span>
@@ -108,7 +106,7 @@ function IconSlide({
 
 function Arrow() {
   return (
-    <ArrowIcon className="shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+    <ArrowIcon className="shrink-0 transition-transform duration-300 group-hover:translate-x-1 group-focus-visible:translate-x-1 motion-reduce:transition-none" />
   );
 }
 

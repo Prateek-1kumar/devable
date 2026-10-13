@@ -36,7 +36,7 @@ export default function Hero() {
 
         <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
           <p className="mb-5 text-center text-sm font-medium text-muted">Trusted by AI-native DevTools and platforms</p>
-          <LogoCloud className="bg-card" />
+          <LogoCloud />
         </div>
       </div>
 
