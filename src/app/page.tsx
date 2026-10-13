@@ -1,6 +1,7 @@
 // import FallingPill from "@/components/FallingPill";
 import CaseStudies from "@/components/case-studies/CaseStudies";
 import ChannelProblems from "@/components/channel-problems/ChannelProblems";
+import FinalCta from "@/components/FinalCta";
 import GrowthSystem from "@/components/growth-system/GrowthSystem";
 import Hero from "@/components/Hero";
 import HowWeWork from "@/components/how-we-work/HowWeWork";
@@ -17,6 +18,7 @@ export default function Home() {
       <HowWeWork />
       <CaseStudies />
       <WhyDevable />
+      <FinalCta />
     </main>
   );
 }

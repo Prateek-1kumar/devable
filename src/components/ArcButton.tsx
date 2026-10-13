@@ -15,14 +15,26 @@ const TONES = {
   accent: `bg-black text-white shadow-sm hover:bg-primary hover:text-black focus-visible:bg-primary focus-visible:text-black ${EASE}`,
   secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-primary hover:bg-primary focus-visible:border-primary focus-visible:bg-primary ${EASE}`,
   orange: "bg-secondary text-white",
+  // For dark sections: a white button, and a quiet outline.
+  light: `bg-white text-black hover:bg-primary focus-visible:bg-primary ${EASE}`,
+  // Plain white with only a slight dim on hover, for a quieter secondary next to a sliding primary.
+  white: `bg-white text-black hover:bg-white/85 focus-visible:bg-white/85 ${EASE}`,
+  outline: `border border-white/20 text-white hover:border-primary hover:bg-primary hover:text-black focus-visible:border-primary focus-visible:bg-primary focus-visible:text-black ${EASE}`,
 };
 
-// With an arrow the green layer does the filling, so the base stays black with white text underneath it.
-const SLIDE_TONE = "bg-black text-white shadow-sm";
+// With an arrow the green layer does the filling, so the base keeps its own fill and label color underneath.
+const SLIDE_TONES: Partial<Record<keyof typeof TONES, string>> = {
+  primary: "bg-black text-white shadow-sm",
+  accent: "bg-black text-white shadow-sm",
+  light: "bg-white text-black",
+  outline:
+    "border border-white/20 text-white transition-colors duration-500 hover:border-primary focus-visible:border-primary",
+};
 
 const SIZES = {
   md: "gap-2.5 px-6 py-2.5 text-[0.95rem] rounded-[6px]",
   sm: "gap-2 px-4 py-2 text-[0.88rem] rounded-[6px]",
+  lg: "gap-3 px-6 py-4 text-[1rem] rounded-[6px]",
 };
 
 // Room for the icon box on the right. The box sits 4px in from the edges and is square to the button's
@@ -37,6 +49,11 @@ const SLIDE_SIZES = {
     pad: "py-2 pl-4 pr-11 text-[0.88rem]",
     box: "w-7",
     clip: "[clip-path:inset(4px_4px_4px_calc(100%-32px)_round_4px)]",
+  },
+  lg: {
+    pad: "py-4 pl-6 pr-16 text-[1rem]",
+    box: "w-12",
+    clip: "[clip-path:inset(4px_4px_4px_calc(100%-52px)_round_4px)]",
   },
 };
 
@@ -79,10 +96,10 @@ function IconSlide({
         className={`absolute top-1 right-1 bottom-1 grid place-items-center overflow-hidden text-black ${box}`}
       >
         <ArrowIcon
-          className={`col-start-1 row-start-1 transition-transform ${GROW} group-hover:translate-x-[180%] group-focus-visible:translate-x-[180%]`}
+          className={`col-start-1 row-start-1 transition-transform ${GROW} group-hover:translate-x-[260%] group-focus-visible:translate-x-[260%]`}
         />
         <ArrowIcon
-          className={`col-start-1 row-start-1 -translate-x-[180%] transition-transform ${GROW} group-hover:translate-x-0 group-hover:delay-100 group-focus-visible:translate-x-0`}
+          className={`col-start-1 row-start-1 -translate-x-[260%] transition-transform ${GROW} group-hover:translate-x-0 group-hover:delay-100 group-focus-visible:translate-x-0`}
         />
       </span>
     </>
@@ -112,11 +129,12 @@ export default function ArcButton({
   arrow = false,
   className = "",
 }: Props) {
-  if (arrow && (tone === "primary" || tone === "accent")) {
+  const slideTone = SLIDE_TONES[tone];
+  if (arrow && slideTone) {
     return (
       <Link
         href={href}
-        className={`group relative inline-flex items-center justify-center overflow-hidden rounded-[6px] font-medium tracking-wide outline-offset-4 ${SLIDE_TONE} ${SLIDE_SIZES[size].pad} ${className}`}
+        className={`group relative inline-flex items-center justify-center overflow-hidden rounded-[6px] font-medium tracking-wide outline-offset-4 ${slideTone} ${SLIDE_SIZES[size].pad} ${className}`}
       >
         <span>{children}</span>
         <IconSlide size={size}>{children}</IconSlide>
