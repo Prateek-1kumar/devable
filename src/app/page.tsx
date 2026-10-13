@@ -2,6 +2,7 @@
 import CaseStudies from "@/components/case-studies/CaseStudies";
 import ChannelProblems from "@/components/channel-problems/ChannelProblems";
 import FinalCta from "@/components/FinalCta";
+import Footer from "@/components/Footer";
 import GrowthSystem from "@/components/growth-system/GrowthSystem";
 import Hero from "@/components/Hero";
 import HowWeWork from "@/components/how-we-work/HowWeWork";
@@ -19,6 +20,7 @@ export default function Home() {
       <CaseStudies />
       <WhyDevable />
       <FinalCta />
+      <Footer />
     </main>
   );
 }
