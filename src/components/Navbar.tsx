@@ -39,7 +39,7 @@ export default function Navbar() {
       <NavBody>
         <Logo />
         <NavItems items={LINKS} />
-        {/* The CTA's fill breaks into the hero glyph grid on hover (ArcButton). */}
+        {/* The CTA's green icon box grows to fill it on hover (ArcButton). */}
         <ArcButton href="#contact" size="sm" arrow className="relative z-20">
           Speak With Us
         </ArcButton>
