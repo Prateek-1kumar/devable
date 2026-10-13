@@ -3,6 +3,7 @@ import ChannelProblems from "@/components/channel-problems/ChannelProblems";
 import GrowthSystem from "@/components/growth-system/GrowthSystem";
 import Hero from "@/components/Hero";
 import HowWeWork from "@/components/how-we-work/HowWeWork";
+import WhyDevable from "@/components/WhyDevable";
 // import Stats from "@/components/Stats";
 // import TrustedBy from "@/components/TrustedBy";
 
@@ -13,6 +14,7 @@ export default function Home() {
       <ChannelProblems />
       {/* <GrowthSystem /> */}
       <HowWeWork />
+      <WhyDevable />
     </main>
   );
 }
