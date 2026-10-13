@@ -77,7 +77,7 @@ export default function HowWeWork() {
   };
 
   return (
-    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-32 sm:px-12 lg:pt-32 lg:pb-52 xl:px-[6vw]">
+    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-20 sm:px-12 lg:pt-32 lg:pb-24 xl:px-[6vw]">
       {/* Headline and subtitle stacked on one left edge so they read as a single thought. */}
       <header className="max-w-[44rem]">
         <h2
