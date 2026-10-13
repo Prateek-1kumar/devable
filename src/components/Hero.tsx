@@ -14,28 +14,28 @@ export default function Hero() {
     <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
       {/* The first viewport as one framed panel: warm off-white, set apart from the white page, over a quiet
           field of squares where green glows spread like compounding reach, eased back behind the copy. */}
-      <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-2xl bg-[#f9f8f4] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
-        <SignalGrid className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_40%,rgb(0_0_0_/_0.15)_25%,black_80%)]" />
+      <div className="relative isolate mx-auto max-w-[76rem] overflow-hidden rounded-2xl bg-[#f9f8f4] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">
+        <SignalGrid className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_75%_65%_at_50%_38%,transparent_50%,rgb(0_0_0_/_0.35)_72%,black_100%)]" />
         <div className="mx-auto max-w-4xl text-center text-ink">
           <h1 className="text-[clamp(2.25rem,4.2vw,3.6rem)] leading-[1.02] font-medium tracking-[-0.045em]">
-            Growth Marketing for AI&#8209;Native DevTools and Platforms
+            We build growth engines for AI&#8209;native DevTools and platforms.
           </h1>
           <p className="mx-auto mt-6 max-w-[36rem] text-lg leading-relaxed tracking-[-0.01em] text-ink/70 sm:text-xl">
-            We build visibility and pipeline through technical content, organic search, AI visibility, Reddit, and
+            Driving visibility and pipeline through technical content, organic search, AI visibility, Reddit, and
             creator distribution.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <ArcButton href="#contact" arrow tone="primary">
-              Speak with the team
+              Speak with the Team
             </ArcButton>
             <ArcButton href="#case-studies" tone="secondary">
-              View case studies
+              View Case Studies
             </ArcButton>
           </div>
         </div>
 
         <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
-          <p className="mb-5 text-center text-sm font-medium text-muted">Trusted by AI-native dev tools and platforms</p>
+          <p className="mb-5 text-center text-sm font-medium text-muted">Trusted by AI-native DevTools and platforms</p>
           <LogoCloud className="bg-card" />
         </div>
       </div>

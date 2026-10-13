@@ -13,7 +13,7 @@ const GROW =
 const TONES = {
   primary: `bg-black text-white shadow-sm hover:bg-primary hover:text-black focus-visible:bg-primary focus-visible:text-black ${EASE}`,
   accent: `bg-black text-white shadow-sm hover:bg-primary hover:text-black focus-visible:bg-primary focus-visible:text-black ${EASE}`,
-  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-primary hover:bg-primary focus-visible:border-primary focus-visible:bg-primary ${EASE}`,
+  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-[#dff5e7] hover:bg-[#dff5e7] focus-visible:border-[#dff5e7] focus-visible:bg-[#dff5e7] ${EASE}`,
   orange: "bg-secondary text-white",
   // For dark sections: a white button, and a quiet outline.
   light: `bg-white text-black hover:bg-primary focus-visible:bg-primary ${EASE}`,
@@ -86,7 +86,7 @@ function IconSlide({
           full button on hover, so the black text is revealed exactly where the green has reached. */}
       <span
         aria-hidden="true"
-        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-black transition-[clip-path] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
+        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-ink transition-[clip-path,background-color] group-hover:bg-[#dff5e7] group-focus-visible:bg-[#dff5e7] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
       >
         {children}
       </span>
