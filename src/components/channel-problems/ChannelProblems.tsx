@@ -78,7 +78,7 @@ function ProblemCard({ index, title, body }: { index: number; title: string; bod
         <h3 className="text-[1.05rem] font-medium tracking-[-0.015em] text-white">{title}</h3>
         <p className="mt-2 text-[0.875rem] leading-[1.55] text-white/55">{body}</p>
       </div>
-      <div ref={box} aria-hidden="true" className="relative min-h-[230px] flex-1">
+      <div ref={box} aria-hidden="true" className="relative min-h-[290px] flex-1">
         <CardScene key={String(still)} index={index} still={still} active={onScreen} hover={hover} />
       </div>
     </article>

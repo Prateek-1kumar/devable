@@ -3,20 +3,17 @@
 import { useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
-  BoxGeometry,
   BufferGeometry,
   Color,
-  EdgesGeometry,
   Float32BufferAttribute,
   Group,
-  LineBasicMaterial,
+  MeshBasicMaterial,
   Mesh,
   Points,
-  TorusGeometry,
   Vector3,
 } from "three";
 import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
-import { Dither, Stage, Tag, WHITE, clamp01, green, lerp, seg, show, strut, useStory, type DitherMat } from "./kit";
+import { Dither, Stage, Tag, WHITE, clamp01, green, lerp, seg, show, strut, useStory, useZoom, type DitherMat } from "./kit";
 
 const white = new Color(WHITE);
 const tmp = new Color();
@@ -157,222 +154,287 @@ function Layer({ i }: { i: number }) {
 }
 
 // ═════════════════════════════════════════════════════════════
-// 02 · Search is no longer one surface.
-// One query beam passes through three discovery surfaces: you rank on
-// search but are missing from the AI ones, until a second pass lands you.
+// Cards 02–04 share card 1's iso view: objects stay square to the world, and
+// `at` places them by screen position (sx across, y up, d toward the viewer).
 // ═════════════════════════════════════════════════════════════
-const BEAM_TOP = 1.85;
-const BEAM_END = -1.5;
-const SLOT: [number, number] = [0.6, -0.35];
-const FIRST = [0.4, 1.8] as const; // beam: start, duration
-const SECOND = [3.6, 1.8] as const; // pulse: start, duration
-const passAt = (y: number, [start, dur]: readonly [number, number]) => start + (dur * (BEAM_TOP - y)) / (BEAM_TOP - BEAM_END);
+const ACROSS = new Vector3(1, 0, -1).normalize();
+const TOWARD = new Vector3(1, 0, 1).normalize();
+const at = (sx: number, y = 0, d = 0) => ACROSS.clone().multiplyScalar(sx).addScaledVector(TOWARD, d).setY(y);
+const xyz = (v: Vector3) => [v.x, v.y, v.z] as [number, number, number];
+const DIM = new Color("#2a2a2a");
 
-function drawSerp(ctx: Ctx, w: number, h: number) {
-  frame(ctx, w, h);
-  ctx.strokeStyle = "rgba(242,242,238,0.45)";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(30, 26, w - 60, 38);
-  for (let i = 0; i < 4; i++) bars(ctx, 30, 92 + i * 56, w - 60, [[0.5, 0.42, 0.56, 0.38][i], 0.82], 12, 22, i === 0 ? 0.9 : 0.35);
-}
-function drawAnswer(ctx: Ctx, w: number, h: number) {
-  frame(ctx, w, h);
-  bars(ctx, 30, 34, w - 60, [0.9, 0.78, 0.86, 0.62, 0.8, 0.44], 12, 40);
-}
-function drawChat(ctx: Ctx, w: number, h: number) {
-  frame(ctx, w, h);
-  bars(ctx, w * 0.45, 32, w * 0.48, [1], 40, 0, 0.25);
-  ctx.strokeStyle = "rgba(242,242,238,0.45)";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(30, 104, w * 0.72, 190);
-  bars(ctx, 54, 130, w * 0.64, [0.95, 0.8, 0.9, 0.55], 12, 40);
+/** A thin bar from `a` to `b`; its material is animated from dim to green. */
+function Beam({ a, b, mat }: { a: Vector3; b: Vector3; mat: RefObject<MeshBasicMaterial | null> }) {
+  const s = useMemo(() => strut(a, b), [a, b]);
+  return (
+    <mesh position={s.position} quaternion={s.quaternion}>
+      <boxGeometry args={[0.025, s.length, 0.025]} />
+      <meshBasicMaterial ref={mat} color={DIM} toneMapped={false} />
+    </mesh>
+  );
 }
 
-const SURFACES = [
-  { name: "Search", hit: "#1 ranked", draw: drawSerp, y: 1.0 },
-  { name: "AI answer", hit: "cited", draw: drawAnswer, y: 0 },
-  { name: "AI chat", hit: "cited", draw: drawChat, y: -1.0 },
+// ═════════════════════════════════════════════════════════════
+// 02 · Search is no longer one surface.
+// One buyer question drops three beams onto three surfaces, a results list
+// (Google), an answer (ChatGPT) and cited sources (Perplexity). On each,
+// the product's spot lifts and turns green: found everywhere.
+// ═════════════════════════════════════════════════════════════
+const Q = at(0, 1.25, -0.2);
+const SURF_Y = -0.75;
+const PAD = 1.05;
+const LEAVE = 1.6;
+const STAGGER = 0.7;
+const FLY = 1.6;
+const FOUND = 6.4;
+
+type Part = { size: [number, number, number]; pos: [number, number, number] };
+const ENGINES: { name: string; sx: number; parts: Part[]; hit: Part }[] = [
+  {
+    name: "Google",
+    sx: -1.7,
+    // A results list: the back row sits highest on screen, so it is #1.
+    parts: [1, 2, 3].map((i) => ({ size: [0.78, 0.05, 0.13], pos: [0, 0.085, -0.33 + i * 0.22] })),
+    hit: { size: [0.78, 0.07, 0.13], pos: [0, 0.095, -0.33] },
+  },
+  {
+    name: "ChatGPT",
+    sx: 0,
+    // An answer standing up, with lines across its face; the middle line is the product.
+    parts: [
+      { size: [0.82, 0.62, 0.07], pos: [0, 0.37, -0.28] },
+      { size: [0.6, 0.045, 0.03], pos: [-0.06, 0.55, -0.235] },
+      { size: [0.48, 0.045, 0.03], pos: [-0.12, 0.31, -0.235] },
+    ],
+    hit: { size: [0.66, 0.06, 0.05], pos: [-0.03, 0.43, -0.22] },
+  },
+  {
+    name: "Perplexity",
+    sx: 1.7,
+    // An answer with a row of source cards in front; the first source is the product.
+    parts: [
+      { size: [0.78, 0.05, 0.13], pos: [0, 0.085, -0.33] },
+      { size: [0.62, 0.05, 0.13], pos: [-0.08, 0.085, -0.11] },
+      { size: [0.2, 0.12, 0.2], pos: [0.02, 0.12, 0.24] },
+      { size: [0.2, 0.12, 0.2], pos: [0.3, 0.12, 0.24] },
+    ],
+    hit: { size: [0.2, 0.12, 0.2], pos: [-0.26, 0.12, 0.24] },
+  },
 ];
 
-const slotBox = new BoxGeometry(0.26, 0.26, 0.26);
-const slotEdges = new EdgesGeometry(slotBox);
-
-function SurfacesScene() {
+function SearchScene() {
   const t = useStory();
-  const beam = useRef<Mesh>(null);
-  const pulse = useRef<Mesh>(null);
-
+  const query = useRef<HTMLSpanElement>(null);
+  const found = useRef<HTMLSpanElement>(null);
+  const block = useRef<Mesh>(null);
   useFrame(() => {
     const k = t.current;
-    const head = lerp(BEAM_TOP, BEAM_END, clamp01((k - FIRST[0]) / FIRST[1]));
-    const len = Math.max(BEAM_TOP - head, 0.001);
-    beam.current?.scale.setY(len);
-    beam.current?.position.setY(BEAM_TOP - len / 2);
-    const p = clamp01((k - SECOND[0]) / SECOND[1]);
-    pulse.current?.position.setY(lerp(BEAM_TOP, BEAM_END, p));
-    pulse.current?.scale.setScalar(p > 0 && p < 1 ? 1 : 0.001);
+    show(query.current, seg(k, 0.3, 1.0));
+    show(found.current, seg(k, FOUND, FOUND + 0.6));
+    block.current?.scale.setScalar(Math.max(seg(k, 0.2, 1.0), 0.001));
   });
-
   return (
-    <group position={[-0.8, 0, 0.8]}>
-      <mesh ref={beam} position={[SLOT[0], 0, SLOT[1]]}>
-        <boxGeometry args={[0.035, 1, 0.035]} />
-        <meshBasicMaterial color={green()} toneMapped={false} />
+    <group position-y={-0.1}>
+      <mesh ref={block} position={Q}>
+        <boxGeometry args={[0.34, 0.34, 0.34]} />
+        <Dither level={1.15} />
       </mesh>
-      <mesh ref={pulse} position={[SLOT[0], BEAM_TOP, SLOT[1]]}>
-        <boxGeometry args={[0.1, 0.34, 0.1]} />
-        <meshBasicMaterial color={green()} toneMapped={false} />
-      </mesh>
-      <Tag position={[SLOT[0], BEAM_TOP + 0.1, SLOT[1]]} tone="green" anchor="left" bare className="pl-2">
-        › buyer query
+      <Tag ref={query} position={xyz(at(0, Q.y + 0.42, -0.2))} tone="white" plain className="tracking-normal">
+        › best CI for monorepos?
       </Tag>
-      {SURFACES.map((s) => (
-        <Surface key={s.name} {...s} />
+      {ENGINES.map((e, i) => (
+        <Engine key={e.name} {...e} i={i} />
       ))}
+      <Tag ref={found} position={xyz(at(0, SURF_Y - 1.2, 0.6))} tone="green" plain className="tracking-normal">
+        ✓ Found everywhere
+      </Tag>
     </group>
   );
 }
 
-function Surface({ name, hit, draw, y }: (typeof SURFACES)[number]) {
+function Engine({ name, sx, parts, hit, i }: (typeof ENGINES)[number] & { i: number }) {
   const t = useStory();
-  const { texture } = useCanvasTexture(512, 328, draw);
-  const cube = useRef<Mesh>(null);
-  const edges = useRef<LineBasicMaterial>(null);
-  const tag = useRef<HTMLSpanElement>(null);
-  const status = useRef<HTMLSpanElement>(null);
-  const reached = passAt(y, FIRST);
-  const fixed = name === "Search" ? reached : passAt(y, SECOND);
+  const g = useGreen();
+  const origin = useMemo(() => at(sx, SURF_Y), [sx]);
+  const from = useMemo(() => Q.clone().setY(Q.y - 0.2), []);
+  const to = useMemo(() => origin.clone().add(new Vector3(...hit.pos)), [origin, hit]);
+  const beam = useRef<MeshBasicMaterial>(null);
+  const pulse = useRef<Mesh>(null);
+  const spot = useRef<Mesh>(null);
+  const spotMat = useRef<DitherMat>(null);
+  const label = useRef<HTMLSpanElement>(null);
+  const leave = LEAVE + i * STAGGER;
+  const land = leave + FLY;
 
   useFrame(() => {
     const k = t.current;
-    const seen = seg(k, reached, reached + 0.3);
-    const f = seg(k, fixed, fixed + 0.3);
-    cube.current?.scale.setScalar(Math.max(f, 0.001));
-    if (edges.current) edges.current.opacity = 0.8 * seen;
-    show(tag.current, Math.max(seen, 0.35));
-    if (status.current) status.current.textContent = f > 0.5 ? `✓ ${hit}` : seen > 0.5 ? "✕ missing" : " ";
-    lightUp(tag.current, f > 0.5);
+    const p = clamp01((k - leave) / FLY);
+    const e = p * p * (3 - 2 * p);
+    pulse.current?.position.lerpVectors(from, to, e);
+    pulse.current?.scale.setScalar(p > 0 && p < 1 ? 1 : 0.001);
+    beam.current?.color.lerpColors(DIM, g, e);
+    const on = seg(k, land, land + 0.8);
+    spot.current?.position.setY(hit.pos[1] + 0.09 * on);
+    spotMat.current?.uColor.lerpColors(white, g, on);
+    if (spotMat.current) spotMat.current.uLevel = 1 + 0.45 * on;
+    if (label.current) label.current.textContent = on > 0.5 ? `✓ ${name}` : name;
+    lightUp(label.current, on > 0.5);
   });
 
   return (
-    <group position={[0, y, 0]}>
-      <mesh>
-        <boxGeometry args={[2.4, 0.06, 1.6]} />
-        <Dither level={0.7} />
+    <>
+      <Beam a={from} b={to} mat={beam} />
+      <mesh ref={pulse} position={from}>
+        <boxGeometry args={[0.1, 0.1, 0.1]} />
+        <meshBasicMaterial color={green()} toneMapped={false} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.031}>
-        <planeGeometry args={[2.3, 1.5]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
-      <group position={[SLOT[0], 0.16, SLOT[1]]}>
-        <mesh ref={cube} geometry={slotBox}>
-          <Dither color={green()} level={1.3} />
+      <group position={origin}>
+        <mesh>
+          <boxGeometry args={[PAD, 0.12, PAD]} />
+          <Dither level={0.75} />
         </mesh>
-        <lineSegments geometry={slotEdges}>
-          <lineBasicMaterial ref={edges} color={WHITE} transparent opacity={0} />
-        </lineSegments>
+        {parts.map((part, j) => (
+          <mesh key={j} position={part.pos}>
+            <boxGeometry args={part.size} />
+            <Dither />
+          </mesh>
+        ))}
+        <mesh ref={spot} position={hit.pos}>
+          <boxGeometry args={hit.size} />
+          <Dither ref={spotMat} />
+        </mesh>
       </group>
-      <Tag ref={tag} position={[1.25, 0.05, -0.85]} anchor="left">
-        <span className="block text-[9.5px] opacity-70">{name}</span>
-        <span ref={status} className="mt-1 block" />
+      <Tag ref={label} position={xyz(at(sx, SURF_Y - 0.5, 0.55))} tone="dim" plain className="tracking-normal">
+        {name}
       </Tag>
-    </group>
+    </>
   );
 }
 
 // ═════════════════════════════════════════════════════════════
 // 03 · Reddit punishes forced promotion.
-// Two replies in a thread: the promo is voted down, sinks and collapses;
-// the genuinely useful answer is voted up and climbs to the top.
+// Two comments posted together both name the same product, each standing on
+// a column of votes. The link-drop loses its votes block by block, sinks and
+// folds flat; the real answer is lifted on green upvotes and gets replies.
 // ═════════════════════════════════════════════════════════════
-const VOTES = [0.8, 4.2];
-const SORT = [4.2, 5.2];
-const COLLAPSE = [5.4, 6.1];
-const CARD_W = 2.8;
-const CARD_H = 0.95;
-const cardBox = new BoxGeometry(CARD_W, CARD_H, 0.08);
-const cardEdges = new EdgesGeometry(cardBox);
-
-const REPLIES = {
-  promo: { user: "u/growth_team", body: "Try our tool!!! Best CI ever", score: -47, from: 0.55, to: -0.65 },
-  genuine: { user: "u/ci_maintainer", body: "Root cause: shared cache keys.", score: 312, from: -0.65, to: 0.55 },
-};
+const TILE = 0.16;
+const BASE_Y = -1.25;
+const VOTE = [1.6, 7.6];
+const FOLD = [8.0, 9.2];
+const COMMENTS = [
+  { kind: "promo", sx: -1.15, start: 3, end: 0, user: "u/cachefly_hq", body: "Check out Cachefly CI!!! 🚀", score: -38 },
+  { kind: "genuine", sx: 1.15, start: 3, end: 7, user: "u/sre_dana", body: "Scope cache keys per branch. We use Cachefly CI for it.", score: 214 },
+] as const;
+const REPLIES = [
+  { text: "+1, we use this too", at: 9.0 },
+  { text: "Same fix here", at: 9.8 },
+];
 
 function ThreadScene() {
   return (
-    // Turned to face the camera, so the comments read straight on.
-    <group rotation-y={Math.PI / 4} position={[0.1, -0.15, 0]}>
-      <Tag position={[-CARD_W / 2 + 0.05, 1.3, 0]} anchor="left">
-        r/devops · flaky CI help?
+    <group position-y={0.1}>
+      <Tag position={xyz(at(-2.25, 1.85))} anchor="left" tone="white" plain className="tracking-normal">
+        r/devops · flaky CI?
       </Tag>
-      <Reply kind="promo" />
-      <Reply kind="genuine" />
+      {COMMENTS.map((c) => (
+        <VoteColumn key={c.kind} {...c} />
+      ))}
+      {REPLIES.map((r, i) => (
+        <ReplyChip key={r.text} {...r} position={xyz(at(1.0, BASE_Y - 0.42 - i * 0.36, 0.5))} />
+      ))}
     </group>
   );
 }
 
-function Reply({ kind }: { kind: keyof typeof REPLIES }) {
-  const r = REPLIES[kind];
+function ReplyChip({ text, at: when, position }: { text: string; at: number; position: [number, number, number] }) {
+  const t = useStory();
+  const el = useRef<HTMLSpanElement>(null);
+  useFrame(() => show(el.current, seg(t.current, when, when + 0.6)));
+  return (
+    <Tag ref={el} position={position} bare>
+      <span className="border-l border-primary/60 pl-2.5 font-sans text-[13px] tracking-normal text-white/85">↳ {text}</span>
+    </Tag>
+  );
+}
+
+function VoteColumn({ kind, sx, start, end, user, body, score }: (typeof COMMENTS)[number]) {
   const good = kind === "genuine";
   const t = useStory();
   const g = useGreen();
-  const up = useRef<DitherMat>(null);
-  const down = useRef<DitherMat>(null);
-  const edges = useRef<LineBasicMaterial>(null);
-  const root = useRef<Group>(null);
-  const card = useRef<Mesh>(null);
-  const score = useRef<HTMLSpanElement>(null);
-  const body = useRef<HTMLDivElement>(null);
-  const folded = useRef<HTMLSpanElement>(null);
+  const zoom = useZoom();
+  const tiles = useRef<(Mesh | null)[]>([]);
+  const hinge = useRef<Group>(null);
+  const post = useRef<DitherMat>(null);
+  const scoreEl = useRef<HTMLSpanElement>(null);
+  const bodyEl = useRef<HTMLSpanElement>(null);
+  const foldedAt = useMemo(() => xyz(at(0.3, 0.45)), []);
+  const foldedEl = useRef<HTMLSpanElement>(null);
+  const chip = useRef<Group>(null);
+  const count = Math.max(start, end);
 
   useFrame(() => {
     const k = t.current;
-    const v = seg(k, VOTES[0], VOTES[1]);
-    const s = Math.round(1 + (r.score - 1) * v);
-    if (score.current) score.current.textContent = `${good ? "▲" : "▼"} ${s}`;
-    root.current?.position.setY(lerp(r.from, r.to, seg(k, SORT[0], SORT[1])));
+    const v = seg(k, VOTE[0], VOTE[1]);
+    const n = lerp(start, end, v);
+    tiles.current.forEach((m, i) => m?.scale.set(1, Math.max(clamp01(n - i), 0.001), 1));
+    tiles.current.forEach((m, i) => m?.position.setY(0.03 + TILE * i + (TILE * clamp01(n - i)) / 2));
+    const top = 0.03 + TILE * n;
+    hinge.current?.position.setY(top);
+    chip.current?.position.setY(top + 0.62);
+    const s = Math.round(1 + (score - 1) * v);
+    if (scoreEl.current) scoreEl.current.textContent = `${s > 0 ? "▲" : "▼"} ${s}`;
     if (good) {
-      up.current?.uColor.lerpColors(white, g, v);
-      if (up.current) up.current.uLevel = 1 + 0.5 * v;
+      post.current?.uColor.lerpColors(white, g, seg(k, VOTE[1] - 1, VOTE[1]));
       return;
     }
-    if (down.current) down.current.uLevel = 1 + 0.5 * v;
-    if (up.current) up.current.uLevel = 1 - 0.6 * v;
-    if (edges.current) edges.current.opacity = 0.55 - 0.35 * v;
-    const c = seg(k, COLLAPSE[0], COLLAPSE[1]);
-    card.current?.scale.setY(1 - 0.62 * c);
-    show(body.current, 1 - c);
-    show(folded.current, c);
+    const f = seg(k, FOLD[0], FOLD[1]);
+    hinge.current?.rotation.set(-1.45 * f, 0, 0);
+    if (post.current) post.current.uLevel = 1 - 0.45 * v;
+    show(bodyEl.current, 1 - clamp01(f * 2));
+    show(foldedEl.current, clamp01(f * 2 - 1));
+    foldedEl.current?.parentElement?.style.setProperty("visibility", f > 0.5 ? "visible" : "hidden");
   });
 
   return (
-    <group ref={root}>
-      <mesh ref={card} geometry={cardBox}>
-        <meshBasicMaterial color="#050505" />
-        <lineSegments geometry={cardEdges}>
-          <lineBasicMaterial ref={edges} color={good ? green() : WHITE} transparent opacity={0.55} />
-        </lineSegments>
+    <group position={at(sx, BASE_Y)}>
+      <mesh>
+        <boxGeometry args={[0.9, 0.06, 0.9]} />
+        <Dither level={0.7} />
       </mesh>
-      <mesh position={[-CARD_W / 2 - 0.22, 0.17, 0]}>
-        <coneGeometry args={[0.11, 0.2, 4]} />
-        <Dither ref={up} />
-      </mesh>
-      <mesh position={[-CARD_W / 2 - 0.22, -0.17, 0]} rotation-z={Math.PI}>
-        <coneGeometry args={[0.11, 0.2, 4]} />
-        <Dither ref={down} />
-      </mesh>
-      <Tag position={[-CARD_W / 2 + 0.12, 0, 0.05]} anchor="left" bare className="normal-case tracking-normal">
-        <div ref={body}>
-          <div className="flex gap-2 text-[10px] text-white/50">
-            <span ref={score} className={good ? "text-primary" : "text-white/70"} />
-            <span>{r.user}</span>
-          </div>
-          <div className="mt-1.5 font-sans text-[12px] text-white/90">{r.body}</div>
-        </div>
-      </Tag>
+      {Array.from({ length: count }, (_, i) => (
+        <mesh
+          key={i}
+          ref={(m) => {
+            tiles.current[i] = m;
+          }}
+        >
+          <boxGeometry args={[0.72, TILE - 0.03, 0.72]} />
+          <Dither color={good && i >= start ? green() : WHITE} level={good && i >= start ? 1.25 : 0.95} />
+        </mesh>
+      ))}
+      {/* The comment itself: a card standing on its votes, hinged at the bottom so it can fold flat. */}
+      <group ref={hinge}>
+        <mesh position-y={0.28}>
+          <boxGeometry args={[0.72, 0.5, 0.06]} />
+          <Dither ref={post} />
+        </mesh>
+      </group>
+      <group ref={chip}>
+        <Tag position={[0, 0, 0]} anchor="above" bare width={Math.min(2.1 * zoom, 170)}>
+          <span ref={bodyEl} className="block rounded-[3px] border border-white/15 bg-black/85 px-2 py-1.5 tracking-normal">
+            <span className="block">
+              <span className="flex gap-2 whitespace-nowrap text-[12px] text-white/55">
+                <span ref={scoreEl} className={good ? "text-primary" : "text-white/80"} />
+                {user}
+              </span>
+              <span className="mt-1 block font-sans text-[13px] leading-[1.35] whitespace-normal text-white/90">{body}</span>
+            </span>
+          </span>
+        </Tag>
+      </group>
       {!good && (
-        <Tag ref={folded} position={[0, 0, 0.05]} bare className="text-[10px] normal-case tracking-normal">
-          comment score below threshold
+        <Tag ref={foldedEl} position={foldedAt} plain className="tracking-normal opacity-0">
+          [+] collapsed
         </Tag>
       )}
     </group>
@@ -381,180 +443,151 @@ function Reply({ kind }: { kind: keyof typeof REPLIES }) {
 
 // ═════════════════════════════════════════════════════════════
 // 04 · Reach is easy to buy. Trust is not.
-// Paid reach flashes the audience and fades. Creator, narrative and
-// timing click into line one by one, a beam locks through, and the
-// audience lights up and stays lit.
+// Two posts about the same product. The big account's wave sweeps a huge
+// crowd in seconds and leaves it dark. The trusted creator's slower wave
+// reaches fewer people, they stay lit, and questions travel back.
 // ═════════════════════════════════════════════════════════════
-const C = new Vector3(-1.0, -0.1, 1.0);
-const DIR = new Vector3(1, 0, -1).normalize();
-const PERP = new Vector3(1, 0, 1).normalize();
-const AIM = Math.PI / 4; // ring angle that faces DIR
-const TAU = Math.PI * 2;
-const GAP = 0.6; // notch width, world units
-const LOCK_FROM = 2.8;
-const BEAM = [5.6, 6.1];
-const BEAM_FROM = 0.3;
-const FIELD_AT = 2.0;
-// Outer → inner; each one clicks into line a beat after the last.
-const RINGS = [
-  { name: "Creator", r: 1.4, w: 0.45, base: 4.6, lock: 4.2 },
-  { name: "Narrative", r: 1.0, w: -0.65, base: 3.1, lock: 4.75 },
-  { name: "Timing", r: 0.6, w: 0.9, base: 1.2, lock: 5.3 },
+const FIELDS = [
+  { label: "Reach", sx: -1.35, n: 8, tower: 0.85, wave: [0.8, 2.6], views: 1_200_000, comments: 12, talk: [0.8, 2.8] },
+  { label: "Trust", sx: 1.25, n: 4, tower: 0.42, wave: [3.4, 6.6], views: 18_000, comments: 240, talk: [6.6, 10] },
+] as const;
+const FIELD_Y = -0.75;
+const PITCH = 0.2;
+const TALKBACK = [7.0, 7.8, 8.6, 9.4];
+const QUESTIONS = [
+  { text: "Works with Bun?", at: 7.6 },
+  { text: "Trying it today", at: 8.8 },
 ];
 
-function ringAngle({ w, base, lock }: (typeof RINGS)[number], k: number) {
-  const free = base + w * k;
-  const mid = base + (w * (LOCK_FROM + lock)) / 2;
-  const target = AIM + TAU * Math.round((mid - AIM) / TAU);
-  return lerp(free, target, seg(k, LOCK_FROM, lock));
-}
+const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(Math.round(n)));
 
-function RingsScene() {
-  const t = useStory();
-  const core = useRef<DitherMat>(null);
-  const g = useGreen();
-  const beam = useRef<Mesh>(null);
-  const reach = useRef<HTMLSpanElement>(null);
-  const checks = useRef<(HTMLSpanElement | null)[]>([]);
-
-  useFrame(() => {
-    const k = t.current;
-    core.current?.uColor.lerpColors(white, g, seg(k, BEAM[0] - 0.2, BEAM[0]));
-    const len = Math.max((FIELD_AT - BEAM_FROM) * seg(k, BEAM[0], BEAM[1]), 0.001);
-    beam.current?.scale.setX(len);
-    beam.current?.position.copy(C).addScaledVector(DIR, BEAM_FROM + len / 2);
-    RINGS.forEach((ring, i) => {
-      const el = checks.current[i];
-      if (!el) return;
-      const locked = k > ring.lock;
-      el.textContent = `${locked ? "✓" : "○"} ${ring.name}`;
-      lightUp(el, locked);
-    });
-    const paid = seg(k, 1.0, 1.3) - seg(k, 2.6, 3.0);
-    const lasting = seg(k, 6.5, 7);
-    if (reach.current) reach.current.textContent = lasting > 0 ? "Lasting reach" : k > 2 ? "Paid reach fades" : "Paid reach";
-    show(reach.current, Math.max(paid, lasting));
-    lightUp(reach.current, lasting > 0);
-  });
-
-  const below = C.clone().addScaledVector(DIR, FIELD_AT + 0.7).addScaledVector(PERP, 1.25);
-  const legend = C.clone().addScaledVector(DIR, FIELD_AT + 0.1).addScaledVector(PERP, -1.1).setY(0.85);
-
+function ReachScene() {
   return (
-    <>
-      <mesh position={C}>
-        <icosahedronGeometry args={[0.2, 1]} />
-        <Dither ref={core} level={1.1} />
-      </mesh>
-      {RINGS.map((ring) => (
-        <Ring key={ring.name} ring={ring} />
+    <group position-y={-0.05}>
+      {FIELDS.map((f) => (
+        <Crowd key={f.label} {...f} />
       ))}
-      <mesh ref={beam} rotation-y={AIM}>
-        <boxGeometry args={[1, 0.045, 0.045]} />
-        <meshBasicMaterial color={green()} toneMapped={false} />
-      </mesh>
-      <Audience />
-      <Tag position={[legend.x, legend.y, legend.z]} anchor="left" bare>
-        <span className="flex flex-col gap-1.5">
-          {RINGS.map((ring, i) => (
-            <span
-              key={ring.name}
-              ref={(el) => {
-                checks.current[i] = el;
-              }}
-              className="text-white/60"
-            />
-          ))}
-        </span>
-      </Tag>
-      <Tag ref={reach} position={[below.x, below.y, below.z]} tone="white">
-        Paid reach
-      </Tag>
-    </>
-  );
-}
-
-function Ring({ ring }: { ring: (typeof RINGS)[number] }) {
-  const t = useStory();
-  const mat = useRef<DitherMat>(null);
-  const g = useGreen();
-  const spin = useRef<Group>(null);
-  const geo = useMemo(() => {
-    const gap = GAP / ring.r;
-    const geo = new TorusGeometry(ring.r, 0.07, 6, 96, TAU - gap);
-    geo.rotateZ(gap / 2); // centre the notch on angle 0…
-    geo.rotateX(-Math.PI / 2); // …and lay the ring flat
-    return geo;
-  }, [ring.r]);
-
-  useFrame(() => {
-    const k = t.current;
-    spin.current?.rotation.set(0, ringAngle(ring, k), 0);
-    mat.current?.uColor.lerpColors(white, g, seg(k, ring.lock - 0.1, ring.lock + 0.2));
-  });
-
-  return (
-    <group ref={spin} position={C}>
-      <mesh geometry={geo}>
-        <Dither ref={mat} />
-      </mesh>
+      {QUESTIONS.map((q, i) => (
+        <ReplyChip key={q.text} text={q.text} at={q.at} position={xyz(at(1.1, FIELD_Y - 0.75 - i * 0.36, 0.5))} />
+      ))}
     </group>
   );
 }
 
-const ROWS = 5;
-const COLS = 7;
-
-function Audience() {
+function Crowd({ label, sx, n, tower, wave, views, comments, talk }: (typeof FIELDS)[number]) {
+  const trust = label === "Trust";
   const t = useStory();
   const g = useGreen();
   const pts = useRef<Points>(null);
-  const { geo, dist, bought } = useMemo(() => {
+  const ring = useRef<Mesh>(null);
+  const ringMat = useRef<MeshBasicMaterial>(null);
+  const towerMat = useRef<DitherMat>(null);
+  const viewsEl = useRef<HTMLSpanElement>(null);
+  const commentsEl = useRef<HTMLSpanElement>(null);
+  const labelEl = useRef<HTMLSpanElement>(null);
+  const pulses = useRef<(Mesh | null)[]>([]);
+  const origin = useMemo(() => at(sx, FIELD_Y), [sx]);
+  const reach = ((n - 1) / 2) * PITCH * Math.SQRT2 + 0.1;
+
+  const { geo, dist, talkers } = useMemo(() => {
     const pos: number[] = [];
     const dist: number[] = [];
-    const bought: boolean[] = [];
-    const p = new Vector3();
-    for (let a = 0; a < ROWS; a++) {
-      for (let b = 0; b < COLS; b++) {
-        const across = b - (COLS - 1) / 2;
-        p.copy(C).addScaledVector(DIR, FIELD_AT + 0.15 + a * 0.3).addScaledVector(PERP, across * 0.3);
-        pos.push(p.x, p.y, p.z);
-        dist.push(a + Math.abs(across) * 0.45);
-        bought.push((a * 7 + b * 13) % 5 > 1); // ponytail: fixed pseudo-random pattern, no RNG needed
+    for (let a = 0; a < n; a++) {
+      for (let b = 0; b < n; b++) {
+        const x = (a - (n - 1) / 2) * PITCH;
+        const z = (b - (n - 1) / 2) * PITCH;
+        pos.push(x, 0, z);
+        dist.push(Math.hypot(x, z));
       }
     }
     const geo = new BufferGeometry();
     geo.setAttribute("position", new Float32BufferAttribute(pos, 3));
     geo.setAttribute("color", new Float32BufferAttribute(new Array(pos.length).fill(0), 3));
-    return { geo, dist, bought };
-  }, []);
+    // ponytail: four fixed corners-ish dots talk back; no RNG needed.
+    const talkers = [1, n + 2, n * n - 2, n * (n - 1) - 1].map((i) => new Vector3(pos[i * 3], 0, pos[i * 3 + 2]));
+    return { geo, dist, talkers };
+  }, [n]);
 
   useFrame(() => {
     const k = t.current;
-    const flash = seg(k, 1.1, 1.4) - seg(k, 1.9, 3.0);
+    const w = seg(k, wave[0], wave[1]);
+    const r = w * reach;
+    ring.current?.scale.set(Math.max(r, 0.001), Math.max(r, 0.001), 1);
+    if (ringMat.current) {
+      ringMat.current.opacity = w > 0 && w < 1 ? 0.8 : 0;
+      ringMat.current.color.copy(trust ? g : white);
+    }
     const color = pts.current?.geometry.getAttribute("color");
-    if (!color) return;
-    dist.forEach((d, i) => {
-      const lit = seg(k, BEAM[1] + d * 0.2, BEAM[1] + 0.3 + d * 0.2);
-      tmp.setScalar(0.05).lerp(white, bought[i] ? flash * 0.9 : 0).lerp(g, lit);
-      color.setXYZ(i, tmp.r, tmp.g, tmp.b);
-    });
-    color.needsUpdate = true;
+    if (color) {
+      dist.forEach((d, i) => {
+        const passed = w > 0 ? clamp01((r - d) / 0.12) : 0;
+        if (trust) tmp.setScalar(0.16).lerp(g, passed);
+        else tmp.setScalar(0.16).lerp(white, clamp01(1 - Math.abs(r - d) / 0.18) * (w < 1 ? 1 : 0));
+        color.setXYZ(i, tmp.r, tmp.g, tmp.b);
+      });
+      color.needsUpdate = true;
+    }
+    const lit = trust ? seg(k, wave[1] - 0.6, wave[1]) : 0;
+    towerMat.current?.uColor.lerpColors(white, g, lit);
+    if (viewsEl.current) viewsEl.current.textContent = `${fmt(views * w)} views`;
+    const c = Math.round(comments * seg(k, talk[0], talk[1]));
+    if (commentsEl.current) commentsEl.current.textContent = `${c} comment${c === 1 ? "" : "s"}`;
+    lightUp(labelEl.current, lit > 0.5);
+    if (trust) {
+      talkers.forEach((p, i) => {
+        const q = clamp01((k - TALKBACK[i]) / 1.2);
+        const m = pulses.current[i];
+        if (!m) return;
+        m.position.copy(p).lerp(new Vector3(0, tower, 0), q * q * (3 - 2 * q));
+        m.scale.setScalar(q > 0 && q < 1 ? 1 : 0.001);
+      });
+    }
   });
 
   return (
-    <points ref={pts} geometry={geo}>
-      <pointsMaterial vertexColors size={6} sizeAttenuation={false} toneMapped={false} />
-    </points>
+    <group position={origin}>
+      <points ref={pts} geometry={geo}>
+        <pointsMaterial vertexColors size={5} sizeAttenuation={false} toneMapped={false} />
+      </points>
+      <mesh ref={ring} rotation-x={-Math.PI / 2} position-y={0.01}>
+        <ringGeometry args={[0.94, 1, 64]} />
+        <meshBasicMaterial ref={ringMat} transparent opacity={0} toneMapped={false} />
+      </mesh>
+      <mesh position-y={tower / 2}>
+        <boxGeometry args={[0.26, tower, 0.26]} />
+        <Dither ref={towerMat} level={1.1} />
+      </mesh>
+      {trust &&
+        talkers.map((_, i) => (
+          <mesh
+            key={i}
+            ref={(m) => {
+              pulses.current[i] = m;
+            }}
+          >
+            <boxGeometry args={[0.07, 0.07, 0.07]} />
+            <meshBasicMaterial color={green()} toneMapped={false} />
+          </mesh>
+        ))}
+      <Tag position={[0, tower + 0.35, 0]} anchor="above" bare>
+        <span className="block tracking-normal">
+          <span ref={labelEl} className="block rounded-[3px] border border-white/30 bg-black/85 px-1.5 py-[5px] text-center text-white uppercase tracking-[0.06em]">
+            {label}
+          </span>
+          <span ref={viewsEl} className="mt-2 block text-center font-sans text-[15px] font-medium text-white" />
+          <span ref={commentsEl} className="mt-1 block text-center text-[12px] text-white/65" />
+        </span>
+      </Tag>
+    </group>
   );
 }
 
 // ═════════════════════════════════════════════════════════════
 const SCENES = [
   { Scene: FacadeScene, loop: 10, poster: 5, view: [5.3, 3.6] },
-  { Scene: SurfacesScene, loop: 8.5, poster: 6.5, view: [5.6, 4.1] },
-  { Scene: ThreadScene, loop: 8.5, poster: 7, view: [4.3, 3.2] },
-  { Scene: RingsScene, loop: 9.5, poster: 7.5, view: [6.0, 3.6] },
+  { Scene: SearchScene, loop: 12, poster: 9, view: [5.4, 4.0] },
+  { Scene: ThreadScene, loop: 13, poster: 11, view: [4.7, 4.3] },
+  { Scene: ReachScene, loop: 13, poster: 11, view: [5.0, 4.0] },
 ] as const;
 
 type Props = { index: number; still: boolean; active: boolean; hover: RefObject<boolean> };

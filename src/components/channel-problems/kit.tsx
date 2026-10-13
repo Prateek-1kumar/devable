@@ -81,6 +81,9 @@ export function Dither({ color = WHITE, level = 1, ref }: { color?: ColorReprese
 type Clock = RefObject<number>;
 const ClockContext = createContext<Clock | null>(null);
 export const useStory = () => useContext(ClockContext)!;
+// CSS px per world unit, so HTML text can be sized to a part of the scene.
+const ZoomContext = createContext(100);
+export const useZoom = () => useContext(ZoomContext);
 
 type StageProps = {
   /** Loop length in seconds. */
@@ -102,15 +105,16 @@ export function Stage({ loop, poster, still, hover, view, children }: StageProps
   const root = useRef<Group>(null);
   const { width, height } = useThree((s) => s.size);
   const get = useThree((s) => s.get);
+  const zoom = Math.min(width / view[0], height / view[1]);
 
   useLayoutEffect(() => {
     const { camera, invalidate } = get();
     camera.position.set(10, 8, 10);
     camera.lookAt(0, 0, 0);
-    camera.zoom = Math.min(width / view[0], height / view[1]);
+    camera.zoom = zoom;
     camera.updateProjectionMatrix();
     invalidate();
-  }, [get, width, height, view]);
+  }, [get, zoom]);
 
   useFrame(({ events }, dt) => {
     if (still) return;
@@ -126,7 +130,9 @@ export function Stage({ loop, poster, still, hover, view, children }: StageProps
 
   return (
     <ClockContext value={clock}>
-      <group ref={root}>{children}</group>
+      <ZoomContext value={zoom}>
+        <group ref={root}>{children}</group>
+      </ZoomContext>
     </ClockContext>
   );
 }
@@ -137,7 +143,7 @@ const TONES = {
   white: "border-white/30 text-white",
   green: "border-primary/45 text-primary",
 };
-const ANCHOR = { center: "-50%,-50%", left: "0,-50%", right: "-100%,-50%" };
+const ANCHOR = { center: "-50%,-50%", left: "0,-50%", right: "-100%,-50%", above: "-50%,-100%", top: "-50%,0" };
 
 type TagProps = {
   children: ReactNode;
@@ -147,17 +153,21 @@ type TagProps = {
   /** Drop the chip border/fill, for text that sits on a dark card. */
   bare?: boolean;
   className?: string;
+  /** Keep the text's own case instead of the chip's uppercase. */
+  plain?: boolean;
+  /** Wrap the text at this width (CSS px) instead of keeping it on one line. */
+  width?: number;
   ref?: Ref<HTMLSpanElement>;
 };
 
-export function Tag({ children, position, tone = "dim", anchor = "center", bare, className = "", ref }: TagProps) {
+export function Tag({ children, position, tone = "dim", anchor = "center", bare, plain, className = "", width, ref }: TagProps) {
   return (
     <Html position={position} zIndexRange={[1, 0]} style={{ pointerEvents: "none" }}>
       <span
         ref={ref}
-        style={{ transform: `translate(${ANCHOR[anchor]})` }}
-        className={`block whitespace-nowrap font-mono text-[11px] leading-none tracking-[0.06em] ${
-          bare ? "" : "rounded-[3px] border bg-black/85 px-1.5 py-[5px] uppercase"
+        style={{ transform: `translate(${ANCHOR[anchor]})`, width }}
+        className={`block ${width ? "whitespace-normal" : "whitespace-nowrap"} font-mono text-[12px] leading-none tracking-[0.06em] ${
+          bare ? "" : `rounded-[3px] border bg-black/85 px-1.5 py-[5px] ${plain ? "" : "uppercase"}`
         } ${TONES[tone]} ${className}`}
       >
         {children}
