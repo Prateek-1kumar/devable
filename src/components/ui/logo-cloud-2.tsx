@@ -25,6 +25,13 @@ const LOGOS: Logo[] = [
   { src: "/clients/evenrealities.svg", alt: "Even Realities", h: 15 },
   { src: "/clients/apodex.svg", alt: "Apodex", h: 42 },
   { src: "/clients/mistral.svg", alt: "Mistral AI", h: 22 },
+  { src: "/clients/kilo.svg", alt: "Kilo Code", h: 34 },
+  { src: "/clients/minimax.png", alt: "MiniMax", h: 26 },
+  { src: "/clients/firecrawl.svg", alt: "Firecrawl", h: 26 },
+  { src: "/clients/qodo.svg", alt: "Qodo", h: 30 },
+  { src: "/clients/reflex.svg", alt: "Reflex", h: 18 },
+  { src: "/clients/byterover.svg", alt: "ByteRover", h: 24 },
+  { src: "/clients/rockset.svg", alt: "Rockset", h: 24 },
 ];
 
 const TILES = 8;

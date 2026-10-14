@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 718 198"
+   version="1.1"
+   sodipodi:docname="rockset.svg"
+   width="718"
+   height="198"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview2231"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="1.6495434"
+     inkscape:cx="359.79654"
+     inkscape:cy="99.118339"
+     inkscape:window-width="2460"
+     inkscape:window-height="1563"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
+  <defs
+     id="defs2208">
+    <style
+       id="style2206">.cls-1{fill:#609;}.cls-2{fill:#63c0dd;}</style>
+  </defs>
+  <title
+     id="title2210">RsLogo</title>
+  <path
+     class="cls-1"
+     d="m 127.55,81.75 c 0,-18 -12.32,-31.16 -32.46,-31.16 H 49.87 v 96.67 h 20.58 v -34.64 h 15.07 l 19,34.64 h 23.62 L 106.4,110.45 c 10.43,-2.45 21.15,-11.59 21.15,-28.7 z"
+     id="path2212" />
+  <path
+     class="cls-1"
+     d="M 185.39,49 C 156.26,49 135,69.87 135,99 c 0,29.13 21.3,50 50.43,50 29.28,0 50.58,-20.87 50.58,-50 0,-29.13 -21.34,-50 -50.62,-50 z m 0,81.74 c -17.83,0 -29.27,-13.77 -29.27,-31.74 0,-18.12 11.44,-31.74 29.27,-31.74 17.83,0 29.42,13.62 29.42,31.74 0,18 -11.59,31.74 -29.42,31.74 z"
+     id="path2214" />
+  <path
+     class="cls-1"
+     d="m 294.28,67.26 a 26.45,26.45 0 0 1 23.47,14.06 l 17.69,-8.7 C 328.62,60.62 316.31,49 294.28,49 c -28.27,0 -50.73,20.29 -50.73,50 0,29.71 22.46,50 50.73,50 22,0 34.2,-11.74 41.16,-23.77 l -17.69,-8.55 a 26.19,26.19 0 0 1 -23.47,14.06 c -16.82,0 -29.57,-13.48 -29.57,-31.74 0,-18.26 12.75,-31.74 29.57,-31.74 z"
+     id="path2216" />
+  <polygon
+     class="cls-1"
+     points="444.28,172.78 444.28,129.59 423.7,129.59 423.7,226.26 444.28,226.26 444.28,196.55 451.81,187.56 481.09,226.26 506.45,226.26 465.44,174.96 503.84,129.59 478.48,129.59 "
+     id="polygon2218"
+     transform="translate(-78,-79)" />
+  <path
+     class="cls-1"
+     d="m 471.45,88.13 c -11.16,-2.61 -19.28,-4.64 -19.28,-11.16 0,-5.8 4.93,-9.85 14.21,-9.85 a 41.23,41.23 0 0 1 27.68,10.58 l 11.45,-15.08 c -9.57,-8.84 -22.32,-13.48 -37.68,-13.48 -22.76,0 -36.67,13.05 -36.67,29.14 0,21.59 20.29,25.94 36.09,29.56 11.16,2.61 19.56,5.07 19.56,12.32 0,5.51 -5.51,10.87 -16.81,10.87 a 42.38,42.38 0 0 1 -30.72,-13 L 428,133.64 c 9.13,9.13 22.47,15.36 41,15.36 26.08,0 38.69,-13.33 38.69,-31 -0.01,-21.46 -20.3,-26.25 -36.24,-29.87 z"
+     id="path2220" />
+  <polygon
+     class="cls-1"
+     points="666.48,208.44 618.65,208.44 618.65,185.97 665.47,185.97 665.47,168.29 618.65,168.29 618.65,147.28 666.48,147.28 666.48,129.59 598.07,129.59 598.07,226.26 666.48,226.26 "
+     id="polygon2222"
+     transform="translate(-78,-79)" />
+  <polygon
+     class="cls-1"
+     points="702.29,147.71 702.29,226.26 723.02,226.26 723.02,147.71 751.13,147.71 751.13,129.59 674.03,129.59 674.03,147.71 "
+     id="polygon2224"
+     transform="translate(-78,-79)" />
+  <polygon
+     class="cls-2"
+     points="78,79 78,89 78,99 78,257 78,267 78,277 138,277 138,257 98,257 98,99 138,99 138,79 "
+     id="polygon2226"
+     transform="translate(-78,-79)" />
+  <polygon
+     class="cls-2"
+     points="796,79 796,89 796,99 796,257 796,267 796,277 736,277 736,257 776,257 776,99 736,99 736,79 "
+     id="polygon2228"
+     transform="translate(-78,-79)" />
+  <metadata
+     id="metadata2233">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>RsLogo</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
