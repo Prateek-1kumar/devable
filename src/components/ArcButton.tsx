@@ -24,6 +24,7 @@ const TONES = {
 
 // With an arrow the green layer does the filling, so the base keeps its own fill and label color underneath.
 const SLIDE_TONES: Partial<Record<keyof typeof TONES, string>> = {
+  primary: "bg-black text-white",
   light: "bg-white text-black",
   outline:
     "border border-white/20 text-white transition-colors duration-500 hover:border-primary focus-visible:border-primary",

@@ -322,8 +322,8 @@ const BASE_Y = -1.25;
 const VOTE = [1.6, 7.6];
 const FOLD = [8.0, 9.2];
 const COMMENTS = [
-  { kind: "promo", sx: -1.15, start: 3, end: 0, user: "u/cachefly_hq", body: "Check out Cachefly CI!!! 🚀", score: -38 },
-  { kind: "genuine", sx: 1.15, start: 3, end: 7, user: "u/sre_dana", body: "Scope cache keys per branch. We use Cachefly CI for it.", score: 214 },
+  { kind: "promo", sx: -1.15, y: BASE_Y, start: 3, end: 0, user: "u/cachefly_hq", body: "Check out Cachefly CI!!! 🚀", score: -38 },
+  { kind: "genuine", sx: 1.15, y: BASE_Y + 0.3, start: 3, end: 7, user: "u/sre_dana", body: "Scope cache keys per branch. We use Cachefly CI for it.", score: 214 },
 ] as const;
 const REPLIES = [
   { text: "+1, we use this too", at: 9.0 },
@@ -340,7 +340,7 @@ function ThreadScene() {
         <VoteColumn key={c.kind} {...c} />
       ))}
       {REPLIES.map((r, i) => (
-        <ReplyChip key={r.text} {...r} position={xyz(at(1.0, BASE_Y - 0.42 - i * 0.36, 0.5))} />
+        <ReplyChip key={r.text} {...r} position={xyz(at(1.0, BASE_Y - 0.08 - i * 0.36, 0.5))} />
       ))}
     </group>
   );
@@ -357,7 +357,7 @@ function ReplyChip({ text, at: when, position }: { text: string; at: number; pos
   );
 }
 
-function VoteColumn({ kind, sx, start, end, user, body, score }: (typeof COMMENTS)[number]) {
+function VoteColumn({ kind, sx, y, start, end, user, body, score }: (typeof COMMENTS)[number]) {
   const good = kind === "genuine";
   const t = useStory();
   const g = useGreen();
@@ -396,7 +396,7 @@ function VoteColumn({ kind, sx, start, end, user, body, score }: (typeof COMMENT
   });
 
   return (
-    <group position={at(sx, BASE_Y)}>
+    <group position={at(sx, y)}>
       <mesh>
         <boxGeometry args={[0.9, 0.06, 0.9]} />
         <Dither level={0.7} />
@@ -468,7 +468,7 @@ function ReachScene() {
         <Crowd key={f.label} {...f} />
       ))}
       {QUESTIONS.map((q, i) => (
-        <ReplyChip key={q.text} text={q.text} at={q.at} position={xyz(at(1.1, FIELD_Y - 0.75 - i * 0.36, 0.5))} />
+        <ReplyChip key={q.text} text={q.text} at={q.at} position={xyz(at(1.1, FIELD_Y - 0.35 - i * 0.36, 0.5))} />
       ))}
     </group>
   );
