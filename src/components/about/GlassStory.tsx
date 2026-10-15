@@ -10,10 +10,11 @@ const STATEMENT =
 const WORDS = STATEMENT.split(" ");
 
 // Where each beat of the scroll lands (0 → 1 across the pinned stage). GlassMark uses the same timeline.
+const LOCK = 0.44; // halves fully joined
 const REVEAL_FROM = 0.62;
 const REVEAL_TO = 0.94;
 
-// "Why Devable exists" as a pinned, scroll-driven stage on near-black (the site's dark band):
+// "Why Devable exists" as a pinned, scroll-driven stage on warm charcoal (#1a1918):
 // 1. Two glass halves of the Devable "D", one mirrored, glide in bar by bar and lock into one lens:
 //    product and audience, understood together.
 // 2. The lens splits; the halves swing out to frame the screen.
@@ -22,6 +23,11 @@ const REVEAL_TO = 0.94;
 export default function GlassStory() {
   const track = useRef<HTMLElement>(null);
   const progress = useRef(0);
+  // The glass's own timeline, which starts at the top of the page rather than when the stage pins: 0 at
+  // load (halves parked small in the visible strip of the band), 1 once they've locked (pinned, p = LOCK).
+  const approach = useRef(0);
+  // How much of the viewport the band fills at load (0..1), so the parked halves sit inside that strip.
+  const reveal = useRef(0.3);
   const [onScreen, setOnScreen] = useState(false);
 
   useEffect(() => {
@@ -33,6 +39,9 @@ export default function GlassStory() {
       const p = Math.min(1, Math.max(0, -rect.top / total));
       progress.current = p;
       el.style.setProperty("--p", p.toFixed(4));
+      const top = rect.top + window.scrollY;
+      approach.current = Math.min(1, Math.max(0, window.scrollY / (top + LOCK * total)));
+      reveal.current = Math.min(1, Math.max(0.2, 1 - top / window.innerHeight));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -53,11 +62,11 @@ export default function GlassStory() {
       ref={track}
       aria-labelledby="why-devable-title"
       style={{ "--p": 0 } as CSSProperties}
-      className="relative h-[340svh] bg-[#0b0b0b] text-white"
+      className="relative h-[340svh] bg-[#1a1918] text-white"
     >
       <div className="sticky top-0 h-svh overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          {onScreen && <GlassMark progress={progress} />}
+          {onScreen && <GlassMark progress={progress} approach={approach} reveal={reveal} />}
         </div>
 
         {/* Beat 1: the premise, under the forming lens; it steps aside as the lens splits. */}

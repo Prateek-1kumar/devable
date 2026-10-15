@@ -6,7 +6,7 @@ const RISE = "animate-fade-up motion-reduce:animate-none";
 
 export default function AboutHero() {
   return (
-    <section className="px-6 pt-40 pb-24 sm:px-12 sm:pt-48 sm:pb-32 xl:px-[6vw]">
+    <section className="px-6 pt-32 pb-14 sm:px-12 sm:pt-32 sm:pb-14 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <p className={`flex items-center gap-2.5 text-sm font-medium tracking-[0.14em] text-muted uppercase ${RISE}`}>
           <span aria-hidden="true" className="size-2 rounded-[2px] bg-primary" />
@@ -22,7 +22,7 @@ export default function AboutHero() {
           </span>
         </h1>
 
-        <div style={{ animationDelay: "320ms" }} className={`mt-12 lg:mt-16 lg:ml-[58%] ${RISE}`}>
+        <div style={{ animationDelay: "320ms" }} className={`mt-10 lg:mt-12 lg:ml-[58%] ${RISE}`}>
           <p className="max-w-[28rem] text-lg leading-relaxed tracking-[-0.01em] text-ink/70 sm:text-xl">
             Engineers, technical writers, creators, and growth operators under one roof, helping AI&#8209;native and
             technical companies reach the people who matter.
