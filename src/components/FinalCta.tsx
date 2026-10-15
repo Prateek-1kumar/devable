@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ArcButton from "./ArcButton";
+import DotButton from "./DotButton";
 
 const TITLE = "Developers are already searching.";
 const SUBTITLE = "Let's make sure they find you.";
@@ -61,9 +62,9 @@ export default function FinalCta() {
           style={{ animationDelay: "300ms" }}
           className={`flex w-full flex-col gap-3 lg:max-w-[20rem] lg:justify-self-end ${reveal}`}
         >
-          <ArcButton href="#contact" tone="light" arrow className="w-full">
+          <DotButton href="#contact" className="w-full">
             Speak with the team
-          </ArcButton>
+          </DotButton>
           <ArcButton href="#case-studies" tone="white" className="w-full">
             View case studies
           </ArcButton>

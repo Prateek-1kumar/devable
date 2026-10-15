@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 // Rectangular button with small border radius.
-// Black primary: a plain fill with an inline arrow; on hover it eases to a soft mint with ink text and the
+// Black primary: a plain fill with an inline arrow; on hover it eases to a primary green with ink text and the
 // arrow nudges right. The light and outline tones on dark sections keep the icon-box slide when given an
 // arrow. Shape and size never change.
 const EASE =
@@ -11,9 +11,9 @@ const GROW =
   "ease-[cubic-bezier(0.65,0,0.35,1)] duration-500 motion-reduce:duration-0";
 
 const TONES = {
-  primary: `bg-black text-white shadow-sm hover:bg-[#c4ecd3] hover:text-ink focus-visible:bg-[#c4ecd3] focus-visible:text-ink ${EASE}`,
-  accent: `bg-black text-white shadow-sm hover:bg-[#c4ecd3] hover:text-ink focus-visible:bg-[#c4ecd3] focus-visible:text-ink ${EASE}`,
-  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-[#c4ecd3] hover:bg-[#c4ecd3] focus-visible:border-[#c4ecd3] focus-visible:bg-[#c4ecd3] ${EASE}`,
+  primary: `bg-black text-white shadow-sm hover:bg-primary hover:text-ink focus-visible:bg-primary focus-visible:text-ink ${EASE}`,
+  accent: `bg-black text-white shadow-sm hover:bg-primary hover:text-ink focus-visible:bg-primary focus-visible:text-ink ${EASE}`,
+  secondary: `bg-white text-black border border-black/15 shadow-sm hover:border-primary hover:bg-primary focus-visible:border-primary focus-visible:bg-primary ${EASE}`,
   orange: "bg-secondary text-white",
   // For dark sections: a white button, and a quiet outline.
   light: `bg-white text-black hover:bg-primary focus-visible:bg-primary ${EASE}`,
@@ -85,7 +85,7 @@ function IconSlide({
           full button on hover, so the black text is revealed exactly where the green has reached. */}
       <span
         aria-hidden="true"
-        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-ink transition-[clip-path,background-color] group-hover:bg-[#c4ecd3] group-focus-visible:bg-[#c4ecd3] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
+        className={`absolute inset-0 inline-flex items-center justify-center bg-primary text-ink transition-[clip-path,background-color] ${GROW} ${pad} ${clip} group-hover:[clip-path:inset(0_0_0_0_round_6px)] group-focus-visible:[clip-path:inset(0_0_0_0_round_6px)]`}
       >
         {children}
       </span>

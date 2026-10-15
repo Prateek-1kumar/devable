@@ -91,6 +91,14 @@
   @keyframes pill-ink {
     from { color: var(--foreground); }
   }
+
+  /* Dot-chevron row on the DotButton hover: a brightness wave marching left to right. */
+  --animate-dot-wave: dot-wave 1.4s ease-in-out infinite;
+
+  @keyframes dot-wave {
+    0%, 100% { opacity: 0.25; }
+    30% { opacity: 1; }
+  }
 }
 
 body {
