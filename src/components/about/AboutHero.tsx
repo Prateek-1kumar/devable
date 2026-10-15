@@ -8,10 +8,6 @@ export default function AboutHero() {
   return (
     <section className="px-6 pt-32 pb-14 sm:px-12 sm:pt-32 sm:pb-14 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
-        <p className={`flex items-center gap-2.5 text-sm font-medium tracking-[0.14em] text-muted uppercase ${RISE}`}>
-          <span aria-hidden="true" className="size-2 rounded-[2px] bg-primary" />
-          About Devable
-        </p>
 
         <h1 className="mt-8 text-[clamp(2.5rem,5.2vw,5.25rem)] leading-[0.98] font-medium tracking-[-0.055em] text-ink">
           <span style={{ animationDelay: "80ms" }} className={`block text-ink/30 ${RISE}`}>

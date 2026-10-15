@@ -77,10 +77,6 @@ export default function GlassStory() {
             transform: "translateY(calc(clamp(0, (var(--p) - 0.45) * 9, 1) * -1.5rem))",
           }}
         >
-          <p className="flex items-center justify-center gap-2.5 text-xs font-medium tracking-[0.18em] text-white/45 uppercase">
-            <span aria-hidden="true" className="size-1.5 rounded-[2px] bg-primary" />
-            Why Devable exists
-          </p>
           <h2
             id="why-devable-title"
             className="mx-auto mt-4 max-w-[22ch] text-[clamp(1.6rem,3vw,2.6rem)] leading-[1.08] font-medium tracking-[-0.04em]"
