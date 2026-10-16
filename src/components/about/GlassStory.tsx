@@ -65,7 +65,8 @@ export default function GlassStory() {
       className="relative h-[340svh] bg-[#1a1918] text-white"
     >
       <div className="sticky top-0 h-svh overflow-hidden">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        {/* Above the text: the bars are solid, so they occlude the copy as they sweep past it. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
           {onScreen && <GlassMark progress={progress} approach={approach} reveal={reveal} />}
         </div>
 

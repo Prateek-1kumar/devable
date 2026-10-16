@@ -21,6 +21,7 @@ const LINKS: NavItem[] = [
   { name: "Case Studies", link: "#case-studies" },
   { name: "Resources", link: "#resources", dropdown: true },
   { name: "Company", link: "#company", dropdown: true },
+  { name: "About Us", link: "/about" },
 ];
 
 function Logo() {

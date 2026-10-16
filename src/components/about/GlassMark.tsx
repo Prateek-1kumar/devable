@@ -5,35 +5,60 @@ import { BackSide, ExtrudeGeometry, Group, Shape } from "three";
 
 // The Devable mark is a "D" of four stacked bars with a rounded right edge. Here each bar is a slab of
 // glass; one D and its mirror image meet flat-side to flat-side and become a single symmetrical lens.
-// Shape units: the D is 2 tall (y −1..1), flat edge at x = 0, widest point at x = FLAT + BULGE.
+// Shape units: the D is 2 tall (y −1..1), flat edge at x = 0. As in the brand mark it's a rectangle W wide
+// whose two right corners are rounded with a big radius RC, so the middle of the right side runs straight.
 const BARS = 4;
 const GAP = 0.12;
 const BAR_H = (2 - GAP * (BARS - 1)) / BARS;
-const FLAT = 0.9;
-const BULGE = 1.1;
+const W = 2;
+const RC = 0.85;
+const FILLET = 0.06; // small, so each bar end follows the D outline (crisp like the mark); must stay > BEVEL or the bevel pinches
+const BEVEL = 0.05; // how far the pillowy bevel rolls in from the outline
 const DEPTH = 0.14; // the flat core; the pillowy bevels add ~0.36 more
 
-const edgeX = (y: number) => FLAT + BULGE * Math.sqrt(Math.max(0, 1 - y * y));
+// Right edge of the D shrunk inward by `r`: still a rounded rectangle, just smaller.
+const edgeX = (y: number, r: number) => {
+  const rc = RC - r;
+  const dy = Math.max(0, Math.abs(y) - (1 - r - rc));
+  return W - r - rc + Math.sqrt(Math.max(0, rc * rc - dy * dy));
+};
 
 function barGeometry(i: number) {
   const top = 1 - i * (BAR_H + GAP);
   const bottom = top - BAR_H;
-  // Where a bar's straight edge meets the curve the corner is acute, and a bevel there spikes; round
-  // those two corners off with a short curve (R long) so the bevel flows round them.
-  const R = 0.3;
-  const arc = Array.from({ length: 49 }, (_, k) => bottom + (BAR_H * k) / 48).map((y) => [edgeX(y), y] as const);
-  const dist = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-  const first = arc.findIndex((pt) => dist(pt, arc[0]) >= R);
-  const last = arc.findLastIndex((pt) => dist(pt, arc[arc.length - 1]) >= R);
-  const [x0, y0] = arc[0];
-  const [x1, y1] = arc[arc.length - 1];
+  // Each bar is (strip ∩ D) with every corner rounded by FILLET: shrink that convex region by FILLET, then
+  // grow it back by sweeping a FILLET-radius arc round each vertex. Exact, evenly round corners everywhere.
+  const r = FILLET;
+  const b = bottom + r;
+  const t = top - r;
+  const inner: [number, number][] = [[r, b]];
+  for (let k = 0; k <= 48; k++) {
+    const y = b + ((t - b) * k) / 48;
+    inner.push([edgeX(y, r), y]);
+  }
+  inner.push([r, t]);
+
+  const pts: [number, number][] = [];
+  const n = inner.length;
+  for (let k = 0; k < n; k++) {
+    const [px, py] = inner[(k + n - 1) % n];
+    const [x, y] = inner[k];
+    const [nx, ny] = inner[(k + 1) % n];
+    // Outward normals of the edges either side (polygon is counter-clockwise).
+    const a0 = Math.atan2(-(x - px), y - py);
+    let a1 = Math.atan2(-(nx - x), ny - y);
+    if (a1 < a0) a1 += Math.PI * 2;
+    const steps = Math.max(1, Math.ceil((a1 - a0) / (Math.PI / 32)));
+    for (let s = 0; s <= steps; s++) {
+      const a = a0 + ((a1 - a0) * s) / steps;
+      const p: [number, number] = [x + r * Math.cos(a), y + r * Math.sin(a)];
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) > 1e-4) pts.push(p);
+    }
+  }
   const s = new Shape();
-  s.moveTo(0, bottom);
-  s.lineTo(x0 - R, y0);
-  s.quadraticCurveTo(x0, y0, arc[first][0], arc[first][1]);
-  for (let k = first + 1; k <= last; k++) s.lineTo(arc[k][0], arc[k][1]);
-  s.quadraticCurveTo(x1, y1, x1 - R, y1);
-  s.lineTo(0, top);
+  s.moveTo(...pts[0]);
+  pts.slice(1).forEach((p) => s.lineTo(...p));
   s.closePath();
   // Soft, pillowy bevels: deep and wide, inset by their own size (bevelOffset) so the bar keeps the mark's
   // outline and gaps. All that curvature is what catches light the whole way round, like poured glass.
@@ -41,8 +66,8 @@ function barGeometry(i: number) {
     depth: DEPTH,
     bevelEnabled: true,
     bevelThickness: 0.18,
-    bevelSize: 0.1,
-    bevelOffset: -0.1,
+    bevelSize: BEVEL,
+    bevelOffset: -BEVEL,
     bevelSegments: 14,
     curveSegments: 32,
   });
@@ -62,8 +87,6 @@ const SPLIT_LEN = 0.2;
 const TURN = 0.75; // how far each half is turned inward while apart (radians)
 
 type Progress = RefObject<number>;
-
-const BG = "#1a1918"; // matches the section behind the canvas
 
 type Timelines = { progress: Progress; approach: Progress; reveal: Progress };
 type HalfProps = Timelines & { side: 1 | -1; geometries: ExtrudeGeometry[] };
@@ -107,18 +130,13 @@ function Half({ side, progress, approach, reveal, geometries }: HalfProps) {
         {geometries.map((g, i) => (
           <group key={i} ref={(el) => void (bars.current[i] = el)}>
             <mesh geometry={g}>
-              {/* Satin frosted glass, in keeping with the site's matte, neutral palette: mostly transmissive but
-                  milky (rough), a little body colour so it reads on charcoal, and only soft sheen on the
-                  curves. No colour fringing, no hard glints. */}
+              {/* Solid, opaque satin with a clear lacquer on top: the softboxes glide over the pillowy
+                  bevels like on poured resin, but nothing behind shows through. */}
               <meshPhysicalMaterial
-                color="#f2f2f0"
-                transmission={0.55}
-                roughness={0.38}
-                thickness={1.2}
-                ior={1.42}
-                attenuationColor="#d8d7d3"
-                attenuationDistance={4}
-                specularIntensity={0.45}
+                color="#e8e7e3"
+                roughness={0.32}
+                clearcoat={1}
+                clearcoatRoughness={0.12}
                 envMapIntensity={1.5}
               />
             </mesh>
@@ -133,7 +151,6 @@ function Scene(timelines: Timelines) {
   const geometries = useMemo(() => Array.from({ length: BARS }, (_, i) => barGeometry(i)), []);
   return (
     <>
-      <color attach="background" args={[BG]} />
       <Half side={1} {...timelines} geometries={geometries} />
       <Half side={-1} {...timelines} geometries={geometries} />
       <Studio />
