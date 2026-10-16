@@ -12,7 +12,7 @@ const PRINCIPLES = [
 
 // "How we work" as a pinned stage on the same charcoal as the glass story, inset like that band's exit.
 // Scrolling steps through four principles on a numbered rail: the active one lights up and opens to a
-// single line and a live drawing of the idea; the rest wait in grey.
+// single line and a looping drawing of the idea; the marker glides down the rail from step to step.
 export default function Principles() {
   const track = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
@@ -40,9 +40,10 @@ export default function Principles() {
       aria-labelledby="how-we-work-title"
       className="relative mx-[2.5vw] mb-[2.5vw] h-[400svh] rounded-[1.25rem] bg-[#1a1918] text-white"
     >
-      <div className="sticky top-0 flex h-svh items-center px-6 pt-20 sm:px-12 xl:px-[6vw]">
+      <div className="@container sticky top-0 flex h-svh items-center px-6 pt-20 sm:px-12 xl:px-[6vw]">
         <div className="mx-auto grid w-full max-w-[76rem] gap-10 lg:grid-cols-12">
-          <header className="lg:col-span-4">
+          {/* Out to the stage's left padding, past the centred grid; the rail and steps stay put. */}
+          <header className="lg:col-span-4 lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
             <h2
               id="how-we-work-title"
               className="w-fit rounded-[4px] bg-white/10 px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-white/80 uppercase"
@@ -55,28 +56,27 @@ export default function Principles() {
           </header>
 
           <ol
-            style={{ "--t": "clamp(2.3rem, 4.4vw, 4.25rem)" } as CSSProperties}
-            className="lg:col-span-8"
+            style={{ "--t": "clamp(2.3rem, 4.4vw, 4.25rem)", "--i": active } as CSSProperties}
+            className="relative lg:col-span-8"
           >
+            {/* The marker, one for the whole rail. Rows above the active one are collapsed to a title line, so
+                the active title sits at i title lines down; the marker glides there in step with the rows. */}
+            <span
+              aria-hidden="true"
+              className="absolute top-[calc(var(--t)*1.08*var(--i)+var(--t)*0.54)] right-[calc(100%+1rem)] hidden -translate-y-1/2 items-center transition-[top] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex"
+            >
+              <span className="grid size-6 place-items-center rounded-[4px] bg-primary">
+                <span className="size-1.5 rounded-full bg-ink" />
+              </span>
+              <span className="h-px w-[clamp(3rem,7vw,8rem)] bg-primary/60" />
+            </span>
             {PRINCIPLES.map(({ title, line, Visual }, i) => {
               const on = i === active;
               return (
                 <li key={title} aria-current={on ? "step" : undefined} className="grid grid-cols-[2rem_1px_1fr] gap-x-5 sm:gap-x-10">
-                  {/* Number, with the marker sliding in beside the active one. */}
-                  <div className="relative flex h-[calc(var(--t)*1.08)] items-center font-mono text-sm">
+                  <div className="flex h-[calc(var(--t)*1.08)] items-center font-mono text-sm">
                     <span className={`transition-colors duration-500 ${on ? "text-white" : "text-white/35"}`}>
                       {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className={`absolute right-[calc(100%+1rem)] hidden items-center transition-[opacity,translate] duration-500 lg:flex ${
-                        on ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0"
-                      }`}
-                    >
-                      <span className="grid size-6 place-items-center rounded-[4px] bg-primary">
-                        <span className="size-1.5 rounded-full bg-ink" />
-                      </span>
-                      <span className="h-px w-[clamp(3rem,7vw,8rem)] bg-primary/60" />
                     </span>
                   </div>
 
@@ -111,7 +111,7 @@ export default function Principles() {
                       <div className="overflow-hidden">
                         <p className="mt-3 max-w-[30rem] text-[1.05rem] leading-relaxed text-white/70 sm:text-lg">{line}</p>
                         <div className="mt-6 mb-10 h-[min(12rem,22svh)] max-w-[30rem]">
-                          {/* Remounted on activation so the drawing plays its story from the start. */}
+                          {/* Remounted on activation so the drawing starts its story from the top. */}
                           <Visual key={String(on)} />
                         </div>
                       </div>
