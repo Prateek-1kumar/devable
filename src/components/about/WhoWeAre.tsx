@@ -1,10 +1,11 @@
 // "Who we are", back on paper after the dark story band: a small label on the left, the claim and the
-// story stepped in on the right, on the same grid as AboutHero.
+// story stepped in on the right, on the same grid as AboutHero. The label lines up with the "How we work"
+// label below it (that stage's left padding, inset 2.5vw).
 export default function WhoWeAre() {
   return (
-    <section aria-labelledby="who-we-are-title" className="px-6 py-28 sm:px-12 sm:py-36 xl:px-[6vw]">
+    <section aria-labelledby="who-we-are-title" className="@container px-6 py-28 sm:px-12 sm:py-36 xl:px-[6vw]">
       <div className="mx-auto grid max-w-[76rem] gap-10 lg:grid-cols-12">
-        <p className="self-start justify-self-start rounded-[4px] bg-ink/[0.06] px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-ink/80 uppercase lg:col-span-5">
+        <p className="self-start justify-self-start lg:ml-[calc(min(0px,(76rem-100cqw)/2)+2.5vw)] rounded-[4px] bg-ink/[0.06] px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-ink/80 uppercase lg:col-span-5">
           Who we are
         </p>
 
