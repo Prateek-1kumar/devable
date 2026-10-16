@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import AboutHero from "@/components/about/AboutHero";
 import GlassStory from "@/components/about/GlassStory";
+import WhoWeAre from "@/components/about/WhoWeAre";
+import Principles from "@/components/about/Principles";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
@@ -14,6 +16,8 @@ export default function About() {
     <main className="overflow-x-clip">
       <AboutHero />
       <GlassStory />
+      <WhoWeAre />
+      <Principles />
       <Footer />
     </main>
   );

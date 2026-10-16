@@ -42,6 +42,10 @@ export default function GlassStory() {
       const top = rect.top + window.scrollY;
       approach.current = Math.min(1, Math.max(0, window.scrollY / (top + LOCK * total)));
       reveal.current = Math.min(1, Math.max(0.2, 1 - top / window.innerHeight));
+      // Leaving: as the band's bottom rises from the viewport's foot to its middle, the paper creeps in
+      // from the sides and the band's corners round off.
+      const out = Math.min(1, Math.max(0, 2 - (2 * rect.bottom) / window.innerHeight));
+      el.style.setProperty("--out", out.toFixed(4));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -61,7 +65,13 @@ export default function GlassStory() {
     <section
       ref={track}
       aria-labelledby="why-devable-title"
-      style={{ "--p": 0 } as CSSProperties}
+      style={
+        {
+          "--p": 0,
+          "--out": 0,
+          clipPath: "inset(0 calc(var(--out) * 2.5vw) 0 round 0 0 calc(var(--out) * 1.25rem) calc(var(--out) * 1.25rem))",
+        } as CSSProperties
+      }
       className="relative h-[340svh] bg-[#1a1918] text-white"
     >
       <div className="sticky top-0 h-svh overflow-hidden">
