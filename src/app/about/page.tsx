@@ -4,6 +4,7 @@ import GlassStory from "@/components/about/GlassStory";
 import WhoWeAre from "@/components/about/WhoWeAre";
 import Founder from "@/components/about/Founder";
 import Principles from "@/components/about/Principles";
+import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
@@ -20,6 +21,12 @@ export default function About() {
       <WhoWeAre />
       <Founder />
       <Principles />
+      <FinalCta
+        title="Build with a team that understands what you are building."
+        subtitle=""
+        body=""
+        caseStudiesHref="/#case-studies"
+      />
       <Footer />
     </main>
   );
