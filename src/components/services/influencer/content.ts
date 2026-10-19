@@ -45,6 +45,69 @@ export const LAUNCH = {
   impressions: 1_840_000,
 };
 
+// The hero's post stack: one launch, as it showed up on each channel. SAMPLE posts and numbers.
+export type HeroPost =
+  | { kind: "x"; creator: number; time: string; text: string; replies: string; reposts: string; likes: string; views: string; reach: number }
+  | {
+      kind: "linkedin";
+      creator: number;
+      headline: string;
+      time: string;
+      text: string;
+      link: { domain: string; title: string };
+      reactions: string;
+      comments: string;
+      reach: number;
+    }
+  | { kind: "youtube"; creator: number; title: string; thumb: string; duration: string; views: string; time: string; reach: number }
+  | { kind: "newsletter"; creator: number; name: string; issue: string; subject: string; preview: string; readers: string; opened: string; reach: number };
+
+export const HERO_POSTS: HeroPost[] = [
+  {
+    kind: "x",
+    creator: 1,
+    time: "2h",
+    text: "If you ship LLM agents without simulations, you're testing in prod. LangWatch Scenarios runs thousands of real conversations before release.",
+    replies: "184",
+    reposts: "1.2K",
+    likes: "6.8K",
+    views: "530K",
+    reach: 530_000,
+  },
+  {
+    kind: "linkedin",
+    creator: 3,
+    headline: "Head of AI Platform · Building agents in production",
+    time: "5h",
+    text: "We finally have a sane way to test agents before they reach customers. Here's how we wired LangWatch into our CI in an afternoon.",
+    link: { domain: "langwatch.ai", title: "Agent simulations: test every conversation before you ship" },
+    reactions: "2,184",
+    comments: "126 comments · 58 reposts",
+    reach: 286_000,
+  },
+  {
+    kind: "youtube",
+    creator: 6,
+    title: "I stress-tested my AI agent with 1,000 simulated users",
+    thumb: "1,000 users. One agent.",
+    duration: "14:32",
+    views: "412K views",
+    time: "3 days ago",
+    reach: 412_000,
+  },
+  {
+    kind: "newsletter",
+    creator: 0,
+    name: "AI Engineering Weekly",
+    issue: "Issue #118",
+    subject: "Evals were the bottleneck. Simulations fixed it.",
+    preview: "This week: why agent teams are moving from static eval sets to simulated users, and the tool we keep reaching for.",
+    readers: "94K readers",
+    opened: "61% opened",
+    reach: 94_000,
+  },
+];
+
 export const LOGOS = [
   { src: "/clients/glean.svg", alt: "Glean", h: 30 },
   { src: "/clients/webai.svg", alt: "webAI", h: 24 },

@@ -59,9 +59,9 @@ export const PLATFORM_NAME: Record<Platform, string> = {
   newsletter: "Newsletters",
 };
 
-export function PlatformIcon({ platform, className = "size-4" }: { platform: Platform; className?: string }) {
+export function PlatformIcon({ platform, className = "size-4", style }: { platform: Platform; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={`shrink-0 fill-current ${className}`}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`shrink-0 fill-current ${className}`} style={style}>
       {PATHS[platform]}
     </svg>
   );

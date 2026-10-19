@@ -225,21 +225,37 @@ export function Box({
 }
 
 /**
- * A label pinned to a point in the scene but always facing the reader (it undoes the floor's tilt), so it
- * stays upright and easy to read however the scene is drawn. Its bottom-left corner sits on the point.
+ * Anything pinned to a point in the scene but always facing the reader (it undoes the floor's tilt), so
+ * faces and labels stay upright and undistorted. Its bottom edge sits on the point; `center` centres it
+ * horizontally on the point instead of starting there.
  */
-export function Flag({ x, y, z = 0, children, tone, style }: Place & { tone?: string }) {
-  const t = useIsoTheme();
+export function Billboard({ x, y, z = 0, center = false, className = "", style, children }: Place & { center?: boolean }) {
   const { wrap, look } = split(style);
   return (
     <At x={x} y={y} z={z} style={wrap}>
       <div
-        className={`absolute bottom-0 left-0 flex items-center gap-2 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10.5px] leading-none tracking-[0.08em] whitespace-nowrap uppercase ${tone ?? t.flag}`}
-        style={{ transformOrigin: "bottom left", transform: "rotateZ(45deg) rotateX(-60deg)", ...look }}
+        className={`absolute bottom-0 left-0 ${className}`}
+        style={{ transformOrigin: "bottom left", transform: `rotateZ(45deg) rotateX(-60deg)${center ? " translateX(-50%)" : ""}`, ...look }}
       >
-        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
         {children}
       </div>
     </At>
+  );
+}
+
+/** A label: a small upright tag with a green dot, in the site's monospace label style. */
+export function Flag({ x, y, z = 0, children, tone, style }: Place & { tone?: string }) {
+  const t = useIsoTheme();
+  return (
+    <Billboard
+      x={x}
+      y={y}
+      z={z}
+      style={style}
+      className={`flex items-center gap-2 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10.5px] leading-none tracking-[0.08em] whitespace-nowrap uppercase ${tone ?? t.flag}`}
+    >
+      <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+      {children}
+    </Billboard>
   );
 }
