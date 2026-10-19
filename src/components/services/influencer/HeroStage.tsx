@@ -3,10 +3,10 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { At, Billboard, Box, IsoScene, Panel } from "../iso";
 import { PLATFORM_COLOR, PlatformIcon, type Platform } from "../kit";
-import { CREATORS, HERO_POSTS, LAUNCH, type HeroPost } from "./content";
+import { CREATORS, HERO_POSTS, type HeroPost } from "./content";
 
 // The hero visual, "one launch, everywhere", on the page's light isometric floor: the launch sits at the
-// center as a glowing pad; one after another a pulse runs out across the floor and a creator's post rises
+// center as a glowing Devable pad; one after another a pulse runs out across the floor and a creator's post rises
 // above it (X, LinkedIn, YouTube, a newsletter), tethered to the floor by a stem of light, with its views.
 // The launch's reach totals up above the pad. The posts are billboards (they face the reader), so they
 // stay crisp; one clock drives everything, with no CSS transitions on driven values, so it's smooth.
@@ -122,8 +122,8 @@ export default function HeroStage() {
         {/* The launch pad: a low block with the product on it and a green rim when it's live. */}
         <Box x={PAD.x} y={PAD.y} w={PAD.size} d={PAD.size} h={16} top="#ffffff" front="#d9e7dd" side="#c3d6c8" style={still}>
           <div className="grid size-full place-items-center" style={{ boxShadow: `inset 0 0 0 ${2 + 2 * pad}px rgb(25 231 110 / ${pad})` }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- sample product logo */}
-            <img src={LAUNCH.company.logo} alt="" className="w-[64%]" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- static brand logo */}
+            <img src="/brand/devable-logo.png" alt="" className="w-[70%]" />
           </div>
         </Box>
 
