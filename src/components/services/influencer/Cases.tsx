@@ -2,13 +2,13 @@ import { Label } from "../kit";
 import { CASES, type Case } from "./content";
 
 // Case studies, led by their numbers: each card puts the outcome headline and the story on the left and a
-// tall column of big stats on the right, with the client's quote (when there is one) under the story.
+// column of stat rows on the right (big number left, label right), with the client's quote under the story.
 export default function Cases() {
   return (
     <section id="case-studies" aria-labelledby="cases-title" className="scroll-mt-24 px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{CASES.label}</Label>
-        <h2 id="cases-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
+        <h2 id="cases-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
           {CASES.title}
         </h2>
         <div className="mt-14 space-y-5">
@@ -23,7 +23,7 @@ export default function Cases() {
 
 function CaseCard({ study }: { study: Case }) {
   return (
-    <article className="grid overflow-hidden rounded-2xl border border-line bg-white lg:grid-cols-[1.5fr_1fr]">
+    <article className="grid overflow-hidden rounded-2xl border border-line bg-white lg:grid-cols-[minmax(0,1fr)_minmax(19rem,26rem)]">
       <div className="flex flex-col p-7 sm:p-10">
         <div className="flex items-center justify-between gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element -- static logo */}
@@ -50,12 +50,12 @@ function CaseCard({ study }: { study: Case }) {
         </a>
       </div>
 
-      <dl className="grid grid-cols-3 divide-x divide-line border-t border-line bg-[#f9f8f4] lg:grid-cols-1 lg:divide-x-0 lg:divide-y lg:border-t-0 lg:border-l">
+      {/* Each stat as a row: the number left, its label right on the same baseline, so the panel fills. */}
+      <dl className="grid divide-y divide-line border-t border-line bg-[#f9f8f4] lg:border-t-0 lg:border-l">
         {study.stats.map((s) => (
-          <div key={s.label} className="flex flex-col justify-center px-5 py-6 sm:px-8 lg:py-0">
-            <dt className="sr-only">{s.label}</dt>
-            <dd className="text-[clamp(1.75rem,3.4vw,3rem)] leading-none font-medium tracking-[-0.05em] text-ink tabular-nums">{s.value}</dd>
-            <dd className="mt-2 text-[0.85rem] text-ink/55">{s.label}</dd>
+          <div key={s.label} className="flex items-baseline justify-between gap-6 px-7 py-6 sm:px-9 lg:items-center lg:py-0">
+            <dt className="order-last max-w-[9rem] text-right text-[0.85rem] leading-snug text-ink/55">{s.label}</dt>
+            <dd className="text-[clamp(2rem,3.2vw,2.9rem)] leading-none font-medium tracking-[-0.05em] text-ink tabular-nums">{s.value}</dd>
           </div>
         ))}
       </dl>

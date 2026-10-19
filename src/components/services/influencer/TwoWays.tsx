@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import NumberFlow from "@number-flow/react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import ArcButton from "../../ArcButton";
 import { At, Box, Flag, IsoScene, Panel, Tile } from "../iso";
 import { Label, PlatformIcon, useInView, type Platform } from "../kit";
@@ -54,22 +55,38 @@ export default function TwoWays() {
   );
 }
 
-// Launch: one post at the center, creators' posts landing all around it at once, wired back to it.
+// Launch: one post at the center; creators' posts land around it one after another, each wired back to
+// it, while its view count climbs. The full picture holds for a moment, clears, and the launch plays again.
 const AROUND: [number, number][] = [
+  [45, 140],
+  [360, 245],
   [40, 250],
+  [320, 360],
   [70, 365],
   [200, 405],
-  [320, 360],
-  [360, 245],
-  [45, 140],
 ];
+const LAND_MS = 650;
+const CYCLE = AROUND.length + 5; // land each post, hold for a few beats, then one beat cleared
 
 function LaunchScene({ on }: { on: boolean }) {
+  const [beat, setBeat] = useState(0);
+  const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
+  useEffect(() => {
+    if (!on || still) return;
+    const id = setInterval(() => setBeat((b) => (b + 1) % CYCLE), LAND_MS);
+    return () => clearInterval(id);
+  }, [on, still]);
+
+  const cleared = beat === CYCLE - 1;
+  const landed = !on ? 0 : still ? AROUND.length : cleared ? 0 : Math.min(beat + 1, AROUND.length);
+  const views = 18_000 + landed * 71_000;
+
   return (
-    <IsoScene w={560} h={300} floor={520} shift={[-20, 20]} className="w-full">
-      <At x={120} y={120}>
+    <IsoScene w={560} h={300} floor={520} shift={[-20, 25]} className="w-full">
+      <At x={110} y={112}>
         <div
-          className={`size-[300px] rounded-full bg-[radial-gradient(closest-side,rgb(25_231_110/0.4),transparent)] transition-opacity duration-1000 ${on ? "opacity-100" : "opacity-0"}`}
+          className="size-[320px] rounded-full bg-[radial-gradient(closest-side,rgb(25_231_110/0.42),transparent)] transition-opacity duration-700"
+          style={{ opacity: on ? 0.35 + (0.65 * landed) / AROUND.length : 0 }}
         />
       </At>
       <At x={0} y={0}>
@@ -77,49 +94,65 @@ function LaunchScene({ on }: { on: boolean }) {
           {AROUND.map(([x, y], i) => (
             <path
               key={i}
-              d={`M${x + 40} ${y + 18} L 260 262`}
+              d={`M${x + 40} ${y + 18} L 262 264`}
               stroke="var(--primary)"
               strokeWidth={2}
               strokeDasharray="5 6"
-              style={{ opacity: on ? 1 : 0, transition: `opacity 500ms ${300 + i * 90}ms` }}
+              style={{ opacity: i < landed ? 1 : 0, transition: "opacity 400ms" }}
             />
           ))}
         </svg>
       </At>
-      <Panel x={205} y={262} w={110} h={130} className="flex flex-col gap-2 border border-ink/60 bg-white p-3">
+      <Panel x={200} y={264} w={124} h={148} className="flex flex-col gap-2 border border-ink/60 bg-white p-3">
         <span className="flex items-center gap-1.5">
           <span className="size-4 rounded-full bg-ink" />
           <span className="h-1.5 w-12 rounded-full bg-ink/25" />
         </span>
         <span className="h-1.5 w-full rounded-full bg-ink/15" />
         <span className="h-1.5 w-4/5 rounded-full bg-ink/15" />
-        <span className="mt-auto h-10 rounded-[3px] bg-primary/25" />
+        <span className="h-9 rounded-[3px] bg-primary/25" />
+        <span className="mt-auto flex items-end justify-between border-t border-ink/10 pt-1.5">
+          <span className="font-mono text-[7px] tracking-[0.1em] text-ink/50 uppercase">Views</span>
+          <span className="text-[15px] leading-none font-medium tracking-[-0.03em] text-ink tabular-nums">
+            <NumberFlow value={on ? views : 0} format={{ notation: "compact", maximumFractionDigits: 1 }} />
+          </span>
+        </span>
       </Panel>
-      <Flag x={205} y={262} z={142}>
+      <Flag x={200} y={264} z={160}>
         Launch day
       </Flag>
-      {AROUND.map(([x, y], i) => (
-        <Tile
-          key={i}
-          x={x}
-          y={y}
-          z={on ? 0 : 60}
-          w={80}
-          h={36}
-          style={{ opacity: on ? 1 : 0, transitionDelay: `${i * 90}ms` }}
-          className="flex items-center gap-1.5 border border-ink/60 bg-white px-2"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-          <img src={CREATORS[i].photo} alt="" className="size-5 rounded-full object-cover" />
-          <span className="flex flex-1 flex-col gap-1">
-            <span className="h-1 w-full rounded-full bg-ink/25" />
-            <span className="h-1 w-2/3 rounded-full bg-ink/15" />
-          </span>
-        </Tile>
-      ))}
+      {AROUND.map(([x, y], i) => {
+        const down = i < landed;
+        return (
+          <Tile
+            key={i}
+            x={x}
+            y={y}
+            z={down ? 0 : 46}
+            w={80}
+            h={36}
+            style={{ opacity: down ? 1 : 0 }}
+            className="flex items-center gap-1.5 border border-ink/60 bg-white px-2"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
+            <img src={CREATORS[i].photo} alt="" className="size-5 rounded-full object-cover" />
+            <span className="flex flex-1 flex-col gap-1">
+              <span className="h-1 w-full rounded-full bg-ink/25" />
+              <span className="h-1 w-2/3 rounded-full bg-ink/15" />
+            </span>
+          </Tile>
+        );
+      })}
     </IsoScene>
   );
 }
+
+const REDUCED = "(prefers-reduced-motion: reduce)";
+const subscribe = (onChange: () => void) => {
+  const mq = window.matchMedia(REDUCED);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+};
 
 // Ongoing: four channel blocks along a twelve-week track, a post dropping onto the track every beat.
 const CHANNELS: Platform[] = ["x", "linkedin", "youtube", "newsletter"];
@@ -162,7 +195,7 @@ function OngoingScene({ on }: { on: boolean }) {
       <Flag x={42} y={216} z={4} tone="border-ink/60 bg-white text-ink">
         Week 1
       </Flag>
-      <Flag x={420} y={216} z={4} tone="border-ink/60 bg-white text-ink">
+      <Flag x={430} y={210} z={4} tone="border-ink/60 bg-white text-ink">
         Week 12
       </Flag>
     </IsoScene>

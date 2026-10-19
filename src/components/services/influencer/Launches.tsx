@@ -26,7 +26,7 @@ export default function Launches() {
                 src={logo.src}
                 alt={i >= LOGOS.length ? "" : logo.alt}
                 style={{ height: logo.h }}
-                className="w-auto max-w-full object-contain opacity-60 grayscale"
+                className="w-auto max-w-full object-contain"
               />
             </li>
           ))}

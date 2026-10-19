@@ -15,15 +15,16 @@ const STEPS = PROCESS.steps.length;
 // per step, standing straight on the section's own floor, crossfading as steps change.
 export default function Process() {
   const track = useRef<HTMLElement>(null);
-  const [progress, setProgress] = useState(0);
-  const active = Math.min(STEPS - 1, Math.floor(progress * STEPS));
+  // Only the active step is state, so scrolling re-renders the stage once per step, not every frame.
+  const [active, setActive] = useState(0);
 
   useEffect(() => {
     const el = track.current;
     if (!el) return;
     const update = () => {
       const total = el.offsetHeight - window.innerHeight;
-      setProgress(Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total)));
+      const p = Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total));
+      setActive(Math.min(STEPS - 1, Math.floor(p * STEPS)));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
@@ -229,7 +230,7 @@ function NarrativeScene({ active }: SceneProps) {
               <span className="h-1.5 w-4/5 rounded-full bg-white/12" />
               <span className="h-1.5 w-3/5 rounded-full bg-white/12" />
             </Panel>
-            <Flag x={a.x} y={a.y} z={up ? 142 : 120} style={fade(up, 200)}>
+            <Flag x={a.x} y={a.y} z={142} style={fade(up, 200)}>
               {a.angle}
             </Flag>
           </Fragment>
@@ -239,44 +240,70 @@ function NarrativeScene({ active }: SceneProps) {
   );
 }
 
-// 03 · Launch week as one simple track: a marker moves along it and at each moment one creator's post
-// rises and lights up, labelled with its role and day.
-const MOMENTS = [
-  { c: 1, label: "Day 0 · Launch posts", x: 120 },
-  { c: 4, label: "Day 1 · Quote posts", x: 230 },
-  { c: 6, label: "Day 3 · Deep dives", x: 340 },
-  { c: 5, label: "Day 7 · Follow-ups", x: 450 },
+// 03 · We run it from the middle: a Devable hub with four creators around it. A pulse travels out to each
+// in turn (timing matters), and each lights up with its role and day as the pulse arrives. Everything is
+// derived from one clock with transitions off, so the pulses and the lighting stay in lockstep.
+const HUB = { x: 230, y: 230 };
+const ROLES = [
+  { c: 1, label: "Day 0 · Launch posts", x: 10, y: 390 },
+  { c: 4, label: "Day 1 · Quote posts", x: 180, y: 80 },
+  { c: 6, label: "Day 3 · Deep dives", x: 370, y: 130 },
+  { c: 5, label: "Day 7 · Follow-ups", x: 330, y: 420 },
 ];
-const TRACK = { x: 80, y: 300, len: 430 };
+const TRAVEL = 0.16; // share of the timeline a pulse spends travelling
+const still: CSSProperties = { transition: "none" };
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const ease = (v: number) => 1 - (1 - v) ** 3;
 
 function CoordinateScene({ active }: SceneProps) {
-  const t = usePlay(active, 3200);
-  const at = TRACK.x + t * TRACK.len;
+  const t = usePlay(active, 3600);
+  const hub = { x: HUB.x + 45, y: HUB.y + 45 }; // centre of the hub's top
   return (
-    <IsoScene {...SCENE} shift={[-10, -45]}>
-      <Pool x={300} y={280} size={460} />
-      <Tile x={TRACK.x} y={TRACK.y} w={TRACK.len} h={16} shadow={false} className="rounded-full bg-white/[0.08]" />
-      <Tile x={TRACK.x} y={TRACK.y} w={Math.max(16, t * TRACK.len)} h={16} shadow={false} className="rounded-full bg-primary/70" style={{ transition: "none" }} />
-      {MOMENTS.map((m) => {
-        const live = at >= m.x + 10;
+    <IsoScene w={540} h={430} floor={560} theme="dark" shift={[-50, 45]}>
+      <Pool x={hub.x} y={hub.y} size={480} />
+      <At x={0} y={0}>
+        <svg width={560} height={560} className="overflow-visible">
+          {ROLES.map((r, i) => {
+            const k = ease(clamp01((t - 0.08 - i * 0.2) / TRAVEL));
+            const end = { x: r.x + 40, y: r.y };
+            return (
+              <g key={i}>
+                <line x1={hub.x} y1={hub.y} x2={end.x} y2={end.y} stroke="rgb(255 255 255 / 0.12)" strokeWidth={2} strokeDasharray="4 6" />
+                <line x1={hub.x} y1={hub.y} x2={hub.x + (end.x - hub.x) * k} y2={hub.y + (end.y - hub.y) * k} stroke="var(--primary)" strokeWidth={2.5} />
+                {k > 0 && k < 1 && <circle cx={hub.x + (end.x - hub.x) * k} cy={hub.y + (end.y - hub.y) * k} r={6} fill="var(--primary)" />}
+              </g>
+            );
+          })}
+        </svg>
+      </At>
+      <Box x={HUB.x} y={HUB.y} w={90} d={90} h={58} top="#f2f1ec" front="#b9b8b2" side="#8f8e89">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
+        <img src="/brand/devable-mark.png" alt="" className="size-14 rounded-[8px]" />
+      </Box>
+      {ROLES.map((r, i) => {
+        const lit = clamp01((t - 0.08 - i * 0.2 - TRAVEL) / 0.06);
         return (
-          <Fragment key={m.label}>
+          <Fragment key={r.label}>
             <Panel
-              x={m.x - 32}
-              y={TRACK.y - 6}
-              z={live ? 0 : -16}
-              w={64}
-              h={82}
-              style={{ opacity: live ? 1 : 0.25 }}
-              className={`flex flex-col items-start gap-2 border p-2.5 transition-[border-color,box-shadow] duration-500 ${live ? `border-primary bg-[#262523] ${GLOW}` : "border-white/15 bg-[#232220]"}`}
+              x={r.x}
+              y={r.y}
+              z={lit * 10}
+              w={80}
+              h={100}
+              style={{ ...still, opacity: 0.3 + 0.7 * lit }}
+              className="flex flex-col gap-2 border border-white/15 bg-[#262523] p-3"
             >
+              <span
+                className="absolute inset-0 border border-primary shadow-[0_0_28px_rgb(25_231_110/0.4)]"
+                style={{ opacity: lit }}
+              />
               {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-              <img src={CREATORS[m.c].photo} alt="" className={`size-7 rounded-full object-cover ${live ? "" : "grayscale"}`} />
+              <img src={CREATORS[r.c].photo} alt="" className="size-9 rounded-full object-cover" style={{ filter: `grayscale(${1 - lit})` }} />
               <span className="h-1.5 w-full rounded-full bg-white/25" />
               <span className="h-1.5 w-2/3 rounded-full bg-white/12" />
             </Panel>
-            <Flag x={m.x - 20} y={TRACK.y + 52} style={{ opacity: live ? 1 : 0.35, transitionDelay: "150ms" }}>
-              {m.label}
+            <Flag x={r.x} y={r.y} z={118} style={{ ...still, opacity: 0.25 + 0.75 * lit }}>
+              {r.label}
             </Flag>
           </Fragment>
         );

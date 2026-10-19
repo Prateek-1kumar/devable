@@ -20,7 +20,7 @@ const THEMES = {
     shadow: "rgb(23 44 33 / 0.72)",
     edge: "1px solid rgb(23 44 33 / 0.55)",
     box: { top: "#ffffff", front: "#e4e9e5", side: "#c9d3cc" },
-    flag: "border-ink/60 bg-[#e7f9d9] text-ink",
+    flag: "border-ink/15 bg-white text-ink",
   },
   dark: {
     tone: "#1a1918",
@@ -28,7 +28,7 @@ const THEMES = {
     shadow: "rgb(0 0 0 / 0.55)",
     edge: "1px solid rgb(255 255 255 / 0.14)",
     box: { top: "#2c2b29", front: "#232220", side: "#1c1b19" },
-    flag: "border-primary/40 bg-[#14231a] text-primary",
+    flag: "border-white/12 bg-[#232220] text-white/85",
   },
 };
 type Theme = (typeof THEMES)["light"];
@@ -122,18 +122,33 @@ export function At({ x, y, z = 0, className = "", style, children }: Place) {
   );
 }
 
+/**
+ * Splits a piece's style: the 3D wrapper takes position and motion, the visible leaf takes the fade.
+ * Opacity below 1 on an element flattens its 3D subtree (CSS spec), so a fade on a wrapper lays standing
+ * panels and labels flat mid-fade and snaps them upright at the end. Fading the leaf keeps them upright.
+ */
+function split(style?: CSSProperties) {
+  const { opacity, transitionDelay, ...wrap } = style ?? {};
+  const look: CSSProperties =
+    opacity === undefined
+      ? {}
+      : { opacity, transition: wrap.transition === "none" ? "none" : `opacity 450ms ease-out ${transitionDelay ?? "0ms"}` };
+  return { wrap, look };
+}
+
 /** A flat card lying on the floor (or floating at z), with a hard shadow under it like the references. */
 export function Tile({ x, y, z = 0, w, h, shadow = true, className = "", style, children }: Place & { w: number; h: number; shadow?: boolean }) {
   const t = useIsoTheme();
+  const { wrap, look } = split(style);
   return (
     <>
       {shadow && (
-        <At x={x + 7} y={y + 7} style={{ opacity: style?.opacity }}>
-          <div className="rounded-[3px]" style={{ width: w, height: h, background: t.shadow }} />
+        <At x={x + 7} y={y + 7}>
+          <div className="rounded-[3px]" style={{ width: w, height: h, background: t.shadow, ...look }} />
         </At>
       )}
-      <At x={x} y={y} z={z + 1} style={style}>
-        <div className={`rounded-[3px] ${className}`} style={{ width: w, height: h }}>
+      <At x={x} y={y} z={z + 1} style={wrap}>
+        <div className={`rounded-[3px] ${className}`} style={{ width: w, height: h, ...look }}>
           {children}
         </div>
       </At>
@@ -144,17 +159,18 @@ export function Tile({ x, y, z = 0, w, h, shadow = true, className = "", style, 
 /** An upright panel standing on its bottom edge along x at (x, y), facing the viewer's lower right. */
 export function Panel({ x, y, z = 0, w, h, shadow = true, className = "", style, children }: Place & { w: number; h: number; shadow?: boolean }) {
   const t = useIsoTheme();
+  const { wrap, look } = split(style);
   return (
     <>
       {shadow && (
-        <At x={x + 4} y={y} style={{ opacity: style?.opacity }}>
-          <div style={{ width: w, height: 22, background: t.shadow }} />
+        <At x={x + 4} y={y}>
+          <div style={{ width: w, height: 22, background: t.shadow, ...look }} />
         </At>
       )}
-      <At x={x} y={y} z={z} style={style}>
+      <At x={x} y={y} z={z} style={wrap}>
         <div
           className={className}
-          style={{ position: "absolute", left: 0, top: -h, width: w, height: h, transformOrigin: "bottom", transform: "rotateX(-90deg)" }}
+          style={{ position: "absolute", left: 0, top: -h, width: w, height: h, transformOrigin: "bottom", transform: "rotateX(-90deg)", ...look }}
         >
           {children}
         </div>
@@ -180,6 +196,7 @@ export function Box({
   frontChildren,
 }: Place & { w: number; d: number; h: number; top?: string; front?: string; side?: string; shadow?: boolean; frontChildren?: ReactNode }) {
   const t = useIsoTheme();
+  const { wrap, look } = split(style);
   const edge = t.edge;
   top ??= t.box.top;
   front ??= t.box.front;
@@ -187,21 +204,21 @@ export function Box({
   return (
     <>
       {shadow && (
-        <At x={x + 10} y={y + 10} style={{ opacity: style?.opacity }}>
-          <div style={{ width: w, height: d, background: t.shadow }} />
+        <At x={x + 10} y={y + 10}>
+          <div style={{ width: w, height: d, background: t.shadow, ...look }} />
         </At>
       )}
-      <At x={x} y={y} z={z} style={style}>
-        <div style={{ position: "absolute", width: w, height: d, transform: `translateZ(${h}px)`, background: top, border: edge }} className="grid place-items-center">
+      <At x={x} y={y} z={z} style={wrap}>
+        <div style={{ position: "absolute", width: w, height: d, transform: `translateZ(${h}px)`, background: top, border: edge, ...look }} className="grid place-items-center">
           {children}
         </div>
         <div
-          style={{ position: "absolute", left: 0, top: d - h, width: w, height: h, transformOrigin: "bottom", transform: "rotateX(-90deg)", background: front, border: edge }}
+          style={{ position: "absolute", left: 0, top: d - h, width: w, height: h, transformOrigin: "bottom", transform: "rotateX(-90deg)", background: front, border: edge, ...look }}
           className="grid place-items-center"
         >
           {frontChildren}
         </div>
-        <div style={{ position: "absolute", left: -h, top: 0, width: h, height: d, transformOrigin: "right", transform: "rotateY(90deg)", background: side, border: edge }} />
+        <div style={{ position: "absolute", left: -h, top: 0, width: h, height: d, transformOrigin: "right", transform: "rotateY(90deg)", background: side, border: edge, ...look }} />
       </At>
     </>
   );
@@ -213,12 +230,14 @@ export function Box({
  */
 export function Flag({ x, y, z = 0, children, tone, style }: Place & { tone?: string }) {
   const t = useIsoTheme();
+  const { wrap, look } = split(style);
   return (
-    <At x={x} y={y} z={z} style={style}>
+    <At x={x} y={y} z={z} style={wrap}>
       <div
-        className={`absolute bottom-0 left-0 rounded-[4px] border px-2 py-1 text-[12px] leading-none font-medium whitespace-nowrap ${tone ?? t.flag}`}
-        style={{ transformOrigin: "bottom left", transform: "rotateZ(45deg) rotateX(-60deg)" }}
+        className={`absolute bottom-0 left-0 flex items-center gap-2 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10.5px] leading-none tracking-[0.08em] whitespace-nowrap uppercase ${tone ?? t.flag}`}
+        style={{ transformOrigin: "bottom left", transform: "rotateZ(45deg) rotateX(-60deg)", ...look }}
       >
+        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
         {children}
       </div>
     </At>
