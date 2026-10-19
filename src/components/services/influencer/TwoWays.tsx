@@ -159,10 +159,10 @@ function OngoingScene({ on }: { on: boolean }) {
           <PlatformIcon platform={c} className="size-7 text-ink" />
         </Box>
       ))}
-      <Flag x={42} y={216} z={4} tone="bg-white">
+      <Flag x={42} y={216} z={4} tone="border-ink/60 bg-white text-ink">
         Week 1
       </Flag>
-      <Flag x={420} y={216} z={4} tone="bg-white">
+      <Flag x={420} y={216} z={4} tone="border-ink/60 bg-white text-ink">
         Week 12
       </Flag>
     </IsoScene>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 // A tiny isometric kit in CSS 3D (no WebGL), for the service-page illustrations: a tinted floor with a
 // dashed grid, flat tiles, standing panels, boxes and soft-edged shadows, all with real HTML on them so text
@@ -12,6 +12,30 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 const FLOOR = "rotateX(60deg) rotateZ(-45deg)";
 const preserve: CSSProperties = { transformStyle: "preserve-3d" };
 
+// Light scenes sit on tinted panels; dark scenes melt into a dark section (the floor is the background).
+const THEMES = {
+  light: {
+    tone: "#e3eee6",
+    line: "rgb(23 44 33 / 0.14)",
+    shadow: "rgb(23 44 33 / 0.72)",
+    edge: "1px solid rgb(23 44 33 / 0.55)",
+    box: { top: "#ffffff", front: "#e4e9e5", side: "#c9d3cc" },
+    flag: "border-ink/60 bg-[#e7f9d9] text-ink",
+  },
+  dark: {
+    tone: "#1a1918",
+    line: "rgb(255 255 255 / 0.07)",
+    shadow: "rgb(0 0 0 / 0.55)",
+    edge: "1px solid rgb(255 255 255 / 0.14)",
+    box: { top: "#2c2b29", front: "#232220", side: "#1c1b19" },
+    flag: "border-primary/40 bg-[#14231a] text-primary",
+  },
+};
+type Theme = (typeof THEMES)["light"];
+const ThemeContext = createContext<Theme>(THEMES.light);
+/** The active scene theme, for scenes that colour their own pieces. */
+export const useIsoTheme = () => useContext(ThemeContext);
+
 /**
  * A fixed-size drawing (`w`×`h` design pixels) scaled to fit its container's width, so a scene is authored
  * once and stays sharp at any size. The floor is centered and can be nudged with `shift`.
@@ -22,8 +46,7 @@ export function IsoScene({
   floor,
   shift = [0, 0],
   grid = 48,
-  tone = "#e3eee6",
-  line = "rgb(23 44 33 / 0.14)",
+  theme = "light",
   className = "",
   children,
 }: {
@@ -33,8 +56,7 @@ export function IsoScene({
   floor: number;
   shift?: [number, number];
   grid?: number;
-  tone?: string;
-  line?: string;
+  theme?: keyof typeof THEMES;
   className?: string;
   children: ReactNode;
 }) {
@@ -48,6 +70,7 @@ export function IsoScene({
     return () => ro.disconnect();
   }, [w]);
 
+  const t = THEMES[theme];
   const place: CSSProperties = {
     ...preserve,
     position: "absolute",
@@ -58,13 +81,15 @@ export function IsoScene({
     transform: FLOOR,
   };
   return (
-    <div ref={box} aria-hidden="true" className={`relative overflow-hidden ${className}`} style={{ aspectRatio: `${w} / ${h}`, background: tone }}>
+    <div ref={box} aria-hidden="true" className={`relative overflow-hidden ${className}`} style={{ aspectRatio: `${w} / ${h}`, background: t.tone }}>
       <div className="absolute top-0 left-0 origin-top-left" style={{ width: w, height: h, transform: `scale(${k})` }}>
         {/* The dashed grid, fading out toward the floor's edges; the scene sits on its own layer above. */}
         <div style={{ ...place, maskImage: "radial-gradient(closest-side, #000 60%, transparent)" }}>
-          <GridLines size={floor} step={grid} line={line} />
+          <GridLines size={floor} step={grid} line={t.line} />
         </div>
-        <div style={place}>{children}</div>
+        <div style={place}>
+          <ThemeContext value={t}>{children}</ThemeContext>
+        </div>
       </div>
     </div>
   );
@@ -99,11 +124,12 @@ export function At({ x, y, z = 0, className = "", style, children }: Place) {
 
 /** A flat card lying on the floor (or floating at z), with a hard shadow under it like the references. */
 export function Tile({ x, y, z = 0, w, h, shadow = true, className = "", style, children }: Place & { w: number; h: number; shadow?: boolean }) {
+  const t = useIsoTheme();
   return (
     <>
       {shadow && (
         <At x={x + 7} y={y + 7} style={{ opacity: style?.opacity }}>
-          <div className="rounded-[3px] bg-ink/70" style={{ width: w, height: h }} />
+          <div className="rounded-[3px]" style={{ width: w, height: h, background: t.shadow }} />
         </At>
       )}
       <At x={x} y={y} z={z + 1} style={style}>
@@ -117,11 +143,12 @@ export function Tile({ x, y, z = 0, w, h, shadow = true, className = "", style, 
 
 /** An upright panel standing on its bottom edge along x at (x, y), facing the viewer's lower right. */
 export function Panel({ x, y, z = 0, w, h, shadow = true, className = "", style, children }: Place & { w: number; h: number; shadow?: boolean }) {
+  const t = useIsoTheme();
   return (
     <>
       {shadow && (
         <At x={x + 4} y={y} style={{ opacity: style?.opacity }}>
-          <div className="bg-ink/75" style={{ width: w, height: 22 }} />
+          <div style={{ width: w, height: 22, background: t.shadow }} />
         </At>
       )}
       <At x={x} y={y} z={z} style={style}>
@@ -144,20 +171,24 @@ export function Box({
   w,
   d,
   h,
-  top = "#ffffff",
-  front = "#e4e9e5",
-  side = "#c9d3cc",
+  top,
+  front,
+  side,
   shadow = true,
   style,
   children,
   frontChildren,
 }: Place & { w: number; d: number; h: number; top?: string; front?: string; side?: string; shadow?: boolean; frontChildren?: ReactNode }) {
-  const edge = "1px solid rgb(23 44 33 / 0.55)";
+  const t = useIsoTheme();
+  const edge = t.edge;
+  top ??= t.box.top;
+  front ??= t.box.front;
+  side ??= t.box.side;
   return (
     <>
       {shadow && (
         <At x={x + 10} y={y + 10} style={{ opacity: style?.opacity }}>
-          <div className="bg-ink/80" style={{ width: w, height: d }} />
+          <div style={{ width: w, height: d, background: t.shadow }} />
         </At>
       )}
       <At x={x} y={y} z={z} style={style}>
@@ -176,13 +207,17 @@ export function Box({
   );
 }
 
-/** A small floating label flag (like "Report", "Table" in the references), standing up at z. */
-export function Flag({ x, y, z = 0, children, tone = "bg-[#e7f9d9]", style }: Place & { tone?: string }) {
+/**
+ * A label pinned to a point in the scene but always facing the reader (it undoes the floor's tilt), so it
+ * stays upright and easy to read however the scene is drawn. Its bottom-left corner sits on the point.
+ */
+export function Flag({ x, y, z = 0, children, tone, style }: Place & { tone?: string }) {
+  const t = useIsoTheme();
   return (
     <At x={x} y={y} z={z} style={style}>
       <div
-        className={`absolute bottom-0 left-0 border border-ink/60 px-2 py-[3px] font-mono text-[11px] tracking-[0.04em] whitespace-nowrap text-ink ${tone}`}
-        style={{ transformOrigin: "bottom left", transform: "rotateX(-90deg)" }}
+        className={`absolute bottom-0 left-0 rounded-[4px] border px-2 py-1 text-[12px] leading-none font-medium whitespace-nowrap ${tone ?? t.flag}`}
+        style={{ transformOrigin: "bottom left", transform: "rotateZ(45deg) rotateX(-60deg)" }}
       >
         {children}
       </div>
