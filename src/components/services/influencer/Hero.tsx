@@ -2,16 +2,13 @@
 
 import ArcButton from "../../ArcButton";
 import { SignalGrid } from "../../ui/signal-grid";
-import { Label, PLATFORM_NAME, PlatformIcon, type Platform } from "../kit";
+import { Label, PLATFORM_COLOR, PLATFORM_NAME, PlatformIcon } from "../kit";
 import { HERO } from "./content";
-import HeroPosts from "./HeroPosts";
-
-// Each channel's own brand colour; newsletters take Substack's orange as the familiar newsletter mark.
-const BRAND: Record<Platform, string> = { x: "#000000", linkedin: "#0a66c2", youtube: "#ff0000", newsletter: "#ff6719" };
+import HeroStage from "./HeroStage";
 
 // The first viewport, framed like the homepage hero (warm off-white panel over the pixel field), split in
-// two: the claim, the numbers and the channels on the left; on the right, one launch as it showed up across
-// channels, as a fanned stack of posts (see HeroPosts).
+// two: the claim, the numbers and the channels on the left; on the right, the launch going out to every
+// channel on the page's light isometric floor (see HeroStage).
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
@@ -38,7 +35,7 @@ export default function Hero() {
           <ul className="mt-5 flex items-center gap-5" aria-label="Channels">
             {HERO.channels.map((c) => (
               <li key={c} title={PLATFORM_NAME[c]}>
-                <PlatformIcon platform={c} className="size-5" style={{ color: BRAND[c] }} />
+                <PlatformIcon platform={c} className="size-5" style={{ color: PLATFORM_COLOR[c] }} />
                 <span className="sr-only">{PLATFORM_NAME[c]}</span>
               </li>
             ))}
@@ -54,7 +51,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <HeroPosts />
+        <HeroStage />
       </div>
     </section>
   );

@@ -52,6 +52,9 @@ const PATHS: Record<Platform, ReactNode> = {
   ),
 };
 
+/** Each channel's brand colour; newsletters take Substack's orange, the familiar newsletter mark. */
+export const PLATFORM_COLOR: Record<Platform, string> = { x: "#000000", linkedin: "#0a66c2", youtube: "#ff0000", newsletter: "#ff6719" };
+
 export const PLATFORM_NAME: Record<Platform, string> = {
   x: "X",
   linkedin: "LinkedIn",
