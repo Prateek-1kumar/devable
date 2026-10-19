@@ -1,35 +1,48 @@
-"use client";
-
-import { motion } from "motion/react";
 import Image from "next/image";
 import photo from "../../../public/about/founder.jpg";
-import { SOCIAL } from "../Footer";
 
 // TODO(founder): real URLs; add a Newsletter link if it's separate from AI Engineering.
 const LINKS = [
-  { label: "LinkedIn", href: "#", icon: SOCIAL[0].icon },
-  { label: "X / Twitter", href: "#", icon: SOCIAL[1].icon },
-  { label: "AI Engineering", href: "#", icon: null },
+  { label: "LinkedIn", href: "#" },
+  { label: "X / Twitter", href: "#" },
+  { label: "AI Engineering", href: "#" },
 ];
 
-// The founder, compact enough to sit in one viewport, on the same columns as "Who we are" above: a single
-// portrait card (his name and links on a glass plate) in the label column, the brief's words in the text column.
+// The founder as an editorial spread: a large, square-cut black-and-white portrait with a magazine-style
+// caption, and the brief's words set low beside it, ending on a hairline with the audience and his links.
+// Same columns as the page's other label/text sections.
 export default function Founder() {
   return (
-    <section aria-labelledby="founder-title" className="@container px-6 pb-28 sm:px-12 sm:pb-36 xl:px-[6vw]">
-      <div className="mx-auto grid max-w-[76rem] items-center gap-14 lg:grid-cols-12 lg:gap-10">
-        <div className="w-full max-w-[20rem] justify-self-center lg:col-span-5 lg:justify-self-start lg:ml-[calc(min(0px,(76rem-100cqw)/2)+2.5vw)]">
-          <PortraitCard />
-        </div>
+    <section aria-labelledby="founder-title" className="@container px-6 py-32 sm:px-12 sm:py-44 xl:px-[6vw]">
+      <div className="mx-auto grid max-w-[76rem] gap-14 lg:grid-cols-12 lg:items-end lg:gap-10">
+        <figure className="lg:col-span-5 lg:ml-[calc(min(0px,(76rem-100cqw)/2)+2.5vw)]">
+          <div className="relative aspect-[4/5] w-full max-w-[30rem] bg-black">
+            <Image
+              src={photo}
+              alt="Sumanth Papareddy"
+              fill
+              sizes="(min-width: 1024px) 30rem, 100vw"
+              placeholder="blur"
+              className="object-cover object-[50%_35%]"
+            />
+          </div>
+          <figcaption className="mt-4 flex max-w-[30rem] items-baseline justify-between gap-4 font-mono text-[0.68rem] tracking-[0.1em] text-ink/50 uppercase">
+            <span>Sumanth Papareddy</span>
+            <span>Founder &amp; CEO, Devable</span>
+          </figcaption>
+        </figure>
 
-        <div className="max-w-[38rem] lg:col-span-7">
+        <div className="max-w-[38rem] lg:col-span-6 lg:col-start-7 lg:pb-10">
+          <p className="w-fit rounded-[4px] bg-ink/[0.06] px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-ink/80 uppercase">
+            Founder
+          </p>
           <h2
             id="founder-title"
-            className="text-[clamp(1.7rem,2.6vw,2.35rem)] leading-[1.08] font-medium tracking-[-0.04em] text-ink"
+            className="mt-8 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"
           >
             Built by someone who understands both the product and the audience.
           </h2>
-          <div className="mt-7 space-y-4 text-[1.02rem] leading-relaxed text-ink/70">
+          <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink/70">
             <p>
               Sumanth is a developer, technical creator, and growth operator who has spent years building and creating
               for AI and developer audiences.
@@ -43,62 +56,29 @@ export default function Founder() {
               selling technical products to technical audiences.
             </p>
           </div>
+
+          <div className="mt-12 flex flex-wrap items-end justify-between gap-x-10 gap-y-6 border-t border-ink/15 pt-6">
+            <p className="leading-none">
+              <span className="text-[2.6rem] font-medium tracking-[-0.05em] text-ink">200K+</span>
+              <span className="mt-2 block text-[0.85rem] text-ink/50">developers and AI practitioners</span>
+            </p>
+            <nav aria-label="Sumanth online" className="flex flex-wrap gap-x-6 gap-y-2">
+              {LINKS.map((l) => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  className="group text-[0.95rem] font-medium text-ink/70 underline decoration-ink/20 underline-offset-[6px] transition-colors hover:text-ink hover:decoration-ink"
+                >
+                  {l.label}
+                  <span aria-hidden="true" className="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                    ↗
+                  </span>
+                </a>
+              ))}
+            </nav>
+          </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function PortraitCard() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.5 }}
-      transition={{ type: "spring", bounce: 0.3, duration: 0.9 }}
-      className="relative aspect-[4/5] w-full rounded-[1.5rem] bg-black shadow-[0_40px_80px_-40px_rgb(23_44_33/0.55)]"
-    >
-      <div className="absolute inset-0 overflow-hidden rounded-[1.5rem]">
-        <Image
-          src={photo}
-          alt="Sumanth Papareddy"
-          fill
-          sizes="20rem"
-          placeholder="blur"
-          className="object-cover object-[50%_35%]"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
-      </div>
-
-      <div
-        className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 rounded-[1rem] border border-white/15 bg-white/10 px-4 py-3.5 backdrop-blur-md"
-      >
-        <div className="min-w-0">
-          <h3 className="text-[1.05rem] leading-tight font-medium tracking-[-0.02em] text-white">Sumanth Papareddy</h3>
-          <p className="mt-0.5 text-[0.8rem] text-white/60">Founder &amp; CEO, Devable</p>
-        </div>
-        <nav aria-label="Sumanth online" className="-mr-1 flex shrink-0 items-center">
-          {LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              aria-label={`Sumanth on ${l.label}`}
-              title={l.label}
-              className="grid size-7 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {l.icon ? (
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-current">
-                  {l.icon}
-                </svg>
-              ) : (
-                <span aria-hidden="true" className="text-[0.62rem] font-semibold tracking-[0.02em]">
-                  AI
-                </span>
-              )}
-            </a>
-          ))}
-        </nav>
-      </div>
-    </motion.div>
   );
 }

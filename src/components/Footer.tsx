@@ -33,7 +33,7 @@ const COLUMNS = [
   },
 ];
 
-export const SOCIAL = [
+const SOCIAL = [
   {
     label: "LinkedIn",
     href: "#",

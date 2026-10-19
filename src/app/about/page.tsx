@@ -19,8 +19,8 @@ export default function About() {
       <AboutHero />
       <GlassStory />
       <WhoWeAre />
-      <Founder />
       <Principles />
+      <Founder />
       <FinalCta
         title="Build with a team that understands what you are building."
         subtitle=""
