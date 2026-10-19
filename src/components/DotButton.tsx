@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
 // White button with a green dot-matrix chevron box on the left. On hover the green fills the button
-// (leaving a thin white frame), the label gives way, and a row of chevrons pulses left to right.
+// (leaving a thin white frame); the label stays, in ink, with a short row of chevrons pulsing after it.
 const GROW = "ease-[cubic-bezier(0.65,0,0.35,1)] duration-500 motion-reduce:duration-0";
 const GREEN =
   "bg-[linear-gradient(180deg,#6df3a4_0%,var(--color-primary)_100%)] shadow-[inset_0_1px_0_rgb(255_255_255/0.45)]";
@@ -45,14 +45,18 @@ export default function DotButton({
         aria-hidden="true"
         className={`absolute inset-0 ${GREEN} transition-[clip-path] ${GROW} [clip-path:inset(4px_calc(100%-44px)_4px_4px_round_5px)] group-hover:[clip-path:inset(3px_3px_3px_3px_round_6px)] group-focus-visible:[clip-path:inset(3px_3px_3px_3px_round_6px)]`}
       >
+        {/* The label stays readable in ink on the green, with chevrons pulsing on after it. */}
         <span className="absolute inset-0 flex items-center justify-center gap-4 text-ink opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100">
-          {Array.from({ length: 7 }, (_, i) => (
-            <Chevron
-              key={i}
-              className="animate-dot-wave motion-reduce:animate-none"
-              style={{ animationDelay: `${i * 0.12}s` }}
-            />
-          ))}
+          <span>{children}</span>
+          <span className="flex gap-2">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Chevron
+                key={i}
+                className="animate-dot-wave motion-reduce:animate-none"
+                style={{ animationDelay: `${i * 0.12}s` }}
+              />
+            ))}
+          </span>
         </span>
       </span>
 

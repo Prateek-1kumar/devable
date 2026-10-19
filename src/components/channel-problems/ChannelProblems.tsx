@@ -45,7 +45,7 @@ export default function ChannelProblems() {
         {TITLE} <span className="block text-white/45">{SUBTITLE}</span>
       </h2>
 
-      <div className="mt-10 grid gap-px overflow-hidden rounded-md border border-white/10 bg-white/10 md:grid-cols-2 lg:mt-12 xl:grid-cols-4">
+      <div className="mt-10 grid gap-px overflow-hidden rounded-md border border-white/10 bg-white/10 md:grid-cols-2 lg:mt-12">
         {PROBLEMS.map((p, i) => (
           <ProblemCard key={p.title} index={i} {...p} />
         ))}
@@ -78,7 +78,7 @@ function ProblemCard({ index, title, body }: { index: number; title: string; bod
         <h3 className="text-[1.05rem] font-medium tracking-[-0.015em] text-white">{title}</h3>
         <p className="mt-2 text-[0.875rem] leading-[1.55] text-white/55">{body}</p>
       </div>
-      <div ref={box} aria-hidden="true" className="relative min-h-[290px] flex-1">
+      <div ref={box} aria-hidden="true" className="relative min-h-[290px] flex-1 lg:min-h-[360px]">
         <CardScene key={String(still)} index={index} still={still} active={onScreen} hover={hover} />
       </div>
     </article>

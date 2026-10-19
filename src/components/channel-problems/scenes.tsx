@@ -585,7 +585,7 @@ function Crowd({ label, sx, n, tower, wave, views, comments, talk }: (typeof FIE
 // ═════════════════════════════════════════════════════════════
 const SCENES = [
   { Scene: FacadeScene, loop: 10, poster: 5, view: [5.3, 3.6] },
-  { Scene: SearchScene, loop: 12, poster: 9, view: [5.4, 4.0] },
+  { Scene: SearchScene, loop: 12, poster: 9, view: [5.4, 5.0] }, // tall: the query tag sits above, the found tag below
   { Scene: ThreadScene, loop: 13, poster: 11, view: [4.7, 4.3] },
   { Scene: ReachScene, loop: 13, poster: 11, view: [5.0, 4.0] },
 ] as const;
