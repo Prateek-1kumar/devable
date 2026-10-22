@@ -120,10 +120,11 @@ const VERTEX = /* glsl */ `
   float hash(float n) { return fract(sin(n) * 43758.5453123); }
 
   void main() {
-    // Each glyph's own arrival: bars cascade top to bottom with some scatter, every one settled by the lock.
+    // Each glyph's own arrival: the D stays dormant for the first quarter of the approach (while the halves
+    // are still small), then bars cascade top to bottom with some scatter, every one settled by the lock.
     // Reduced motion: already resolved.
     float bar = floor((1.0 - position.y) / ${BAR_H + GAP});
-    float q = max(uApproach, 1.0 - uMotion);
+    float q = max(clamp((uApproach - 0.25) / 0.75, 0.0, 1.0), 1.0 - uMotion);
     float e = 1.0 - pow(1.0 - clamp((q - 0.08 * bar - 0.3 * aSeed) / 0.45, 0.0, 1.0), 3.0);
     vec4 mv = modelViewMatrix * vec4(position + aLift * sin(3.14159 * e), 1.0);
     gl_Position = projectionMatrix * mv;
