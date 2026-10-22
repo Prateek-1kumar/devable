@@ -150,8 +150,10 @@ export function OwnIt() {
   const cx = 240;
   const cy = 100;
   const R = 70;
-  // Six seats round the ring; seat 0 (3 o'clock) is the open one we take.
-  const seats = Array.from({ length: 6 }, (_, k) => [cx + R * Math.cos((k * Math.PI) / 3), cy + R * Math.sin((k * Math.PI) / 3)]);
+  // Six seats round the ring; seat 0 (3 o'clock) is the open one we take. Rounded so the server and the
+  // browser print the same attribute strings (their trig can differ in the last digit).
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const seats = Array.from({ length: 6 }, (_, k) => [r2(cx + R * Math.cos((k * Math.PI) / 3)), r2(cy + R * Math.sin((k * Math.PI) / 3))]);
   const team = seats.slice(1);
   const [sx, sy] = seats[0];
   return (
@@ -214,7 +216,7 @@ export function Measure() {
         const t = from + ((x - 40) / 400) * (to - from);
         return (
           <g key={i}>
-            <path d={`M${x} ${reach[i]} L${x} ${growthY(x)}`} stroke={G} strokeDasharray="2 3" opacity={0}>
+            <path d={`M${x} ${reach[i]} L${x} ${growthY(x).toFixed(1)}`} stroke={G} strokeDasharray="2 3" opacity={0}>
               <In a={t} b={t + 0.04} />
             </path>
             <circle cx={x} cy={reach[i]} r={3.5} fill={G} opacity={0}>

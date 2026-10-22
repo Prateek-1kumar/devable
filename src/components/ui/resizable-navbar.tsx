@@ -39,7 +39,8 @@ export function NavBody({ children, className, visible }: { children: React.Reac
         y: visible ? 12 : 0,
       }}
       transition={SPRING}
-      style={{ minWidth: 860 }}
+      // The links are centered across the whole bar, so it needs room for the logo and CTA either side.
+      style={{ minWidth: 960 }}
       className={cn(
         "relative z-[60] mx-auto hidden max-w-7xl flex-row items-center justify-between rounded-[14px] px-4 py-2.5 transition-colors lg:flex",
         visible ? "bg-white/80" : "bg-transparent",
