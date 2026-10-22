@@ -106,7 +106,7 @@ function drawAtlas(ctx: CanvasRenderingContext2D) {
   ctx.fill();
   const [dx, dy] = at(DOT);
   ctx.beginPath();
-  ctx.arc(dx + CELL / 2, dy + CELL / 2, CELL * 0.14, 0, Math.PI * 2);
+  ctx.arc(dx + CELL / 2, dy + CELL / 2, CELL * 0.2, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -130,9 +130,10 @@ const VERTEX = /* glsl */ `
 
     float noise = floor(hash(aSeed * 91.7 + floor(uTime * uMotion * 14.0 + aSeed * 50.0)) * ${CHARS.length}.0);
     vGlyph = e < 0.12 ? ${DOT}.0 : e < 0.82 ? noise : e < 0.9 ? ${SHADE}.0 : e < 0.95 ? ${SHADE + 1}.0 : e < 0.985 ? ${SHADE + 2}.0 : ${SOLID}.0;
-    // Dormant dots in the face's own colors, dimmer through the depth; awake glyphs in green.
-    vColor = mix(mix(uDeep, uPaper, pow(aLayer, 1.6)), uGreen, step(0.12, e) * (1.0 - smoothstep(0.82, 1.0, e)));
-    vAlpha = e < 0.12 ? 0.25 + 0.35 * aLayer : 0.6 + 0.4 * e;
+    // Dormant dots: bright paper on the front slab, only a faint trail behind, so the D reads clearly while
+    // parked. Awake glyphs in green; resolved cells grade from paper to deep green through the depth.
+    vColor = e < 0.12 ? uPaper : mix(mix(uDeep, uPaper, pow(aLayer, 1.6)), uGreen, 1.0 - smoothstep(0.82, 1.0, e));
+    vAlpha = e < 0.12 ? 0.08 + 0.87 * pow(aLayer, 4.0) : 0.6 + 0.4 * e;
     gl_PointSize = max(1.0, uPitch * length(modelMatrix[0].xyz) * uPx * projectionMatrix[1][1] / -mv.z);
   }
 `;
@@ -161,7 +162,8 @@ const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 const STAGGER = 0.06;
 const SPLIT = 0.56;
 const SPLIT_LEN = 0.2;
-const TURN = 0.75; // how far each half is turned inward while apart (radians)
+const TURN = 0.75; // how far each half is turned inward once split, framing the statement (radians)
+const PARK_TURN = 0.35; // and while parked at the start: less, so the D reads face-on
 
 type Progress = RefObject<number>;
 
@@ -201,7 +203,7 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
     // Vertically: parked in the middle of the band's visible strip at load, easing to the stage's center
     // by the lock. The band rises the whole time, so on screen the halves only ever travel up and in.
     o.position.y = (1 - arrived) * viewport.height * (0.5 - reveal.current / 2);
-    o.rotation.y = side * apart * TURN;
+    o.rotation.y = side * (split > 0 ? split * TURN : (1 - arrived) * PARK_TURN);
     o.rotation.x = -0.08;
     o.scale.setScalar(scale);
   });
