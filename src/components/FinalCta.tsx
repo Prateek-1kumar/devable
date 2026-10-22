@@ -12,7 +12,18 @@ const BODY =
 // The closing frame: a full-bleed dark band (the Channel Problems near-black) at least half the viewport
 // tall. Copy on the left, two stacked actions on the right: the primary with the site's green-box hover,
 // the secondary plain white. The copy fades in once on first view, then nothing moves.
-export default function FinalCta() {
+// Copy defaults to the homepage's; other pages pass their own (subtitle and body are optional).
+export default function FinalCta({
+  title = TITLE,
+  subtitle = SUBTITLE,
+  body = BODY,
+  caseStudiesHref = "#case-studies",
+}: {
+  title?: string;
+  subtitle?: string;
+  body?: string;
+  caseStudiesHref?: string;
+}) {
   const section = useRef<HTMLElement>(null);
   const [shown, setShown] = useState(false);
 
@@ -48,14 +59,17 @@ export default function FinalCta() {
             style={{ animationDelay: "0ms" }}
             className={`text-[clamp(1.75rem,2.5vw,2.25rem)] leading-[1.1] font-medium tracking-[-0.035em] text-white ${reveal}`}
           >
-            <span className="lg:whitespace-nowrap">{TITLE}</span> <span className="block text-white/45">{SUBTITLE}</span>
+            <span className={subtitle ? "lg:whitespace-nowrap" : "block max-w-[24ch]"}>{title}</span>
+            {subtitle && <span className="block text-white/45">{subtitle}</span>}
           </h2>
-          <p
-            style={{ animationDelay: "200ms" }}
-            className={`mt-6 max-w-[36rem] text-[1.02rem] leading-[1.65] text-white/60 ${reveal}`}
-          >
-            {BODY}
-          </p>
+          {body && (
+            <p
+              style={{ animationDelay: "200ms" }}
+              className={`mt-6 max-w-[36rem] text-[1.02rem] leading-[1.65] text-white/60 ${reveal}`}
+            >
+              {body}
+            </p>
+          )}
         </div>
 
         <div
@@ -65,7 +79,7 @@ export default function FinalCta() {
           <DotButton href="#contact" className="w-full">
             Speak with the team
           </DotButton>
-          <ArcButton href="#case-studies" tone="white" className="w-full">
+          <ArcButton href={caseStudiesHref} tone="white" className="w-full">
             View case studies
           </ArcButton>
         </div>

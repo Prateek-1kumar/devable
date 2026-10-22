@@ -39,7 +39,8 @@ export function NavBody({ children, className, visible }: { children: React.Reac
         y: visible ? 12 : 0,
       }}
       transition={SPRING}
-      style={{ minWidth: 860 }}
+      // The links are centered across the whole bar, so it needs room for the logo and CTA either side.
+      style={{ minWidth: 960 }}
       className={cn(
         "relative z-[60] mx-auto hidden max-w-7xl flex-row items-center justify-between rounded-[14px] px-4 py-2.5 transition-colors lg:flex",
         visible ? "bg-white/80" : "bg-transparent",
@@ -51,7 +52,9 @@ export function NavBody({ children, className, visible }: { children: React.Reac
   );
 }
 
-export type NavItem = { name: string; link: string; dropdown?: boolean };
+/** A sub-link in a dropdown; without a `link` it shows as coming soon. */
+export type NavSubItem = { name: string; link?: string };
+export type NavItem = { name: string; link: string; dropdown?: boolean; items?: NavSubItem[] };
 
 export function NavItems({ items, className, onItemClick }: { items: NavItem[]; className?: string; onItemClick?: () => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -62,7 +65,7 @@ export function NavItems({ items, className, onItemClick }: { items: NavItem[]; 
       className={cn("absolute inset-0 hidden flex-row items-center justify-center gap-1 text-[0.95rem] lg:flex", className)}
     >
       {items.map((item, idx) => (
-        <li key={item.name}>
+        <li key={item.name} className="group relative">
           <a
             href={item.link}
             onMouseEnter={() => setHovered(idx)}
@@ -71,13 +74,46 @@ export function NavItems({ items, className, onItemClick }: { items: NavItem[]; 
           >
             {hovered === idx && <motion.span layoutId="nav-hovered" className="absolute inset-0 rounded-full bg-ink/[0.06]" />}
             <span className="relative z-10">{item.name}</span>
-            {item.dropdown && (
-              // ponytail: chevron only; menus come when their content exists.
+            {(item.dropdown || item.items) && (
+              // ponytail: chevron only on items whose menus don't exist yet.
               <svg aria-hidden="true" viewBox="0 0 12 12" className="relative z-10 size-3">
                 <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </a>
+          {item.items && (
+            // Opens on hover, and on keyboard focus anywhere inside it.
+            <div
+              className={cn(
+                "absolute top-full left-1/2 z-50 w-64 -translate-x-1/2 pt-3 transition-[opacity,translate] duration-200",
+                hovered === idx
+                  ? "visible translate-y-0 opacity-100"
+                  : "invisible -translate-y-1 opacity-0 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100",
+              )}
+            >
+              <ul className="rounded-xl border border-black/[0.06] bg-white p-1.5 shadow-[0_24px_50px_-20px_rgb(23_44_33/0.35)]">
+                {item.items.map((sub) => (
+                  <li key={sub.name}>
+                    {sub.link ? (
+                      <a
+                        href={sub.link}
+                        onClick={onItemClick}
+                        className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[0.92rem] text-ink transition-colors hover:bg-ink/[0.05] focus-visible:bg-ink/[0.05] focus-visible:outline-none"
+                      >
+                        {sub.name}
+                        <span aria-hidden="true" className="text-ink/40">→</span>
+                      </a>
+                    ) : (
+                      <span className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[0.92rem] text-ink/45">
+                        {sub.name}
+                        <span className="rounded-[4px] bg-ink/[0.05] px-1.5 py-0.5 font-mono text-[0.6rem] tracking-[0.08em] text-ink/45 uppercase">Soon</span>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </li>
       ))}
     </ul>
