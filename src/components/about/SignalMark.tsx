@@ -6,10 +6,9 @@ import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 
 // The Devable mark is a "D" of four stacked bars with a rounded right edge. Here each D is a volume of mono
 // glyphs, and one D and its mirror image meet flat-side to flat-side to become a single symmetrical mark.
-// Dormant → noise → signal: parked at the edge, each half is a quiet lattice of dim dots, like an LED panel
-// switched off; as it glides in, bar by bar, the dots wake into scrambling glyphs that lift out of the
-// plane, then settle back and ░ → ▒ → ▓ → █ into solid cells, all of them resolved by the time the halves
-// lock. Front slab in paper, the slabs behind grading to deep green,
+// Dormant → noise → signal: parked at the edge, each half is a quiet lattice of dots, like an LED panel
+// switched off; as it glides in, its slabs part in depth and, bar by bar, the dots wake into scrambling
+// glyphs, then ░ → ▒ → ▓ → █ into solid cells, the slabs closing up as the halves lock. Front slab in paper, the slabs behind grading to deep green,
 // so the halves read as 3D extrusions as they turn. Everything per glyph runs on the GPU.
 
 // Shape units: the D is 2 tall (y −1..1), flat edge at x = 0, a rectangle W wide whose two right corners
@@ -32,7 +31,7 @@ const SOLID = SHADE + 3;
 const DOT = SOLID + 1; // the dormant cell
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
-// Seeded, so the lift is the same on every load.
+// Seeded, so the glyphs' timing is the same on every load.
 function prng(seed: number) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0;
@@ -52,7 +51,6 @@ function markData(rows: number) {
   const rand = prng(3);
   const pitch = BAR_H / rows;
   const target: number[] = [];
-  const lift: number[] = [];
   const seed: number[] = [];
   const layer: number[] = [];
   // Back slab first, so glyph edges blend over what's behind them when seen from the front.
@@ -64,9 +62,6 @@ function markData(rows: number) {
         const y = top - (r + 0.5) * pitch;
         for (let x = pitch / 2; x < edgeX(y); x += pitch) {
           target.push(x, y, z);
-          // How far the cell lifts out mid-flight: a little outward (away from where the halves meet),
-          // up or down, and mostly through depth.
-          lift.push(rand() * 0.25, (rand() - 0.5) * 0.16, (rand() - 0.5) * 1.2);
           seed.push(rand());
           layer.push(l / (LAYERS - 1));
         }
@@ -76,7 +71,6 @@ function markData(rows: number) {
   return {
     pitch,
     target: new Float32Array(target),
-    lift: new Float32Array(lift),
     seed: new Float32Array(seed),
     layer: new Float32Array(layer),
   };
@@ -111,9 +105,8 @@ function drawAtlas(ctx: CanvasRenderingContext2D) {
 }
 
 const VERTEX = /* glsl */ `
-  uniform float uTime, uApproach, uPx, uPitch, uMotion;
+  uniform float uTime, uApproach, uPx, uPitch, uMotion, uSpread;
   uniform vec3 uPaper, uGreen, uDeep;
-  attribute vec3 aLift;
   attribute float aSeed, aLayer;
   varying vec3 vColor;
   varying float vGlyph, vAlpha;
@@ -126,7 +119,10 @@ const VERTEX = /* glsl */ `
     float bar = floor((1.0 - position.y) / ${BAR_H + GAP});
     float q = max(clamp((uApproach - 0.25) / 0.75, 0.0, 1.0), 1.0 - uMotion);
     float e = 1.0 - pow(1.0 - clamp((q - 0.08 * bar - 0.3 * aSeed) / 0.45, 0.0, 1.0), 3.0);
-    vec4 mv = modelViewMatrix * vec4(position + aLift * sin(3.14159 * e), 1.0);
+    // Mid-glide the D opens up: its slabs part in depth as clean sheets and the bars ease apart, closing
+    // again by the lock (uSpread is 0 when parked and when locked, so both read as the plain D).
+    vec3 spread = vec3(0.0, (1.5 - bar) * 0.06, (aLayer - 0.5) * 0.9) * uSpread;
+    vec4 mv = modelViewMatrix * vec4(position + spread, 1.0);
     gl_Position = projectionMatrix * mv;
 
     float noise = floor(hash(aSeed * 91.7 + floor(uTime * uMotion * 14.0 + aSeed * 50.0)) * ${CHARS.length}.0);
@@ -134,7 +130,8 @@ const VERTEX = /* glsl */ `
     // Dormant dots: bright paper on the front slab, only a faint trail behind, so the D reads clearly while
     // parked. Awake glyphs in green; resolved cells grade from paper to deep green through the depth.
     vColor = e < 0.12 ? uPaper : mix(mix(uDeep, uPaper, pow(aLayer, 1.6)), uGreen, 1.0 - smoothstep(0.82, 1.0, e));
-    vAlpha = e < 0.12 ? 0.08 + 0.87 * pow(aLayer, 4.0) : 0.6 + 0.4 * e;
+    // (While open, dormant back slabs show a little more, so the parted sheets read.)
+    vAlpha = e < 0.12 ? 0.08 + 0.87 * pow(aLayer, mix(4.0, 2.0, uSpread)) : 0.6 + 0.4 * e;
     gl_PointSize = max(1.0, uPitch * length(modelMatrix[0].xyz) * uPx * projectionMatrix[1][1] / -mv.z);
   }
 `;
@@ -199,6 +196,9 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
     const scale = fit * (split > 0 ? 1 - 0.25 * split : 0.6 + 0.4 * arrived);
     const edge = Math.max(viewport.width / 2 - 0.35 - 1.5 * scale, 0.4);
 
+    // Open most halfway in, closed at both ends.
+    u.uSpread.value = 4 * arrived * (1 - arrived);
+
     const o = outer.current!;
     o.position.x = side * (0.03 + apart * edge);
     // Vertically: parked in the middle of the band's visible strip at load, easing to the stage's center
@@ -215,7 +215,6 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
       <points scale={[side, 1, 1]} frustumCulled={false}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[data.target, 3]} />
-          <bufferAttribute attach="attributes-aLift" args={[data.lift, 3]} />
           <bufferAttribute attach="attributes-aSeed" args={[data.seed, 1]} />
           <bufferAttribute attach="attributes-aLayer" args={[data.layer, 1]} />
         </bufferGeometry>
@@ -236,6 +235,7 @@ function Scene({ still, ...timelines }: Timelines & { still: boolean }) {
       uAtlas: { value: texture },
       uTime: { value: 0 },
       uApproach: { value: 0 },
+      uSpread: { value: 0 },
       uPx: { value: 1 },
       uPitch: { value: 0.1 },
       uMotion: { value: still ? 0 : 1 },
