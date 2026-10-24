@@ -7,7 +7,7 @@ const SignalMark = dynamic(() => import("./SignalMark"), { ssr: false });
 
 // *Starred* phrases get the green terminal-select sweep.
 const STATEMENT =
-  "Most marketing partners never really understand the product. So we built the team that does: we *learn the product deeply*, *know exactly who it’s for*, and *own the execution* across every channel that drives growth.";
+  "Most marketing partners never get past the surface of the product. So we built the team that does: we *learn the product deeply*, *know exactly who it’s for*, and *own the execution* across the channels that drive growth.";
 // Plain and marked segments alternate; tokens keep their spaces so commas sit flush. Each word knows its
 // place in the reveal.
 const SEGMENTS = (() => {
@@ -49,7 +49,8 @@ export default function SignalStory() {
   // The mark's own timeline, which starts at the top of the page rather than when the stage pins: 0 at
   // load (halves parked small in the visible strip of the band), 1 once they've locked (pinned, p = LOCK).
   const approach = useRef(0);
-  // How much of the viewport the band fills at load (0..1), so the parked halves sit inside that strip.
+  // How much of the viewport the band fills right now (0..1), so the parked halves sit and fit inside that
+  // strip as it grows.
   const reveal = useRef(0.3);
   const [onScreen, setOnScreen] = useState(false);
 
@@ -64,7 +65,7 @@ export default function SignalStory() {
       el.style.setProperty("--p", p.toFixed(4));
       const top = rect.top + window.scrollY;
       approach.current = Math.min(1, Math.max(0, window.scrollY / (top + LOCK * total)));
-      reveal.current = Math.min(1, Math.max(0.2, 1 - top / window.innerHeight));
+      reveal.current = Math.min(1, Math.max(0.1, 1 - rect.top / window.innerHeight));
       // Leaving: as the band's bottom rises from the viewport's foot to its middle, the paper creeps in
       // from the sides and the band's corners round off.
       const out = Math.min(1, Math.max(0, 2 - (2 * rect.bottom) / window.innerHeight));
@@ -113,7 +114,7 @@ export default function SignalStory() {
             id="why-devable-title"
             className="mx-auto mt-4 max-w-[22ch] text-[clamp(1.6rem,3vw,2.6rem)] leading-[1.08] font-medium tracking-[-0.04em]"
           >
-            Technical products deserve more than generic marketing.
+            We understand your product the way your users do.
           </h2>
         </div>
 

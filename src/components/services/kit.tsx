@@ -41,7 +41,7 @@ export function Label({ children, dark = false }: { children: ReactNode; dark?: 
 
 export type Platform = "x" | "linkedin" | "youtube" | "newsletter";
 
-const PATHS: Record<Platform, ReactNode> = {
+export const PATHS: Record<Platform, ReactNode> = {
   linkedin: SOCIAL[0].icon,
   x: SOCIAL[1].icon,
   youtube: (

@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { GoDeep, Measure, OwnIt, Understand } from "./PrincipleVisuals";
+import { Connect, Measure, OwnIt, Understand } from "./PrincipleVisuals";
 
 const PRINCIPLES = [
   { title: "Understand", line: "We get inside the product before we touch a single channel.", Visual: Understand },
-  { title: "Go deep", line: "Depth over surface. If your audience understands the technology, so do we.", Visual: GoDeep },
+  { title: "Connect", line: "We connect your product to the channels and narratives that fit your audience and goals.", Visual: Connect },
   { title: "Own it", line: "We work as an extension of your team, not another vendor to manage.", Visual: OwnIt },
   { title: "Measure", line: "Visibility only counts when it drives growth.", Visual: Measure },
 ];
 
-// "How we work" as a pinned stage on the same charcoal as the glass story, inset like that band's exit.
+// "How we operate" as a pinned stage on the same charcoal as the glass story, inset like that band's exit.
 // Scrolling steps through four principles on a numbered rail: the active one lights up and opens to a
-// single line and a looping drawing of the idea; the marker glides down the rail from step to step.
+// single line; the marker glides down the rail from step to step. Its looping drawing sits large in the
+// left column on desktop, crossfading from step to step; on small screens it opens under the line instead.
 export default function Principles() {
   const track = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
@@ -37,27 +38,39 @@ export default function Principles() {
   return (
     <section
       ref={track}
-      aria-labelledby="how-we-work-title"
+      aria-labelledby="how-we-operate-title"
       className="relative mx-[2.5vw] mb-[2.5vw] h-[400svh] rounded-[1.25rem] bg-[#1a1918] text-white"
     >
       <div className="@container sticky top-0 flex h-svh items-center px-6 pt-20 sm:px-12 xl:px-[6vw]">
         <div className="mx-auto grid w-full max-w-[76rem] gap-10 lg:grid-cols-12">
           {/* Out to the stage's left padding, past the centred grid; the rail and steps stay put. */}
-          <header className="lg:col-span-4 lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
+          <header className="lg:col-span-6 lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
             <h2
-              id="how-we-work-title"
+              id="how-we-operate-title"
               className="w-fit rounded-[4px] bg-white/10 px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-white/80 uppercase"
             >
-              How we work
+              How we operate
             </h2>
-            <p className="mt-5 max-w-[16rem] text-lg leading-snug tracking-[-0.01em] text-white/50">
-              Understand the product. Own the execution.
+            <p className="mt-5 max-w-[20rem] text-lg leading-snug tracking-[-0.01em] text-white/50">
+              What stays the same across every client and every channel.
             </p>
+            {/* Desktop: the active step's drawing, large; the others fade out beneath it. */}
+            <div aria-hidden="true" className="relative mt-[clamp(2rem,6svh,4rem)] hidden aspect-[480/200] lg:block">
+              {PRINCIPLES.map(({ title, Visual }, i) => (
+                <div
+                  key={title}
+                  className={`absolute inset-0 transition-opacity duration-700 ${i === active ? "opacity-100" : "opacity-0"}`}
+                >
+                  {/* Remounted on activation so the drawing starts its story from the top. */}
+                  <Visual key={String(i === active)} />
+                </div>
+              ))}
+            </div>
           </header>
 
           <ol
             style={{ "--t": "clamp(2.3rem, 4.4vw, 4.25rem)", "--i": active } as CSSProperties}
-            className="relative lg:col-span-8"
+            className="relative lg:col-span-5 lg:col-start-8"
           >
             {/* The marker, one for the whole rail. Rows above the active one are collapsed to a title line, so
                 the active title sits at i title lines down; the marker glides there in step with the rows. */}
@@ -110,7 +123,7 @@ export default function Principles() {
                     >
                       <div className="overflow-hidden">
                         <p className="mt-3 max-w-[30rem] text-[1.05rem] leading-relaxed text-white/70 sm:text-lg">{line}</p>
-                        <div className="mt-6 mb-10 h-[min(12rem,22svh)] max-w-[30rem]">
+                        <div className="mt-6 mb-10 h-[min(12rem,22svh)] max-w-[30rem] lg:hidden">
                           {/* Remounted on activation so the drawing starts its story from the top. */}
                           <Visual key={String(on)} />
                         </div>

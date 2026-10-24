@@ -1,11 +1,12 @@
 import Image from "next/image";
 import photo from "../../../public/about/founder.jpg";
+import { PlatformIcon, type Platform } from "../services/kit";
 
-// TODO(founder): real URLs; add a Newsletter link if it's separate from AI Engineering.
-const LINKS = [
-  { label: "LinkedIn", href: "#" },
-  { label: "X / Twitter", href: "#" },
-  { label: "AI Engineering", href: "#" },
+// TODO(founder): real URLs, and the AI Engineering logo in place of the generic newsletter mark.
+const LINKS: { label: string; platform: Platform; href: string }[] = [
+  { label: "LinkedIn", platform: "linkedin", href: "#" },
+  { label: "X", platform: "x", href: "#" },
+  { label: "AI Engineering newsletter", platform: "newsletter", href: "#" },
 ];
 
 // The founder as an editorial spread: a large, square-cut black-and-white portrait with a magazine-style
@@ -44,35 +45,35 @@ export default function Founder() {
           </h2>
           <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink/70">
             <p>
-              Sumanth is a developer, technical creator, and growth operator who has spent years building and creating
-              for AI and developer audiences.
+              Sumanth is an ML engineer, Developer Advocate, technical creator, and growth operator who has spent years
+              building for and writing to AI and developer audiences.
             </p>
             <p>
-              Through his personal platforms and AI Engineering, he has built an audience of more than 200K developers,
-              engineers, and AI practitioners across LinkedIn, X, and the newsletter.
+              Across X, LinkedIn, and the AI Engineering newsletter, he writes for more than 500K developers, engineers,
+              founders, CTOs, and AI practitioners. He reaches millions every week through his work.
             </p>
             <p>
-              That experience became the foundation for Devable: a growth partner built specifically for companies
-              selling technical products to technical audiences.
+              The gap was clear: great technical products were being built for developers, but marketed with playbooks
+              that were never built for them.
             </p>
+            <p>He started Devable to build the growth partner technical companies were missing.</p>
           </div>
 
           <div className="mt-12 flex flex-wrap items-end justify-between gap-x-10 gap-y-6 border-t border-ink/15 pt-6">
             <p className="leading-none">
-              <span className="text-[2.6rem] font-medium tracking-[-0.05em] text-ink">200K+</span>
+              <span className="text-[2.6rem] font-medium tracking-[-0.05em] text-ink">500K+</span>
               <span className="mt-2 block text-[0.85rem] text-ink/50">developers and AI practitioners</span>
             </p>
-            <nav aria-label="Sumanth online" className="flex flex-wrap gap-x-6 gap-y-2">
+            <nav aria-label="Sumanth online" className="flex gap-3">
               {LINKS.map((l) => (
                 <a
                   key={l.label}
                   href={l.href}
-                  className="group text-[0.95rem] font-medium text-ink/70 underline decoration-ink/20 underline-offset-[6px] transition-colors hover:text-ink hover:decoration-ink"
+                  aria-label={l.label}
+                  title={l.label}
+                  className="grid size-12 place-items-center rounded-full border border-ink/15 text-ink/75 transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-white"
                 >
-                  {l.label}
-                  <span aria-hidden="true" className="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                    ↗
-                  </span>
+                  <PlatformIcon platform={l.platform} className="size-5" />
                 </a>
               ))}
             </nav>

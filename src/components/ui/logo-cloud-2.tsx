@@ -4,7 +4,7 @@ type Logo = { src: string; alt: string; h: number };
 
 // Each logo gets its own height so they read at about the same visual weight: wide wordmarks sit
 // shorter, compact marks (Glean) taller. ponytail: tuned by eye; re-tune when a logo is swapped.
-const LOGOS: Logo[] = [
+export const LOGOS: Logo[] = [
   { src: "/clients/vercel.svg", alt: "Vercel", h: 20 },
   { src: "/clients/glean.svg", alt: "Glean", h: 30 },
   { src: "/clients/mistral.svg", alt: "Mistral AI", h: 22 },

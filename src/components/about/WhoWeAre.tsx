@@ -1,7 +1,7 @@
 // "Who we are", back on paper after the dark story band, in the hero's grammar at a step smaller: the label,
 // a two-line claim, then the story as one paragraph stepped in under the claim's right side. The paragraph
 // is two-tone like the hero headline: soft grey, its keywords in ink. The label and claim line up with the
-// "How we work" label below (that stage's left padding, inset 2.5vw).
+// "How we operate" label below (that stage's left padding, inset 2.5vw).
 const EDGE = "lg:ml-[calc(min(0px,(76rem-100cqw)/2)+2.5vw)]";
 
 function Key({ children }: { children: string }) {
@@ -20,12 +20,12 @@ export default function WhoWeAre() {
           id="who-we-are-title"
           className={`${EDGE} text-[clamp(2.2rem,4vw,3.75rem)] leading-[1.02] font-medium tracking-[-0.05em] text-ink lg:col-span-12`}
         >
-          <span className="block">Built from inside</span>
-          <span className="block">the developer ecosystem.</span>
+          <span className="block">Builders first,</span>
+          <span className="block">marketers second.</span>
         </h2>
 
         <p className="mt-4 max-w-[40rem] text-[clamp(1.5rem,2vw,1.75rem)] leading-[1.4] font-medium tracking-[-0.025em] text-ink/55 lg:col-span-7 lg:col-start-6 lg:mt-6">
-          We were <Key>part of the audience</Key> before we started marketing to it. Devable grew out of years spent{" "}
+          We were <Key>part of the audience</Key> before we ever marketed to them. Devable grew out of years spent{" "}
           <Key>building, writing, and creating</Key> for <Key>developers and AI engineers</Key>: technical writers,
           engineers, marketers, and creators who <Key>understand both the technology</Key> and how technical audiences
           discover, evaluate, and talk about products.

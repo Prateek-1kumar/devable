@@ -197,9 +197,11 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
 
     // Apart = before arriving or after splitting: parked at the screen edge, fully in view, turned inward.
     const apart = Math.max(1 - arrived, split);
-    // Size: a little smaller while parked (big enough for the dot lattice to read), growing to full as they
-    // lock, settling at 0.75 to frame the text.
-    const scale = fit * (split > 0 ? 1 - 0.25 * split : 0.6 + 0.4 * arrived);
+    // Size: a little smaller while parked (big enough for the dot lattice to read, and never taller than ~84%
+    // of the band's visible strip, so its edge doesn't slice the D), growing to full as they lock, settling at
+    // 0.75 to frame the text.
+    const park = Math.min(0.6 * fit, 0.42 * reveal.current * viewport.height);
+    const scale = split > 0 ? fit * (1 - 0.25 * split) : park + (fit - park) * arrived;
     const edge = Math.max(viewport.width / 2 - 0.35 - 1.5 * scale, 0.4);
 
     // Open most halfway in, closed at both ends.
@@ -209,8 +211,8 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
 
     const o = outer.current!;
     o.position.x = side * (0.03 + apart * edge);
-    // Vertically: parked in the middle of the band's visible strip at load, easing to the stage's center
-    // by the lock. The band rises the whole time, so on screen the halves only ever travel up and in.
+    // Vertically: parked in the middle of the band's visible strip, easing to the stage's center by the lock.
+    // The strip only grows as the band rises, so on screen the halves only ever travel up and in.
     o.position.y = (1 - arrived) * viewport.height * (0.5 - reveal.current / 2);
     o.rotation.y = side * (split > 0 ? split * TURN : (1 - arrived) * PARK_TURN);
     o.rotation.x = -0.08;

@@ -1,39 +1,16 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import NumberFlow from "@number-flow/react";
 import ArcButton from "../ArcButton";
+import { LOGOS } from "../ui/logo-cloud-2";
 
-// Editorial opener: a wide two-tone headline (the quiet setup in grey, the claim in ink), then one row under
-// it: who's on the team at the left, the who-we-help and the CTA stepped in under the headline's right side.
-// Lines rise in once on load.
+// Editorial opener, centred: a two-tone headline (the quiet setup in grey, the claim in ink), who we are and
+// who we help, the CTA, then a quiet row of client logos as proof. Lines rise in once on load.
 const RISE = "animate-fade-up motion-reduce:animate-none";
-const TEAM = ["Engineers", "Technical writers", "Creators", "Growth operators"];
-const OPERATORS = 15;
-const ROLL = { duration: 1400, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+// A handful of the homepage's clients, at their tuned heights; the full wall lives on the homepage.
+const CLIENTS = ["Vercel", "Glean", "Mistral AI", "AssemblyAI", "Statsig", "Twelve Labs"].map((alt) => LOGOS.find((l) => l.alt === alt)!);
 
 export default function AboutHero() {
-  // The count rolls up like an odometer as its block rises. The server renders the real number; on mount it
-  // drops to 0 unseen (the block is still behind its rise delay), then spins up. Reduced motion: it stays put.
-  const [count, setCount] = useState(OPERATORS);
-  const [rolling, setRolling] = useState(false);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const reset = requestAnimationFrame(() => setCount(0));
-    const roll = window.setTimeout(() => {
-      setRolling(true);
-      setCount(OPERATORS);
-    }, 500);
-    return () => {
-      cancelAnimationFrame(reset);
-      window.clearTimeout(roll);
-    };
-  }, []);
-
   return (
-    <section className="px-6 pt-32 pb-14 sm:px-12 sm:pt-32 sm:pb-14 xl:px-[6vw]">
-      <div className="mx-auto max-w-[76rem]">
-
+    <section className="px-6 pt-28 pb-12 sm:px-12 sm:pt-28 sm:pb-12 xl:px-[6vw]">
+      <div className="mx-auto max-w-[76rem] text-center">
         <h1 className="mt-8 text-[clamp(2.5rem,5.2vw,5.25rem)] leading-[0.98] font-medium tracking-[-0.055em] text-ink">
           <span style={{ animationDelay: "80ms" }} className={`block text-ink/30 ${RISE}`}>
             The growth partner
@@ -43,39 +20,26 @@ export default function AboutHero() {
           </span>
         </h1>
 
-        <div className="mt-10 grid gap-14 lg:mt-12 lg:grid-cols-12 lg:items-end lg:gap-0">
-          <div style={{ animationDelay: "320ms" }} className={`lg:col-span-5 lg:col-start-8 lg:row-start-1 ${RISE}`}>
-            <p className="max-w-[28rem] text-lg leading-relaxed tracking-[-0.01em] text-ink/70 sm:text-xl">
-              Engineers, technical writers, creators, and growth operators under one roof, helping AI&#8209;native and
-              technical companies reach the people who matter.
-            </p>
-            <ArcButton href="/#contact" arrow className="mt-8">
-              Speak with the Team
-            </ArcButton>
-          </div>
+        <div style={{ animationDelay: "320ms" }} className={`mt-8 lg:mt-10 ${RISE}`}>
+          <p className="mx-auto max-w-[40rem] text-lg leading-relaxed tracking-[-0.01em] text-balance text-ink/70 sm:text-xl">
+            Engineers, technical writers, creators, and growth operators under one roof, helping AI&#8209;native
+            devtools and platforms reach the developers and technical buyers they&rsquo;re built for.
+          </p>
+          <ArcButton href="/#contact" arrow className="mt-8">
+            Speak with the Team
+          </ArcButton>
+        </div>
 
-          {/* The team at a glance, on the CTA's line: a spec-sheet count and the disciplines. */}
-          <div
-            style={{ animationDelay: "420ms" }}
-            className={`border-t border-line pt-6 lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:max-w-[28rem] ${RISE}`}
-          >
-            <p className="text-[clamp(3rem,5vw,4.5rem)] leading-none font-medium tracking-[-0.05em] text-ink">
-              <NumberFlow value={count} suffix="+" animated={rolling} spinTiming={ROLL} transformTiming={ROLL} />
-            </p>
-            <p className="mt-2 text-lg tracking-[-0.01em] text-ink/70">technical operators</p>
-            {/* Quiet tinted tags that pop in one after another once the block has risen. */}
-            <ul className="mt-6 flex flex-wrap gap-2">
-              {TEAM.map((role, i) => (
-                <li
-                  key={role}
-                  style={{ animationDelay: `${700 + i * 90}ms` }}
-                  className="animate-pop-in rounded-md bg-ink/[0.05] px-2.5 py-1 text-[0.85rem] tracking-[-0.005em] text-ink/70 motion-reduce:animate-none"
-                >
-                  {role}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div style={{ animationDelay: "440ms" }} className={`mt-12 sm:mt-14 ${RISE}`}>
+          <p className="text-sm font-medium text-muted">Trusted by AI-native devtools and platforms</p>
+          <ul className="mx-auto mt-6 grid grid-cols-3 place-items-center gap-y-6 lg:flex lg:items-center lg:justify-center lg:gap-x-12">
+            {CLIENTS.map((logo) => (
+              <li key={logo.alt} className="flex w-full justify-center lg:w-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element -- static logos, mixed svg/png */}
+                <img src={logo.src} alt={logo.alt} style={{ height: logo.h }} className="w-auto max-w-[85%] object-contain opacity-70 select-none lg:max-w-none" />
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
