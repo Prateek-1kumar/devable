@@ -96,7 +96,7 @@ export default function SignalStory() {
       className="relative h-[340svh] bg-[#1a1918] text-white"
     >
       <div className="sticky top-0 h-svh overflow-hidden">
-        {/* Above the text: the cells are solid, so they occlude the copy as they sweep past it. */}
+        {/* Above the premise: the cells are solid, so they occlude it as they sweep past. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
           <SignalMark progress={progress} approach={approach} reveal={reveal} active={onScreen} />
         </div>
@@ -117,10 +117,11 @@ export default function SignalStory() {
           </h2>
         </div>
 
-        {/* Beats 2–3: the statement, framed by the split halves, lighting up as you scroll. */}
+        {/* Beats 2–3: the statement, framed by the split halves (fading back to give it focus), lighting up as
+            you scroll. Above the mark, so where the halves can't clear it the copy stays on top. */}
         <div
-          className="absolute inset-0 grid place-items-center px-6"
-          style={{ opacity: "clamp(0, calc((var(--p) - 0.56) * 10), 1)" }}
+          className="absolute inset-0 z-20 grid place-items-center px-6"
+          style={{ opacity: "clamp(0, calc((var(--p) - 0.62) * 12.5), 1)" }}
         >
           <p className="max-w-[min(34rem,72vw)] text-center text-[clamp(1.45rem,2.9vw,2.6rem)] leading-[1.15] font-medium tracking-[-0.035em] text-balance max-sm:max-w-full">
             {SEGMENTS.map(({ mark, tokens }, k) => {

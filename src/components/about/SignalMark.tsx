@@ -105,7 +105,7 @@ function drawAtlas(ctx: CanvasRenderingContext2D) {
 }
 
 const VERTEX = /* glsl */ `
-  uniform float uTime, uApproach, uPx, uPitch, uMotion, uSpread;
+  uniform float uTime, uApproach, uPx, uPitch, uMotion, uSpread, uFade;
   uniform vec3 uPaper, uGreen, uDeep;
   attribute float aSeed, aLayer;
   varying vec3 vColor;
@@ -132,6 +132,7 @@ const VERTEX = /* glsl */ `
     vColor = e < 0.12 ? uPaper : mix(mix(uDeep, uPaper, pow(aLayer, 1.6)), uGreen, 1.0 - smoothstep(0.82, 1.0, e));
     // (While open, dormant back slabs show a little more, so the parted sheets read.)
     vAlpha = e < 0.12 ? 0.08 + 0.87 * pow(aLayer, mix(4.0, 2.0, uSpread)) : 0.6 + 0.4 * e;
+    vAlpha *= uFade;
     gl_PointSize = max(1.0, uPitch * length(modelMatrix[0].xyz) * uPx * projectionMatrix[1][1] / -mv.z);
   }
 `;
@@ -162,6 +163,11 @@ const SPLIT = 0.56;
 const SPLIT_LEN = 0.2;
 const TURN = 0.75; // how far each half is turned inward once split, framing the statement (radians)
 const PARK_TURN = 0.35; // and while parked at the start: less, so the D reads face-on
+// As the halves split, they step back so the statement takes over: faded to this over FADE_LEN, done before the
+// first highlight lands. Lower where they can't clear the text (narrow screens), so the copy stays readable.
+const FADE_BESIDE = 0.4;
+const FADE_BEHIND = 0.14; // keeps white copy ≥ 4.5:1 over the brightest cell (measured at 375 and 768)
+const FADE_LEN = 0.14;
 
 type Progress = RefObject<number>;
 
@@ -198,6 +204,8 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
 
     // Open most halfway in, closed at both ends.
     u.uSpread.value = 4 * arrived * (1 - arrived);
+    // ponytail: fit < 1 stands in for "the halves overlap the text"; measure the copy if layouts change.
+    u.uFade.value = 1 - clamp01((p - SPLIT) / FADE_LEN) * (1 - (fit < 1 ? FADE_BEHIND : FADE_BESIDE));
 
     const o = outer.current!;
     o.position.x = side * (0.03 + apart * edge);
@@ -236,6 +244,7 @@ function Scene({ still, ...timelines }: Timelines & { still: boolean }) {
       uTime: { value: 0 },
       uApproach: { value: 0 },
       uSpread: { value: 0 },
+      uFade: { value: 1 },
       uPx: { value: 1 },
       uPitch: { value: 0.1 },
       uMotion: { value: still ? 0 : 1 },
