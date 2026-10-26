@@ -4,6 +4,8 @@ import { PATHS } from "../services/kit";
 // Line drawings for the four principles: brand green on charcoal, hairline strokes, no words. Each is plain
 // SVG with SMIL animations on one shared DUR-second timeline (every animation spans it and places its beat
 // with keyTimes) and loop on their own. Remounting a drawing restarts its story.
+// All four share one 400×200 canvas: wide drawings run edge to edge, compact ones sit on its centre line (x 200),
+// so they line up with the text on the left and with each other as they crossfade.
 const DUR = 6;
 const G = "var(--primary)";
 const FAINT = "rgb(255 255 255 / 0.2)";
@@ -31,7 +33,8 @@ const draw = { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: 1 } as c
 function Frame({ label, children }: { label: string; children: ReactNode }) {
   return (
     <svg
-      viewBox="0 0 480 200"
+      viewBox="0 0 400 200"
+      preserveAspectRatio="xMinYMid meet"
       role="img"
       aria-label={label}
       className="h-full w-full overflow-visible"
@@ -57,10 +60,10 @@ function Frame({ label, children }: { label: string; children: ReactNode }) {
 // 01 · A probe drops past the dashed surface plane, lighting each layer below, and settles at the core.
 // Deeper layers glow a little more, so depth reads without labels.
 export function Understand() {
-  const ys = [44, 80, 116, 152];
+  const ys = [54, 90, 126, 162];
   const arrive = [0.2, 0.36, 0.52, 0.68];
-  const drop = { values: [4, 4, 44, 44, 80, 80, 116, 116, 152, 152], times: [0, 0.08, 0.2, 0.26, 0.36, 0.42, 0.52, 0.58, 0.68, 1] };
-  const plane = (cy: number) => `110,${cy} 240,${cy - 24} 370,${cy} 240,${cy + 24}`;
+  const drop = { values: [10, 10, 54, 54, 90, 90, 126, 126, 162, 162], times: [0, 0.08, 0.2, 0.26, 0.36, 0.42, 0.52, 0.58, 0.68, 1] };
+  const plane = (cy: number) => `60,${cy} 200,${cy - 24} 340,${cy} 200,${cy + 24}`;
   return (
     <Frame label="Going past the surface, layer by layer, down to the core">
       {/* Bottom plane first, so each one above overlaps it like a stack. */}
@@ -72,13 +75,13 @@ export function Understand() {
           </polygon>
         </g>
       ))}
-      <line x1={240} y1={4} x2={240} y2={4} stroke={G} strokeWidth={1.5}>
+      <line x1={200} y1={10} x2={200} y2={10} stroke={G} strokeWidth={1.5}>
         <A attr="y2" {...drop} />
       </line>
-      <circle cx={240} cy={4} r={4.5} fill={G}>
+      <circle cx={200} cy={10} r={4.5} fill={G}>
         <A attr="cy" {...drop} />
       </circle>
-      <circle cx={240} cy={152} r={4} stroke={G} opacity={0}>
+      <circle cx={200} cy={162} r={4} stroke={G} opacity={0}>
         <A attr="r" values={[4, 4, 22, 22]} times={[0, 0.68, 0.86, 1]} />
         <A attr="opacity" values={[0, 0, 1, 0, 0]} times={[0, 0.67, 0.69, 0.86, 1]} />
       </circle>
@@ -97,38 +100,40 @@ const PLATFORMS: { name: string; icon: ReactNode }[] = [
   { name: "LinkedIn", icon: PATHS.linkedin },
 ];
 
-// 02 · The product lights up at the source, then branches reach out one by one and each platform at the
-// end of a branch lights up: the product, connected to where its audience is.
+// 02 · The product lights up at the source, then cables reach out one by one and each platform at the
+// end of one lights up: the product, connected to where its audience is.
 export function Connect() {
-  // Two groups with a gap between them: search and answer engines, then creator platforms.
-  const ys = [22, 54, 86, 118, 158, 190];
-  const x = 420;
+  // An evenly spaced column, centred on the product. Each cable leaves the product at its own port, so the
+  // bundle fans out in order instead of knotting at a single point.
+  const ys = PLATFORMS.map((_, i) => 20 + i * 32);
+  const x = 382;
   return (
     <Frame label="The product branching out to Google, Reddit, ChatGPT, Perplexity, X and LinkedIn">
-      <rect x={40} y={52} width={150} height={100} rx={10} stroke={FAINT} />
-      <rect x={40} y={52} width={150} height={100} rx={10} stroke={G} fill={G} fillOpacity={0.06} opacity={0}>
+      <rect x={2} y={52} width={140} height={96} rx={10} stroke={FAINT} />
+      <rect x={2} y={52} width={140} height={96} rx={10} stroke={G} fill={G} fillOpacity={0.06} opacity={0}>
         <In a={0.04} b={0.14} />
       </rect>
-      <line x1={40} y1={72} x2={190} y2={72} stroke={FAINT} />
-      {[52, 61, 70].map((cx) => (
+      <line x1={2} y1={72} x2={142} y2={72} stroke={FAINT} />
+      {[14, 23, 32].map((cx) => (
         <circle key={cx} cx={cx} cy={62} r={2} fill={FAINT} />
       ))}
 
       {PLATFORMS.map(({ name, icon }, i) => {
         const at = 0.18 + i * 0.07;
+        const port = 80 + i * 8;
         return (
           <g key={name}>
-            <path d={`M190 102 C 290 102, 300 ${ys[i]}, ${x - 18} ${ys[i]}`} stroke={G} strokeOpacity={0.7} {...draw}>
+            <path d={`M142 ${port} C 250 ${port}, 256 ${ys[i]}, ${x - 16} ${ys[i]}`} stroke={G} strokeOpacity={0.7} {...draw}>
               <Draw a={at} b={at + 0.16} />
             </path>
-            <circle cx={x} cy={ys[i]} r={15} stroke={FAINT} fill={BG} />
-            <circle cx={x} cy={ys[i]} r={15} stroke={G} opacity={0}>
+            <circle cx={x} cy={ys[i]} r={12} stroke={FAINT} fill={BG} />
+            <circle cx={x} cy={ys[i]} r={12} stroke={G} opacity={0}>
               <In a={at + 0.14} b={at + 0.2} />
             </circle>
-            <g transform={`translate(${x - 8} ${ys[i] - 8}) scale(${16 / 24})`} fill="rgb(255 255 255 / 0.35)">
+            <g transform={`translate(${x - 7} ${ys[i] - 7}) scale(${14 / 24})`} fill="rgb(255 255 255 / 0.35)">
               {icon}
             </g>
-            <g transform={`translate(${x - 8} ${ys[i] - 8}) scale(${16 / 24})`} fill="#fff" opacity={0}>
+            <g transform={`translate(${x - 7} ${ys[i] - 7}) scale(${14 / 24})`} fill="#fff" opacity={0}>
               <In a={at + 0.14} b={at + 0.2} />
               {icon}
             </g>
@@ -142,9 +147,9 @@ export function Connect() {
 // 03 · Your team is a ring of people with one open seat. Devable glides in from outside and takes it,
 // wires into every member, and the ring closes round all of you: one team, not a vendor at arm's length.
 export function OwnIt() {
-  const cx = 240;
+  const cx = 200;
   const cy = 100;
-  const R = 70;
+  const R = 72;
   // Six seats round the ring; seat 0 (3 o'clock) is the open one we take. Rounded so the server and the
   // browser print the same attribute strings (their trig can differ in the last digit).
   const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -158,11 +163,7 @@ export function OwnIt() {
       <circle cx={cx} cy={cy} r={R} stroke={G} {...draw}>
         <Draw a={0.56} b={0.74} />
       </circle>
-      {/* The team already talks to itself… */}
-      {team.flatMap(([x1, y1], i) =>
-        team.slice(i + 1).map(([x2, y2], j) => <line key={`${i}-${j}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgb(255 255 255 / 0.07)" />),
-      )}
-      {/* …and once seated, we wire into all of it. */}
+      {/* Once seated, we wire into every member. */}
       {team.map(([x, y], i) => (
         <path key={i} d={`M${sx} ${sy} L${x} ${y}`} stroke={G} strokeOpacity={0.5} {...draw}>
           <Draw a={0.42 + i * 0.03} b={0.56 + i * 0.03} />
@@ -177,47 +178,45 @@ export function OwnIt() {
           </circle>
         </g>
       ))}
-      <circle cx={sx + 130} cy={sy} r={9} fill={G}>
-        <A attr="cx" values={[sx + 130, sx + 130, sx, sx]} times={[0, 0.06, 0.4, 1]} />
+      <circle cx={sx + 110} cy={sy} r={9} fill={G}>
+        <A attr="cx" values={[sx + 110, sx + 110, sx, sx]} times={[0, 0.06, 0.4, 1]} />
       </circle>
       {/* Together: one pulse round the whole team. */}
       <circle cx={cx} cy={cy} r={R} stroke={G} opacity={0}>
-        <A attr="r" values={[R, R, R + 24, R + 24]} times={[0, 0.74, 0.88, 1]} />
+        <A attr="r" values={[R, R, R + 20, R + 20]} times={[0, 0.74, 0.88, 1]} />
         <A attr="opacity" values={[0, 0, 0.8, 0, 0]} times={[0, 0.73, 0.75, 0.88, 1]} />
       </circle>
     </Frame>
   );
 }
 
-// 04 · Reach spikes everywhere (dotted, grey); growth is the line that matters. Only the spikes that feed
-// growth get connected to it as the line draws past them.
+// 04 · Reach spikes everywhere (faint bars); growth is the line that matters. Only the spikes that feed
+// growth light up, as the line draws past them.
 export function Measure() {
-  const reach = [140, 112, 150, 74, 134, 120, 62, 146, 124, 92, 150, 116, 56, 140, 130, 100, 146, 120, 80, 134, 126];
-  const growthY = (x: number) => 162 - 124 * ((x - 40) / 400) ** 1.7;
-  const growth = Array.from({ length: 41 }, (_, k) => 40 + k * 10)
+  const base = 184;
+  const reach = [44, 72, 34, 96, 52, 64, 110, 40, 58, 88, 36, 66, 118, 48, 54, 84, 38, 70, 124, 60];
+  const barX = (i: number) => 10 + i * 20;
+  const growthY = (x: number) => 172 - 132 * ((x - 10) / 380) ** 1.7;
+  const growth = Array.from({ length: 39 }, (_, k) => 10 + k * 10)
     .map((x, k) => `${k ? "L" : "M"}${x} ${growthY(x).toFixed(1)}`)
     .join(" ");
   const from = 0.24;
   const to = 0.8;
+  const bar = (i: number) => ({ x: barX(i) - 3, y: base - reach[i], width: 6, height: reach[i], rx: 2 });
   return (
     <Frame label="Many reach spikes, but only the ones that feed growth count">
-      <line x1={30} y1={176} x2={450} y2={176} stroke={FAINT} />
-      <polyline points={reach.map((y, i) => `${40 + i * 20},${y}`).join(" ")} stroke={FAINT} strokeDasharray="2 4" strokeLinejoin="round" opacity={0}>
-        <In a={0.02} b={0.2} />
-      </polyline>
-
+      <line x1={0} y1={base} x2={400} y2={base} stroke={FAINT} />
+      {reach.map((_, i) => (
+        <rect key={i} {...bar(i)} fill="rgb(255 255 255 / 0.1)" opacity={0}>
+          <In a={0.02 + i * 0.008} b={0.08 + i * 0.008} />
+        </rect>
+      ))}
       {[6, 12, 18].map((i) => {
-        const x = 40 + i * 20;
-        const t = from + ((x - 40) / 400) * (to - from);
+        const t = from + ((barX(i) - 10) / 380) * (to - from);
         return (
-          <g key={i}>
-            <path d={`M${x} ${reach[i]} L${x} ${growthY(x).toFixed(1)}`} stroke={G} strokeDasharray="2 3" opacity={0}>
-              <In a={t} b={t + 0.04} />
-            </path>
-            <circle cx={x} cy={reach[i]} r={3.5} fill={G} opacity={0}>
-              <In a={t} b={t + 0.04} />
-            </circle>
-          </g>
+          <rect key={i} {...bar(i)} fill={G} fillOpacity={0.5} opacity={0}>
+            <In a={t} b={t + 0.04} />
+          </rect>
         );
       })}
 

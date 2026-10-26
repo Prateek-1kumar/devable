@@ -54,8 +54,12 @@ export default function Principles() {
             <p className="mt-5 max-w-[20rem] text-lg leading-snug tracking-[-0.01em] text-white/50">
               What stays the same across every client and every channel.
             </p>
-            {/* Desktop: the active step's drawing, large; the others fade out beneath it. */}
-            <div aria-hidden="true" className="relative mt-[clamp(2rem,6svh,4rem)] hidden aspect-[480/200] lg:block">
+            {/* Desktop: the active step's drawing, large; the others fade out beneath it. Flush with the text on
+                the left, and held short of the column's right edge so it clears the rail's marker. */}
+            <div
+              aria-hidden="true"
+              className="relative mt-[clamp(2rem,6svh,4rem)] hidden aspect-[2/1] w-[min(30rem,100%-3rem)] lg:block"
+            >
               {PRINCIPLES.map(({ title, Visual }, i) => (
                 <div
                   key={title}
