@@ -102,13 +102,13 @@ export const MODES = {
   modes: [
     {
       name: "Launch Amplification",
-      body: "Concentrated attention around the moments that matter most, mainly on X and LinkedIn, where launches spread fastest.",
+      body: "Concentrated attention around the moments that matter most, with creators amplifying the launch across X and LinkedIn.",
       fits: ["Product launches", "Major releases", "Funding announcements", "Open-source launches", "New feature announcements"],
     },
     {
-      name: "Ongoing Creator Distribution",
-      body: "Consistent visibility through recurring partnerships across X, LinkedIn, YouTube, and newsletters.",
-      fits: ["Category awareness", "Product education", "Reaching new audiences", "Supporting ongoing GTM campaigns"],
+      name: "Dedicated Creator Campaigns",
+      body: "Built around your product, audience, and goals, with the right creator mix across the channels that matter.",
+      fits: ["Product adoption", "Category awareness", "Product education", "Reaching new audiences", "Ongoing GTM"],
     },
   ],
 };
