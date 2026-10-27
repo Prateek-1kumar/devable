@@ -184,17 +184,25 @@ export const PROCESS = {
   cta: "Plan a creator campaign",
 };
 
-export const FIT = {
-  label: "Built for technical products",
-  title: "The biggest creator is rarely the right creator.",
-  points: [
-    { title: "We understand the product", body: "We get into the product, use cases, and audience before shaping the campaign." },
+export const COMMITMENTS = {
+  label: "What we commit to",
+  title: "Clear goals. Clear spend. Clear accountability.",
+  items: [
     {
-      title: "We know technical creators",
-      body: "Our network and campaign experience are concentrated around AI, developer tools, and technical audiences across X, LinkedIn, YouTube, and newsletters.",
+      tag: "Clear goals",
+      title: "We agree on success before the campaign starts.",
+      body: "Before anything goes live, we align on the objective and the metrics we\u2019ll use to measure success.",
     },
-    { title: "Fit over follower count", body: "The right 30K-person technical audience can matter more than a generic audience ten times larger." },
-    { title: "One team, end to end", body: "Research, outreach, coordination, review, scheduling, and reporting are handled by one team." },
+    {
+      tag: "Clear spend",
+      title: "You know exactly where the budget is going.",
+      body: "You see the creator mix, budget allocation, and campaign plan before we start spending.",
+    },
+    {
+      tag: "Clear accountability",
+      title: "We measure success against the goal we agreed on.",
+      body: "Every campaign is judged against the objective we set together. Posts, views, and engagement only matter if they move us toward that goal.",
+    },
   ],
 };
 
