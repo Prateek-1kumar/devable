@@ -1,13 +1,14 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
+import mark from "../../../../public/brand/devable-mark.png";
 import { Label, useInView } from "../kit";
 import { delay, rise } from "../parts";
 import { COMMUNITIES } from "./content";
 
 // Why a technical team runs this, in the homepage Channel Problems language: three statements in hairline
 // cells on near-black. The pledge closes the grid as its own full-width row, set as one two-tone statement
-// beside a quiet shield, so it reads as a promise rather than small print. Rises once when seen; then still.
+// signed with the Devable mark, so it reads as a promise rather than small print. Rises once when seen; then still.
 export default function Communities() {
   const [ref, seen] = useInView<HTMLDivElement>(0.25);
   return (
@@ -32,9 +33,8 @@ export default function Communities() {
 
           {/* The pledge: the grid's closing row, set as one statement in the site's two-tone headline style. */}
           <div style={delay(420)} className={`${rise(seen)} flex items-start gap-5 bg-black p-6 md:col-span-3 lg:items-center lg:px-8 lg:py-9`}>
-            <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04]">
-              <ShieldCheck className="size-5 text-white/70" strokeWidth={1.6} />
-            </span>
+            {/* Signed with the Devable mark: it's our promise. */}
+            <Image src={mark} alt="" className="size-11 shrink-0 rounded-xl ring-1 ring-white/10" />
             <p className="text-[clamp(1.15rem,1.7vw,1.55rem)] leading-[1.3] font-medium tracking-[-0.025em] text-white">
               {COMMUNITIES.pledge.slice(0, -1).join(" ")} <span className="text-white/45">{COMMUNITIES.pledge.at(-1)}</span>
             </p>
