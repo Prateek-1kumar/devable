@@ -164,7 +164,7 @@ function Story({ study, compact = false }: { study: CaseStudy; compact?: boolean
 }
 
 // Smooth line through the points (Catmull-Rom converted to cubic Béziers).
-function smooth(points: [number, number][]) {
+export function smooth(points: [number, number][]) {
   let d = `M${points[0][0]},${points[0][1]}`;
   for (let i = 0; i < points.length - 1; i++) {
     const [x0, y0] = points[i - 1] ?? points[i];

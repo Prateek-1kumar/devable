@@ -31,7 +31,7 @@ const LINKS: NavItem[] = [
         faces: CREATORS.slice(0, 4).map((c) => c.photo),
       },
       { name: "Technical Content", description: "Docs, tutorials, and deep dives developers actually read." },
-      { name: "Search & AI Visibility", description: "Show up where developers search, and in AI answers." },
+      { name: "Search & AI Visibility", link: "/services/search-ai-visibility", description: "Show up where developers search, and in AI answers." },
       { name: "Reddit", description: "Earn trust in the communities developers already use." },
     ],
   },

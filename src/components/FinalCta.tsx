@@ -19,12 +19,14 @@ export default function FinalCta({
   body = BODY,
   caseStudiesHref = "#case-studies",
   caseStudiesLabel = "View case studies",
+  ctaLabel = "Speak with the team",
 }: {
   title?: string;
   subtitle?: string;
   body?: string;
   caseStudiesHref?: string;
   caseStudiesLabel?: string;
+  ctaLabel?: string;
 }) {
   const section = useRef<HTMLElement>(null);
   const [shown, setShown] = useState(false);
@@ -79,7 +81,7 @@ export default function FinalCta({
           className={`flex w-full flex-col gap-3 lg:max-w-[20rem] lg:justify-self-end ${reveal}`}
         >
           <DotButton href="#contact" className="w-full">
-            Speak with the team
+            {ctaLabel}
           </DotButton>
           <ArcButton href={caseStudiesHref} tone="white" className="w-full">
             {caseStudiesLabel}
