@@ -22,6 +22,15 @@ const THEMES = {
     box: { top: "#ffffff", front: "#e4e9e5", side: "#c9d3cc" },
     flag: "border-ink/15 bg-white text-ink",
   },
+  // Untinted, for scenes on the warm off-white hero panel.
+  paper: {
+    tone: "#f1f0eb",
+    line: "rgb(28 27 24 / 0.11)",
+    shadow: "rgb(28 27 24 / 0.5)",
+    edge: "1px solid rgb(28 27 24 / 0.35)",
+    box: { top: "#ffffff", front: "#ebe9e3", side: "#d9d6cf" },
+    flag: "border-ink/15 bg-white text-ink",
+  },
   dark: {
     tone: "#1a1918",
     line: "rgb(255 255 255 / 0.07)",

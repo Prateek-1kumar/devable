@@ -18,11 +18,13 @@ export default function FinalCta({
   subtitle = SUBTITLE,
   body = BODY,
   caseStudiesHref = "#case-studies",
+  caseStudiesLabel = "View case studies",
 }: {
   title?: string;
   subtitle?: string;
   body?: string;
   caseStudiesHref?: string;
+  caseStudiesLabel?: string;
 }) {
   const section = useRef<HTMLElement>(null);
   const [shown, setShown] = useState(false);
@@ -80,7 +82,7 @@ export default function FinalCta({
             Speak with the team
           </DotButton>
           <ArcButton href={caseStudiesHref} tone="white" className="w-full">
-            View case studies
+            {caseStudiesLabel}
           </ArcButton>
         </div>
       </div>

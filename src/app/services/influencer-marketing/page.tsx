@@ -25,7 +25,7 @@ export default function InfluencerMarketing() {
       <Process />
       <Fit />
       <Measure />
-      <FinalCta title={CTA.title} subtitle="" body={CTA.body} caseStudiesHref="#case-studies" />
+      <FinalCta title={CTA.title} subtitle="" body={CTA.body} caseStudiesHref="#case-studies" caseStudiesLabel="See case studies" />
       <Footer />
     </main>
   );

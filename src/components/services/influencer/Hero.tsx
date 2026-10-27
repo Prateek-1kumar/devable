@@ -2,13 +2,13 @@
 
 import ArcButton from "../../ArcButton";
 import { SignalGrid } from "../../ui/signal-grid";
-import { Label, PLATFORM_COLOR, PLATFORM_NAME, PlatformIcon } from "../kit";
+import { Label, PLATFORM_NAME, PlatformIcon } from "../kit";
 import { HERO } from "./content";
 import HeroStage from "./HeroStage";
 
 // The first viewport, framed like the homepage hero (warm off-white panel over the pixel field), split in
-// two: the claim, the numbers and the channels on the left; on the right, the launch going out to every
-// channel on the page's light isometric floor (see HeroStage).
+// two: the claim, the numbers and the channels on the left; on the right, a client launch spreading
+// through creators and the platforms over its first 24 hours (see HeroStage).
 export default function Hero() {
   return (
     <section className="px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
@@ -32,21 +32,26 @@ export default function Hero() {
             ))}
           </dl>
 
-          <ul className="mt-5 flex items-center gap-5" aria-label="Channels">
-            {HERO.channels.map((c) => (
-              <li key={c} title={PLATFORM_NAME[c]}>
-                <PlatformIcon platform={c} className="size-5" style={{ color: PLATFORM_COLOR[c] }} />
-                <span className="sr-only">{PLATFORM_NAME[c]}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-5 flex items-center gap-5">
+            <p id="hero-channels" className="text-[0.82rem] text-ink/50">
+              Campaigns across
+            </p>
+            <ul className="flex items-center gap-4 text-ink/70" aria-labelledby="hero-channels">
+              {HERO.channels.map((c) => (
+                <li key={c} title={PLATFORM_NAME[c]}>
+                  <PlatformIcon platform={c} className="size-[18px]" />
+                  <span className="sr-only">{PLATFORM_NAME[c]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <div className="mt-10 flex flex-wrap gap-4">
             <ArcButton href="#contact" arrow tone="primary">
               Speak with the Team
             </ArcButton>
-            <ArcButton href="#launches" tone="secondary">
-              See our launches
+            <ArcButton href="#case-studies" tone="secondary">
+              See case studies
             </ArcButton>
           </div>
         </div>

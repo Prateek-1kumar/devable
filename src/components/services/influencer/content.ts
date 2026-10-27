@@ -2,19 +2,18 @@ import type { Platform } from "../kit";
 
 // Copy for the Influencer Marketing service page, from the copy doc.
 //
-// SAMPLE DATA: the hero numbers, every creator (names, handles, photos, posts, view counts), and the case
+// SAMPLE DATA: every creator (names, handles, photos, posts, view counts), the hero launch, and the case
 // study results and quote are placeholders to judge the design. Replace them with real campaign posts,
 // creator photos, and client-approved figures before this ships.
 
 export const HERO = {
   label: "Influencer Marketing",
   title: "Distribution is the moat.",
-  body: "We help AI-native companies build distribution with creators, from product launches to ongoing campaigns.",
-  // Doc: "[X]M+ impressions · [X]+ creators · [X] launches"
+  body: "We help AI-native devtools and platforms reach developers through the technical creators they already follow, from launches to ongoing campaigns.",
   stats: [
-    { value: "120M+", label: "impressions" },
-    { value: "300+", label: "creators" },
-    { value: "60", label: "launches" },
+    { value: "50M+", label: "impressions" },
+    { value: "500+", label: "creators" },
+    { value: "30+", label: "campaigns" },
   ],
   channels: ["x", "linkedin", "youtube", "newsletter"] as Platform[],
 };
@@ -45,68 +44,24 @@ export const LAUNCH = {
   impressions: 1_840_000,
 };
 
-// The hero's post stack: one launch, as it showed up on each channel. SAMPLE posts and numbers.
-export type HeroPost =
-  | { kind: "x"; creator: number; time: string; text: string; replies: string; reposts: string; likes: string; views: string; reach: number }
-  | {
-      kind: "linkedin";
-      creator: number;
-      headline: string;
-      time: string;
-      text: string;
-      link: { domain: string; title: string };
-      reactions: string;
-      comments: string;
-      reach: number;
-    }
-  | { kind: "youtube"; creator: number; title: string; thumb: string; duration: string; views: string; time: string; reach: number }
-  | { kind: "newsletter"; creator: number; name: string; issue: string; subject: string; preview: string; readers: string; opened: string; reach: number };
+// The hero's launch, as it played out over its first 24 hours: webAI's own post, then the creators who
+// picked it up (`hour` = hours after webAI posted). `total` is everyone the launch reached in 24h; what's
+// left after webAI's and the creators' own views is the platforms pushing it further, so it all adds up.
+// SAMPLE until Ritam's sheet lands: one row per creator post; paste the real values in here.
+export type LaunchPost = { creator: number; platform: Platform; hour: number; text: string; views: number };
 
-export const HERO_POSTS: HeroPost[] = [
-  {
-    kind: "x",
-    creator: 1,
-    time: "2h",
-    text: "If you ship LLM agents without simulations, you're testing in prod. LangWatch Scenarios runs thousands of real conversations before release.",
-    replies: "184",
-    reposts: "1.2K",
-    likes: "6.8K",
-    views: "530K",
-    reach: 530_000,
-  },
-  {
-    kind: "linkedin",
-    creator: 3,
-    headline: "Head of AI Platform · Building agents in production",
-    time: "5h",
-    text: "We finally have a sane way to test agents before they reach customers. Here's how we wired LangWatch into our CI in an afternoon.",
-    link: { domain: "langwatch.ai", title: "Agent simulations: test every conversation before you ship" },
-    reactions: "2,184",
-    comments: "126 comments · 58 reposts",
-    reach: 286_000,
-  },
-  {
-    kind: "youtube",
-    creator: 6,
-    title: "I stress-tested my AI agent with 1,000 simulated users",
-    thumb: "1,000 users. One agent.",
-    duration: "14:32",
-    views: "412K views",
-    time: "3 days ago",
-    reach: 412_000,
-  },
-  {
-    kind: "newsletter",
-    creator: 0,
-    name: "AI Engineering Weekly",
-    issue: "Issue #118",
-    subject: "Evals were the bottleneck. Simulations fixed it.",
-    preview: "This week: why agent teams are moving from static eval sets to simulated users, and the tool we keep reaching for.",
-    readers: "94K readers",
-    opened: "61% opened",
-    reach: 94_000,
-  },
-];
+export const HERO_LAUNCH = {
+  company: { name: "webAI", handle: "@thewebAI", logo: "/clients/webai.svg" },
+  text: "Introducing webAI Navigator: run frontier models privately on the devices you already own.",
+  views: 120_000,
+  total: 2_400_000,
+  posts: [
+    { creator: 1, platform: "x", hour: 1, text: "Ran a 70B model on my MacBook with webAI, no cloud, no API key. Local AI just got real.", views: 410_000 },
+    { creator: 3, platform: "linkedin", hour: 2, text: "Private AI on the hardware your team already has. Here's how we tested webAI on our docs.", views: 186_000 },
+    { creator: 0, platform: "x", hour: 4, text: "On-device inference used to be a demo. webAI made it a product. Thread ↓", views: 320_000 },
+    { creator: 7, platform: "linkedin", hour: 7, text: "Every enterprise asking for private AI should look at what webAI shipped today.", views: 144_000 },
+  ] as LaunchPost[],
+};
 
 export const LOGOS = [
   { src: "/clients/glean.svg", alt: "Glean", h: 30 },
