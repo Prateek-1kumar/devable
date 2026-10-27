@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { smooth } from "../../case-studies/CaseStudies";
 import { Label, useInView } from "../kit";
 import { ARTIFACTS, AREAS } from "./content";
-import { Beacon, CANVAS, FRAME, GAP, Mark, PILL, SHEET, STAMP, SheetHead, StepChip, Tick, delay, rise } from "./parts";
+import { Beacon, CANVAS, FRAME, GAP, Mark, PILL, SHEET, STAMP, SheetHead, StepChip, Tick, delay, rise } from "../parts";
 
 // The page's signature section, in How We Work's language: the four areas of work down the left (step chip,
 // title, mono "includes" pills), and on the right, pinned while you scroll, a How We Work card whose dotted

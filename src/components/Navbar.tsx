@@ -30,7 +30,7 @@ const LINKS: NavItem[] = [
         description: "Reach developers through the technical creators they already follow.",
         faces: CREATORS.slice(0, 4).map((c) => c.photo),
       },
-      { name: "Technical Content", description: "Docs, tutorials, and deep dives developers actually read." },
+      { name: "Technical Content", link: "/services/technical-content", description: "Docs, tutorials, and deep dives developers actually read." },
       { name: "Search & AI Visibility", link: "/services/search-ai-visibility", description: "Show up where developers search, and in AI answers." },
       { name: "Reddit", description: "Earn trust in the communities developers already use." },
     ],

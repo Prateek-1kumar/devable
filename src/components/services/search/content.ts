@@ -1,4 +1,4 @@
-import type { Icon } from "./parts";
+import type { Icon } from "../parts";
 
 // Copy for the Search & AI Visibility service page, from the copy doc.
 //

@@ -2,7 +2,7 @@
 
 import { Label, useInView } from "../kit";
 import { EXPANDED, STATUS_LABEL, type Status } from "./content";
-import { Beacon, CANVAS, FRAME, GAP, MarkStack, SHEET, SheetHead, Tick, delay, rise } from "./parts";
+import { Beacon, CANVAS, FRAME, GAP, MarkStack, SHEET, SheetHead, Tick, delay, rise } from "../parts";
 
 // Discovery now happens on five surfaces, so the visual is one product checked across all five, as a sheet
 // on the How We Work canvas with an earlier check stacked behind it. Each surface shows where buyers meet

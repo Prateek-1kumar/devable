@@ -2,7 +2,7 @@
 
 import { Label, useInView } from "../kit";
 import { MEASURE } from "./content";
-import { MarkStack, Tick, delay, rise, type Icon } from "./parts";
+import { MarkStack, Tick, delay, rise, type Icon } from "../parts";
 
 const MARKS: Record<string, Icon[]> = { Search: ["google"], AI: ["chatgpt", "perplexity", "claude"] };
 

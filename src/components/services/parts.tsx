@@ -1,6 +1,6 @@
 import { FileText, Newspaper } from "lucide-react";
 import { useId, type ReactNode } from "react";
-import { MARKS, MARK_COLOR, type MarkName } from "../../how-we-work/marks";
+import { MARKS, MARK_COLOR, type MarkName } from "../how-we-work/marks";
 
 // The page's visual parts, lifted from the site's own components so every scene reads like the homepage:
 // the How We Work dotted canvas and its white sheets (same two-step shadow as its SVG `Card`), its mono

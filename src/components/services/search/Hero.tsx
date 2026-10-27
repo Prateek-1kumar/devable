@@ -5,7 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import ArcButton from "../../ArcButton";
 import { Label, useInView } from "../kit";
 import { ANSWER, HERO } from "./content";
-import { CANVAS, FRAME, Mark, SHEET, STAMP, TAG, Tick } from "./parts";
+import { CANVAS, FRAME, Mark, SHEET, STAMP, TAG, Tick } from "../parts";
 
 const CYCLE = 6500; // ms each engine's answer stays up
 

@@ -149,6 +149,16 @@ body {
 }
 
 /* The navbar's menus (components/ui/navigation-menu): a quick drop-in and fade-out. */
+/* Text typing in, character by character (pair with steps(n) for n characters). */
+@keyframes type-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+/* A word or result arriving: a short rise and fade. */
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(3px); }
+}
+
 @keyframes nav-pop-in {
   from {
     opacity: 0;
