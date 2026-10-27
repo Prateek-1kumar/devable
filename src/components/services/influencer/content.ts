@@ -166,21 +166,22 @@ export const PROCESS = {
   steps: [
     {
       title: "Find the right creators",
-      body: "We pick creators based on technical credibility, audience fit, content quality, and past performance, not follower count.",
+      body: "We evaluate creators based on technical credibility, audience fit, content quality, and past performance, not follower count.",
     },
     {
       title: "Build the right narrative",
-      body: "The same product should not sound identical through every creator. We define the angle and key messages, and leave room for each creator to speak in their own voice.",
+      body: "The same product should not sound identical through every creator. We shape the angle and key messages around each creator while keeping the core narrative consistent.",
     },
     {
-      title: "Coordinate the distribution",
-      body: "We handle outreach, negotiation, scheduling, approvals, and execution. For launches, timing matters: creators play different roles, from the first launch posts to deep dives, quote posts, and follow-ups.",
+      title: "Run the campaign",
+      body: "We handle outreach, negotiation, scheduling, approvals, and execution across the campaign. For launches, we sequence creators around key moments. For dedicated campaigns, we coordinate different creators, formats, and channels over time.",
     },
     {
       title: "Learn what performs",
-      body: "We track which creators, angles, and formats drive results, and use that to improve the next campaign.",
+      body: "We track which creators, angles, and formats perform best, and use those learnings to improve the next campaign.",
     },
   ],
+  cta: "Plan a creator campaign",
 };
 
 export const FIT = {
