@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Billboard, At, IsoScene } from "../iso";
 import { PLATFORM_COLOR, PlatformIcon } from "../kit";
-import { CREATORS, HERO_LAUNCH, type LaunchPost } from "./content";
+import { HERO_LAUNCH, type LaunchPost } from "./content";
 
-// The hero visual: a real client launch over its first 24 hours, in three beats on the iso floor.
+// The hero visual: webAI's TwIL-LM3-Pro launch over its first 48 hours, in three beats on the iso floor.
 // 1. webAI posts. On its own the post reaches webAI's followers: the small dark disc under it.
 // 2. Creators pick it up at their real hour marks. An arc draws out to each one and their post lands over
-//    their own audience, a green disc sized by views. The three biggest posts show in full; the rest of the
-//    creators show as faces, so the scale reads without the clutter.
-// 3. The early engagement makes X and LinkedIn push it further: one soft disc spreads out under everything.
+//    their own audience, a green disc sized by views. Three posts show in full; the biggest of the rest show
+//    as faces, so the scale reads without the clutter.
+// 3. The early engagement makes X push it further: one soft disc spreads out under everything. Those views
+//    are already inside the creators' numbers, so the tally doesn't count them twice.
 // The tally under the floor counts each beat as it lands and ends on the comparison with webAI alone, so the
 // final frame tells the whole story by itself (it's also the still frame, shown before and without motion).
 // One clock drives everything, with no CSS transitions on driven values, so it's smooth.
@@ -31,12 +32,12 @@ function floorAt(sx: number, sy: number) {
 // clear for the tally, which overlaps it.
 const LAUNCH_AT = floorAt(250, 350);
 const FEATURED_AT = [floorAt(118, 215), floorAt(395, 175), floorAt(430, 375)];
-const FACES_AT = [floorAt(245, 130), floorAt(66, 300), floorAt(158, 372), floorAt(262, 45)];
+const FACES_AT = [floorAt(66, 300), floorAt(245, 128), floorAt(470, 478), floorAt(158, 380), floorAt(262, 45), floorAt(52, 470)];
 const LIFT = 36;
 
 const POSTS = HERO_LAUNCH.posts; // in hour order
-const FEATURED = [...POSTS].sort((a, b) => b.views - a.views).slice(0, FEATURED_AT.length);
-const FACES = POSTS.filter((p) => !FEATURED.includes(p));
+const FEATURED = POSTS.filter((p) => p.featured).slice(0, FEATURED_AT.length);
+const FACES = POSTS.filter((p) => !FEATURED.includes(p)).sort((a, b) => b.views - a.views); // biggest get spots
 // Creators past the face spots still count toward the reach; they just aren't drawn.
 const CAST = POSTS.map((p, i) => {
   const f = FEATURED.indexOf(p);
@@ -44,7 +45,9 @@ const CAST = POSTS.map((p, i) => {
 }).filter((c) => c.at);
 
 const CREATOR_VIEWS = POSTS.reduce((sum, p) => sum + p.views, 0);
-const PUSHED = HERO_LAUNCH.total - HERO_LAUNCH.views - CREATOR_VIEWS;
+const TOTAL = HERO_LAUNCH.views + CREATOR_VIEWS;
+const END_HOUR = 48;
+const photo = (handle: string) => `/services/creators/webai/${handle}.jpg`;
 
 // The beats on the clock (0–1 of a cycle).
 const OWN = 0.02; // webAI posts
@@ -70,8 +73,8 @@ function arc(to: { x: number; y: number }) {
   return `M${x} ${y} Q${cx} ${cy} ${to.x} ${to.y}`;
 }
 
-// The launch's clock, in hours: 0 when webAI posts, each creator's hour as their post lands, 24 at the end.
-const HOURS: [number, number][] = [[OWN + RISE, 0], ...POSTS.map((p, i): [number, number] => [START(i) + RISE, p.hour]), [PUSH[1], 24]];
+// The launch's clock, in hours: 0 when webAI posts, each creator's hour as their post lands, 48 at the end.
+const HOURS: [number, number][] = [[OWN + RISE, 0], ...POSTS.map((p, i): [number, number] => [START(i) + RISE, p.hour]), [PUSH[1], END_HOUR]];
 function hourAt(t: number) {
   if (t <= HOURS[0][0]) return 0;
   for (let i = 1; i < HOURS.length; i++) {
@@ -79,7 +82,7 @@ function hourAt(t: number) {
     const [t0, h0] = HOURS[i - 1];
     if (t <= t1) return h0 + (h1 - h0) * ((t - t0) / (t1 - t0 || 1));
   }
-  return 24;
+  return END_HOUR;
 }
 
 function useCycle(ms: number) {
@@ -116,13 +119,13 @@ export default function HeroStage() {
   const landed = POSTS.map((_, i) => ease(clamp01((t - START(i)) / RISE)) * out);
   const push = ease(clamp01((t - PUSH[0]) / (PUSH[1] - PUSH[0]))) * out;
   const creators = POSTS.reduce((sum, p, i) => sum + p.views * landed[i], 0);
-  const reach = HERO_LAUNCH.views * own + creators + PUSHED * push;
+  const reach = HERO_LAUNCH.views * own + creators;
   const still = { transition: "none" } as const;
 
   const beats = [
     { label: "webAI's own post", value: HERO_LAUNCH.views * own, on: own, swatch: "bg-ink" },
     { label: `${POSTS.length} creators pick it up`, value: creators, on: landed[0], swatch: "bg-primary" },
-    { label: "X & LinkedIn push it further", value: PUSHED * push, on: push, swatch: "bg-ink/15" },
+    { label: "X pushes it further", value: null, on: push, swatch: "bg-ink/15" },
   ];
 
   return (
@@ -172,14 +175,16 @@ export default function HeroStage() {
           </svg>
         </At>
 
-        <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={LIFT - 14 * (1 - own)} center style={{ ...still, opacity: own }}>
-          <LaunchCard />
+        <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={LIFT - 14 * (1 - own)} center style={{ ...still, opacity: own, pointerEvents: own > 0.5 ? "auto" : "none" }}>
+          <PostLink href={HERO_LAUNCH.url}>
+            <LaunchCard />
+          </PostLink>
         </Billboard>
 
-        {/* The Devable mark, standing on the dark disc as a token, the way the creators' faces stand on theirs. */}
+        {/* The launch's author, standing on the dark disc, the way the creators' faces stand on theirs. */}
         <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={2} center style={{ ...still, opacity: own }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
-          <img src="/brand/devable-mark.png" alt="" className="size-6 max-w-none rounded-[7px] shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- creator photo */}
+          <img src={HERO_LAUNCH.author.photo} alt="" className="size-7 max-w-none rounded-full object-cover shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
         </Billboard>
 
         {CAST.map(({ p, i, at, featured }) => (
@@ -189,14 +194,16 @@ export default function HeroStage() {
             y={at.y}
             z={(featured ? LIFT : 12) - 14 * (1 - landed[i])}
             center
-            style={{ ...still, opacity: landed[i] }}
+            style={{ ...still, opacity: landed[i], pointerEvents: landed[i] > 0.5 ? "auto" : "none" }}
           >
-            {featured ? (
-              <CreatorCard post={p} />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- sample creator photos
-              <img src={CREATORS[p.creator].photo} alt="" className="size-7 max-w-none rounded-full object-cover shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
-            )}
+            <PostLink href={p.url} round={!featured}>
+              {featured ? (
+                <CreatorCard post={p} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- creator photos
+                <img src={photo(p.handle)} alt="" className="size-7 max-w-none rounded-full object-cover shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
+              )}
+            </PostLink>
           </Billboard>
         ))}
       </IsoScene>
@@ -210,17 +217,17 @@ export default function HeroStage() {
             <span className="size-1.5 rounded-full bg-primary" />
             webAI launch reach
           </span>
-          <span className="tabular-nums">Hour {Math.round(hourAt(t))} / 24</span>
+          <span className="tabular-nums">Hour {Math.round(hourAt(t))} / {END_HOUR}</span>
         </p>
         <div className="mt-2 flex items-end justify-between gap-3">
           <p className="text-[28px] leading-none font-medium tracking-[-0.045em] text-ink tabular-nums">{fmt(reach)}</p>
           <p className="rounded-full bg-primary px-2 py-1 text-[11px] leading-none font-semibold text-ink tabular-nums" style={{ opacity: own }}>
-            {Math.max(1, Math.round(reach / HERO_LAUNCH.views))}× webAI alone
+            {Math.max(1, reach / HERO_LAUNCH.views).toFixed(1)}× webAI alone
           </p>
         </div>
         <div className="mt-3 flex h-1.5 gap-px overflow-hidden rounded-full bg-ink/[0.06]">
           {beats.map((b) => (
-            <span key={b.label} className={b.swatch} style={{ width: `${(b.value / HERO_LAUNCH.total) * 100}%` }} />
+            <span key={b.label} className={b.swatch} style={{ width: `${((b.value ?? 0) / TOTAL) * 100}%` }} />
           ))}
         </div>
         <ol className="mt-3 space-y-1.5 text-[11.5px] text-ink/75">
@@ -228,12 +235,42 @@ export default function HeroStage() {
             <li key={b.label} className="flex items-center gap-2" style={{ opacity: 0.35 + 0.65 * b.on }}>
               <span className={`size-2 shrink-0 rounded-full ${b.swatch}`} />
               <span className="flex-1">{b.label}</span>
-              <span className="font-medium text-ink tabular-nums">{fmt(b.value)}</span>
+              {b.value === null ? (
+                <span className="text-ink/45">included</span>
+              ) : (
+                <span className="font-medium text-ink tabular-nums">{fmt(b.value)}</span>
+              )}
             </li>
           ))}
         </ol>
+        {/* Every creator, in the order they posted, each opening their post. Faces fill in as they land. */}
+        <ul className="mt-3 flex -space-x-1.5 border-t border-ink/[0.06] pt-3">
+          {POSTS.map((p, i) => (
+            <li key={p.handle} style={{ opacity: 0.25 + 0.75 * landed[i] }}>
+              <a href={p.url} target="_blank" rel="noopener noreferrer" tabIndex={-1} title={`${p.name} on X`} className="block rounded-full transition-transform duration-300 hover:-translate-y-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+                <img src={photo(p.handle)} alt="" className="size-[18px] max-w-none rounded-full object-cover ring-2 ring-white" />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
+  );
+}
+
+/** Opens the post on X. The scene is aria-hidden (decorative), so the links stay out of the tab order too. */
+function PostLink({ href, round = false, children }: { href: string; round?: boolean; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      tabIndex={-1}
+      className={`block transition-transform duration-300 hover:-translate-y-0.5 ${round ? "rounded-full" : "rounded-[14px]"}`}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -247,24 +284,24 @@ function LaunchCard() {
         <img src={HERO_LAUNCH.company.logo} alt="" className="h-3.5" />
         <span className="rounded-full bg-ink px-1.5 py-[3px] font-mono text-[7.5px] leading-none tracking-[0.12em] text-white uppercase">Launch</span>
       </header>
-      <p className="mt-2 line-clamp-3 text-[11px] leading-snug text-ink/80">{HERO_LAUNCH.text}</p>
+      <p className="mt-2 line-clamp-3 text-[11px] leading-snug whitespace-pre-line text-ink/80">{HERO_LAUNCH.text}</p>
+      <p className="mt-1.5 text-[10px] text-ink/45">{HERO_LAUNCH.author.name}</p>
       <Footer when="Hour 0" views={HERO_LAUNCH.views} />
     </article>
   );
 }
 
 function CreatorCard({ post }: { post: LaunchPost }) {
-  const c = CREATORS[post.creator];
   return (
     <article className={`w-[152px] ${CARD}`}>
       <header className="flex items-center gap-2">
-        {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-        <img src={c.photo} alt="" className="size-[22px] rounded-full object-cover" />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-ink">{c.name}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+        <img src={photo(post.handle)} alt="" className="size-[22px] rounded-full object-cover" />
+        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-ink">{post.name}</span>
         <PlatformIcon platform={post.platform} className="size-3" style={{ color: PLATFORM_COLOR[post.platform] }} />
       </header>
-      <p className="mt-2 line-clamp-3 text-[10.5px] leading-snug text-ink/75">{post.text}</p>
-      <Footer when={`+${post.hour}h`} views={post.views} />
+      <p className="mt-2 line-clamp-3 text-[10.5px] leading-snug whitespace-pre-line text-ink/75">{post.text}</p>
+      <Footer when={post.hour < 1 ? `+${Math.round(post.hour * 60)}m` : `+${Math.round(post.hour)}h`} views={post.views} />
     </article>
   );
 }

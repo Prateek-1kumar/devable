@@ -44,25 +44,37 @@ export const LAUNCH = {
   impressions: 1_840_000,
 };
 
-// The hero's launch, as it played out over its first 24 hours: webAI's own post, then the creators who
-// picked it up (`hour` = hours after webAI posted). `total` is everyone the launch reached in 24h; what's
-// left after webAI's and the creators' own views is the platforms pushing it further, so it all adds up.
-// SAMPLE until Ritam's sheet lands: one row per creator post; paste the real values in here.
-export type LaunchPost = { creator: number; platform: Platform; hour: number; text: string; views: number };
+// The hero's launch: webAI's TwIL-LM3-Pro launch post (by David Stout, 30 Sep 2026 18:40 UTC) and the 18 creator quote
+// posts from Ritam's sheet, metrics captured 27 Oct 2026. `hour` is hours after the launch post, read from
+// each post's X id. Creator views already include X pushing their posts beyond their own followers.
+// `featured` posts show in full on the floor; the rest show as faces. Texts are verbatim from each post.
+export type LaunchPost = { name: string; handle: string; url: string; platform: Platform; hour: number; text: string; views: number; featured?: boolean };
 
 export const HERO_LAUNCH = {
   company: { name: "webAI", handle: "@thewebAI", logo: "/clients/webai.svg" },
-  text: "webAI Navigator is live: frontier models, running privately on devices you own.",
-  views: 120_000,
-  total: 2_400_000,
+  author: { name: "David Stout", photo: "/services/creators/webai/Davidstout.jpg" },
+  url: "https://x.com/Davidstout/status/2105367134876365135",
+  text: "We’re excited to introduce TwIL-LM3-Pro.\nAt just 3.6 billion parameters, it brings powerful reasoning to…",
+  views: 596_400, // read off the post on 27 Oct 2026
   posts: [
-    { creator: 1, platform: "x", hour: 1, text: "Ran a 70B model on my MacBook with webAI. No cloud, no API key.", views: 410_000 },
-    { creator: 6, platform: "x", hour: 1, text: "webAI Navigator is out. Local models, zero setup.", views: 96_000 },
-    { creator: 3, platform: "linkedin", hour: 2, text: "Private AI on the hardware your team already has.", views: 186_000 },
-    { creator: 0, platform: "x", hour: 4, text: "On-device inference used to be a demo. webAI made it a product.", views: 320_000 },
-    { creator: 4, platform: "x", hour: 5, text: "Benchmarked webAI against three cloud APIs. Thread ↓", views: 72_000 },
-    { creator: 7, platform: "linkedin", hour: 7, text: "Every enterprise asking for private AI should look at what webAI shipped.", views: 144_000 },
-    { creator: 5, platform: "linkedin", hour: 9, text: "What on-device AI means for regulated teams.", views: 58_000 },
+    { name: "Ashutosh Shrivastava", handle: "ai_for_success", url: "https://x.com/ai_for_success/status/2105372789943537848", platform: "x", hour: 0.37, text: "webAI just dropped TwIL-LM3-Pro (3.6B).\nthis isn't built for general chatbot tasks, it is tuned specifically for multi-step logic problems.", views: 2_942 },
+    { name: "Hasan Toor", handle: "hasantoxr", url: "https://x.com/hasantoxr/status/2105373534377959673", platform: "x", hour: 0.42, text: "China's small reasoning models have been embarrassing everyone on price and size.\nThis time one of them lost.\n@thewebai's TwIL-LM3-Pro (3.6B, built in Austin) leads VibeThinker-3B on all six formal-logic tasks in webAI's evals.", views: 12_169 },
+    { name: "Santiago", handle: "svpino", url: "https://x.com/svpino/status/2105380308258521104", platform: "x", hour: 0.87, text: "This open-source model scores 95.4% on BIG-Bench Hard’s logic subset with just 3.66B parameters.\nTwIL-LM3-Pro is a model small enough to run locally on a laptop.\nSpecialized post-training is super cool.", views: 14_691, featured: true },
+    { name: "Ben Geskin", handle: "BenGeskin", url: "https://x.com/BenGeskin/status/2105385471505256920", platform: "x", hour: 1.21, text: "A reasoning model that fits on your laptop can match one more than twice its size on formal logic.\n@thewebai’s new TwIL-LM3-Pro has 3.6B parameters.", views: 11_768 },
+    { name: "marcus", handle: "marcusyul", url: "https://x.com/marcusyul/status/2105391082238628123", platform: "x", hour: 1.59, text: "AN AI THAT FITS ON YOUR LAPTOP JUST WENT UP AGAINST MODELS 33X ITS SIZE\nHere's how it did:\n→ Only 2 GB\n→ Works offline\n→ No usage fees\nOn math problems, it lands just 3 points behind a 120-billion-parameter model. It has 3.6 billion.", views: 45_221 },
+    { name: "Rohan Paul", handle: "rohanpaul_ai", url: "https://x.com/rohanpaul_ai/status/2105407648338428049", platform: "x", hour: 2.68, text: "China's best small reasoning model (VibeThinker-3B) just got beaten by a 3.6B model from Austin.\n> webAI's TwIL-LM3-Pro, a 3.66B local model, lifts IBM Granite's formal-logic score by 28%", views: 6_400 },
+    { name: "Charly Wargnier", handle: "DataChaz", url: "https://x.com/DataChaz/status/2105418739600806351", platform: "x", hour: 3.42, text: "THIS MODEL IS ONLY 2.09 GIB. LET THAT SINK IN\nWhat @thewebai managed to fit into just 3.6B parameters with TwIL-LM3-Pro is kinda ridiculous:\n→ beats VibeThinker-3B across all 6 formal-logic tasks tested", views: 22_546, featured: true },
+    { name: "neural nets.", handle: "cneuralnetwork", url: "https://x.com/cneuralnetwork/status/2105421118249283728", platform: "x", hour: 3.58, text: "I read through the model card right now and tbh a 3.66B model beating VibeThinker-3B and GPT-OSS 120B across all six formal-logic tasks tested is pretty wild.\nWhat makes it interesting is the scale gap.", views: 2_395 },
+    { name: "codila", handle: "0xCodila", url: "https://x.com/0xCodila/status/2105424681004097758", platform: "x", hour: 3.81, text: "Why did nobody listen Andrej Karpathy?\n\"The next big step in AI will come when a tiny model can pack an incredible amount of intelligence\"\nso @thewebai just dropped TwIL-LM3-Pro:", views: 5_280 },
+    { name: "Atul Kumar", handle: "atulkumarzz", url: "https://x.com/atulkumarzz/status/2105451232408338900", platform: "x", hour: 5.57, text: "A 3.6B MODEL JUST PUNCHED WAY ABOVE ITS WEIGHT\nTwIL-LM3-Pro is tiny compared to today’s big reasoning models:\n→ 3.6B parameters\n→ 2.09 GiB in Q4\n→ Runs fully on your laptop\n→ No cloud required", views: 18_904 },
+    { name: "ℏεsam", handle: "Hesamation", url: "https://x.com/Hesamation/status/2105456475594195418", platform: "x", hour: 5.92, text: "smaller models are getting insanely smart. this new 3.66B model comes close to the 120B gpt-oss on math word problems:\nin webAI’s GSM8K evaluation:\n> TwIL-LM3-Pro: 94.3%\n> gpt-oss-120b: 97.7%\n> x33 FEWER PARAMS", views: 8_728 },
+    { name: "bodila", handle: "51bodila", url: "https://x.com/51bodila/status/2105460075166924916", platform: "x", hour: 6.16, text: "Andrej Karpathy predicted the future of AI once again:\n\"The next leap in AI could come from packing big-model intelligence: GPT & Claude - into tiny models\"\n- this is what caught my attention about thewebai’s TwIL-LM3-Pro", views: 2_919 },
+    { name: "Haider.", handle: "haider1", url: "https://x.com/haider1/status/2105605031261282544", platform: "x", hour: 15.76, text: "last month, qwen 3.8 27b surprised me running locally on my RTX 3090\nnow webAI has released a 3.66B model with a quantized build of just 2GB hitting 95.4% on BBH logic\ni think we're going to see a lot more of this.", views: 6_342 },
+    { name: "elvis", handle: "omarsar0", url: "https://x.com/omarsar0/status/2105730500811719056", platform: "x", hour: 24.06, text: "Small models are getting really good at reasoning.\nIt's exciting because SLMs can unlock so much at the harness layer.\nTwIL-LM3-Pro from @thewebAI has 3.6B parameters and runs locally on everyday computers.", views: 15_776, featured: true },
+    { name: "me", handle: "twetsfyp", url: "https://x.com/twetsfyp/status/2105731675833745610", platform: "x", hour: 24.14, text: "These guys just released a 3.6B model that matches Qwen3-8B on formal logic with less than half the parameters.", views: 131_176 },
+    { name: "Chubby", handle: "kimmonismus", url: "https://x.com/kimmonismus/status/2105911541384224800", platform: "x", hour: 36.05, text: "webAI has released a 3.66B model for formal logic that can run locally on a laptop.\nIn webAI’s tests, TwIL-LM3-Pro is roughly level with Qwen3-8B on the headline formal-logic composite, with less than half the parameters.", views: 14_176 },
+    { name: "Movez", handle: "0xMovez", url: "https://x.com/0xMovez/status/2106026961134895407", platform: "x", hour: 43.7, text: "Small Language Models are the Future of Agentic AI\nMost agent calls are small decisions: route, classify, check, gate.\nnone of them need a frontier model.\nHere are my notes 👇\n→ An agent loop is mostly bounded choices, not deep reasoning", views: 3_618 },
+    { name: "Codez", handle: "0xCodez", url: "https://x.com/0xCodez/status/2106036867426554100", platform: "x", hour: 44.35, text: "Andrej Karpathy predicted the future of AI once again:\n“Everyone’s renting frontier models for jobs a 3B model could do. Small models are the future.”\nthis 18-page PDF breaks down Karpathy’s case for working with small LLMs.", views: 158_045 },
   ] as LaunchPost[],
 };
 
