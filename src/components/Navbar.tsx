@@ -21,7 +21,6 @@ const LINKS: NavItem[] = [
   {
     name: "Services",
     link: "/services/influencer-marketing",
-    // ponytail: the other three link up as their pages ship.
     items: [
       {
         name: "Influencer Marketing",
@@ -32,7 +31,7 @@ const LINKS: NavItem[] = [
       },
       { name: "Technical Content", link: "/services/technical-content", description: "Docs, tutorials, and deep dives developers actually read." },
       { name: "Search & AI Visibility", link: "/services/search-ai-visibility", description: "Show up where developers search, and in AI answers." },
-      { name: "Reddit", description: "Earn trust in the communities developers already use." },
+      { name: "Reddit", link: "/services/reddit", description: "Earn trust in the communities developers already use." },
     ],
   },
   { name: "Case Studies", link: "#case-studies" },
