@@ -140,3 +140,17 @@ body {
     0 1.5px 0 rgb(255 255 255 / 0.8),
     0 -1px 0 rgb(0 0 0 / 0.14);
 }
+
+/* The navbar's menus (components/ui/navigation-menu): a quick drop-in and fade-out. */
+@keyframes nav-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes nav-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}

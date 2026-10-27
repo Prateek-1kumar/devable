@@ -8,6 +8,15 @@
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "./navigation-menu";
 
 const FLOAT_SHADOW =
   "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset";
@@ -52,66 +61,107 @@ export function NavBody({ children, className, visible }: { children: React.Reac
   );
 }
 
-/** A sub-link in a dropdown; without a `link` it shows as coming soon. */
-export type NavSubItem = { name: string; link?: string };
+/**
+ * A sub-link in a dropdown; without a `link` it shows as coming soon. One sub-link can be `featured`: it takes
+ * the large card on the left of the menu, with a line about it and a few faces.
+ */
+export type NavSubItem = { name: string; link?: string; description?: string; featured?: boolean; faces?: string[] };
 export type NavItem = { name: string; link: string; dropdown?: boolean; items?: NavSubItem[] };
 
+/** The sliding hover pill behind whichever top-level item the cursor is on. */
+function Pill({ on }: { on: boolean }) {
+  return on ? <motion.span layoutId="nav-hovered" className="absolute inset-0 rounded-full bg-ink/[0.06]" /> : null;
+}
+
+// The desktop links on the Radix navigation menu (components/ui/navigation-menu): items with sub-links open a
+// panel on hover or focus, with arrow keys, Escape and focus return handled. Centered across the whole bar.
 export function NavItems({ items, className, onItemClick }: { items: NavItem[]; className?: string; onItemClick?: () => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
-    <ul
-      onMouseLeave={() => setHovered(null)}
-      className={cn("absolute inset-0 hidden flex-row items-center justify-center gap-1 text-[0.95rem] lg:flex", className)}
-    >
-      {items.map((item, idx) => (
-        <li key={item.name} className="group relative">
-          <a
-            href={item.link}
-            onMouseEnter={() => setHovered(idx)}
-            onClick={onItemClick}
-            className="relative inline-flex items-center gap-1 px-4 py-2 text-foreground/75 transition-colors hover:text-foreground"
-          >
-            {hovered === idx && <motion.span layoutId="nav-hovered" className="absolute inset-0 rounded-full bg-ink/[0.06]" />}
-            <span className="relative z-10">{item.name}</span>
-            {(item.dropdown || item.items) && (
-              // ponytail: chevron only on items whose menus don't exist yet.
-              <svg aria-hidden="true" viewBox="0 0 12 12" className="relative z-10 size-3">
-                <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </a>
-          {item.items && (
-            // Opens on hover, and on keyboard focus anywhere inside it.
-            <div
-              className={cn(
-                "absolute top-full left-1/2 z-50 w-64 -translate-x-1/2 pt-3 transition-[opacity,translate] duration-200",
-                hovered === idx
-                  ? "visible translate-y-0 opacity-100"
-                  : "invisible -translate-y-1 opacity-0 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100",
+    <div onMouseLeave={() => setHovered(null)} className={cn("absolute inset-0 hidden items-center justify-center lg:flex", className)}>
+      <NavigationMenu viewport={false}>
+        <NavigationMenuList>
+          {items.map((item, idx) => (
+            <NavigationMenuItem key={item.name} onMouseEnter={() => setHovered(idx)}>
+              {item.items ? (
+                <>
+                  <NavigationMenuTrigger>
+                    <Pill on={hovered === idx} />
+                    <span className="relative z-10">{item.name}</span>
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ServicesPanel items={item.items} onItemClick={onItemClick} />
+                  </NavigationMenuContent>
+                </>
+              ) : (
+                <NavigationMenuLink href={item.link} onClick={onItemClick} className={navigationMenuTriggerStyle()}>
+                  <Pill on={hovered === idx} />
+                  <span className="relative z-10">{item.name}</span>
+                  {item.dropdown && (
+                    // ponytail: chevron only on items whose menus don't exist yet.
+                    <svg aria-hidden="true" viewBox="0 0 12 12" className="relative z-10 size-3">
+                      <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </NavigationMenuLink>
               )}
-            >
-              <ul className="rounded-xl border border-black/[0.06] bg-white p-1.5 shadow-[0_24px_50px_-20px_rgb(23_44_33/0.35)]">
-                {item.items.map((sub) => (
-                  <li key={sub.name}>
-                    {sub.link ? (
-                      <a
-                        href={sub.link}
-                        onClick={onItemClick}
-                        className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[0.92rem] text-ink transition-colors hover:bg-ink/[0.05] focus-visible:bg-ink/[0.05] focus-visible:outline-none"
-                      >
-                        {sub.name}
-                        <span aria-hidden="true" className="text-ink/40">→</span>
-                      </a>
-                    ) : (
-                      <span className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[0.92rem] text-ink/45">
-                        {sub.name}
-                        <span className="rounded-[4px] bg-ink/[0.05] px-1.5 py-0.5 font-mono text-[0.6rem] tracking-[0.08em] text-ink/45 uppercase">Soon</span>
-                      </span>
-                    )}
-                  </li>
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
+    </div>
+  );
+}
+
+/** A dropdown's panel: the featured sub-link as a large card on the left, the rest listed small on the right. */
+function ServicesPanel({ items, onItemClick }: { items: NavSubItem[]; onItemClick?: () => void }) {
+  const featured = items.find((s) => s.featured);
+  const rest = items.filter((s) => !s.featured);
+  return (
+    <ul className="grid w-[40rem] grid-cols-[1fr_1.1fr] gap-1.5">
+      {featured?.link && (
+        <li className="row-span-3">
+          <NavigationMenuLink
+            href={featured.link}
+            onClick={onItemClick}
+            className="group/card flex h-full min-h-[15rem] flex-col justify-between rounded-xl bg-[#f6f5f0] p-5 hover:bg-[#f1efe7] focus-visible:bg-[#f1efe7]"
+          >
+            {featured.faces && (
+              <span className="flex -space-x-2">
+                {featured.faces.map((src) => (
+                  // eslint-disable-next-line @next/next/no-img-element -- sample creator photos
+                  <img key={src} src={src} alt="" className="size-9 rounded-full object-cover ring-2 ring-[#f6f5f0]" />
                 ))}
-              </ul>
+              </span>
+            )}
+            <span>
+              <span className="block text-[1.15rem] font-medium tracking-[-0.025em] text-ink">{featured.name}</span>
+              {featured.description && <span className="mt-1.5 block text-[0.88rem] leading-snug text-ink/60">{featured.description}</span>}
+              <span className="mt-4 inline-flex items-center gap-1.5 text-[0.85rem] font-medium text-ink">
+                Explore
+                <span aria-hidden="true" className="transition-transform duration-300 group-hover/card:translate-x-0.5">
+                  →
+                </span>
+              </span>
+            </span>
+          </NavigationMenuLink>
+        </li>
+      )}
+      {rest.map((sub) => (
+        <li key={sub.name}>
+          {sub.link ? (
+            <NavigationMenuLink href={sub.link} onClick={onItemClick} className="block rounded-xl px-3.5 py-3 hover:bg-ink/[0.04] focus-visible:bg-ink/[0.04]">
+              <span className="block text-[0.92rem] font-medium text-ink">{sub.name}</span>
+              {sub.description && <span className="mt-1 block text-[0.8rem] leading-snug text-ink/55">{sub.description}</span>}
+            </NavigationMenuLink>
+          ) : (
+            <div className="rounded-xl px-3.5 py-3">
+              <span className="flex items-center justify-between gap-3">
+                <span className="text-[0.92rem] font-medium text-ink/55">{sub.name}</span>
+                <span className="rounded-[4px] bg-ink/[0.05] px-1.5 py-0.5 font-mono text-[0.6rem] tracking-[0.08em] text-ink/45 uppercase">Soon</span>
+              </span>
+              {sub.description && <span className="mt-1 block text-[0.8rem] leading-snug text-ink/40">{sub.description}</span>}
             </div>
           )}
         </li>

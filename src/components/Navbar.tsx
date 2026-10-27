@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import logo from "../../public/brand/devable-logo.png";
 import ArcButton from "./ArcButton";
+import { CREATORS } from "./services/influencer/content";
 import {
   MobileNav,
   MobileNavHeader,
@@ -22,10 +23,16 @@ const LINKS: NavItem[] = [
     link: "/services/influencer-marketing",
     // ponytail: the other three link up as their pages ship.
     items: [
-      { name: "Technical Content" },
-      { name: "Search & AI Visibility" },
-      { name: "Reddit" },
-      { name: "Influencer Marketing", link: "/services/influencer-marketing" },
+      {
+        name: "Influencer Marketing",
+        link: "/services/influencer-marketing",
+        featured: true,
+        description: "Reach developers through the technical creators they already follow.",
+        faces: CREATORS.slice(0, 4).map((c) => c.photo),
+      },
+      { name: "Technical Content", description: "Docs, tutorials, and deep dives developers actually read." },
+      { name: "Search & AI Visibility", description: "Show up where developers search, and in AI answers." },
+      { name: "Reddit", description: "Earn trust in the communities developers already use." },
     ],
   },
   { name: "Case Studies", link: "#case-studies" },
