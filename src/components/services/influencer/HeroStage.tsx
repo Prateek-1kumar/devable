@@ -176,6 +176,12 @@ export default function HeroStage() {
           <LaunchCard />
         </Billboard>
 
+        {/* The Devable mark, standing on the dark disc as a token, the way the creators' faces stand on theirs. */}
+        <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={2} center style={{ ...still, opacity: own }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
+          <img src="/brand/devable-mark.png" alt="" className="size-6 max-w-none rounded-[7px] shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
+        </Billboard>
+
         {CAST.map(({ p, i, at, featured }) => (
           <Billboard
             key={i}
