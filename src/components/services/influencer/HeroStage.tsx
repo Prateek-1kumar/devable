@@ -63,9 +63,12 @@ const ease = (v: number) => 1 - (1 - v) ** 3;
 const fmt = (n: number) => (n < 1e6 ? `${Math.round(n / 1e3)}K` : `${(n / 1e6).toFixed(2)}M`);
 const disc = (views: number) => Math.sqrt(views) * 0.065; // area tracks views
 
-/** A gentle arc across the floor from the launch to a creator, bowing to one side. */
+/** A gentle arc across the floor from the edge of webAI's own audience to a creator, bowing to one side. */
 function arc(to: { x: number; y: number }) {
-  const { x, y } = LAUNCH_AT;
+  const r0 = disc(HERO_LAUNCH.views);
+  const d = Math.hypot(to.x - LAUNCH_AT.x, to.y - LAUNCH_AT.y) || 1;
+  const x = LAUNCH_AT.x + ((to.x - LAUNCH_AT.x) / d) * r0;
+  const y = LAUNCH_AT.y + ((to.y - LAUNCH_AT.y) / d) * r0;
   const dx = to.x - x;
   const dy = to.y - y;
   const cx = x + dx / 2 - dy * 0.2;
@@ -139,6 +142,13 @@ export default function HeroStage() {
                 <stop offset="0.8" stopColor="rgb(28 27 24)" stopOpacity={0.05} />
                 <stop offset="1" stopColor="rgb(28 27 24)" stopOpacity={0} />
               </radialGradient>
+              {/* A soft pool of ink, deepest under the post and fading out at the edge: no outline. */}
+              <radialGradient id="hero-own">
+                <stop offset="0" stopColor="rgb(23 44 33)" stopOpacity={0.16} />
+                <stop offset="0.8" stopColor="rgb(23 44 33)" stopOpacity={0.1} />
+                <stop offset="0.93" stopColor="rgb(23 44 33)" stopOpacity={0.07} />
+                <stop offset="1" stopColor="rgb(23 44 33)" stopOpacity={0} />
+              </radialGradient>
               <radialGradient id="hero-audience">
                 <stop offset="0" stopColor="rgb(25 231 110)" stopOpacity={0.32} />
                 <stop offset="1" stopColor="rgb(25 231 110)" stopOpacity={0.1} />
@@ -170,8 +180,9 @@ export default function HeroStage() {
               );
             })}
 
-            {/* Beat 1: webAI's own audience. */}
-            <circle cx={LAUNCH_AT.x} cy={LAUNCH_AT.y} r={disc(HERO_LAUNCH.views) * own} fill="var(--ink)" />
+            {/* Beat 1: webAI's own audience. The pool fades past the disc's true radius, so its visible body
+                still reads at the right size against the creators' discs. */}
+            <circle cx={LAUNCH_AT.x} cy={LAUNCH_AT.y} r={disc(HERO_LAUNCH.views) * 1.05 * own} fill="url(#hero-own)" />
           </svg>
         </At>
 
@@ -181,10 +192,10 @@ export default function HeroStage() {
           </PostLink>
         </Billboard>
 
-        {/* The launch's author, standing on the dark disc, the way the creators' faces stand on theirs. */}
+        {/* The Devable mark, standing on webAI's audience pool as a token. */}
         <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={2} center style={{ ...still, opacity: own }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- creator photo */}
-          <img src={HERO_LAUNCH.author.photo} alt="" className="size-7 max-w-none rounded-full object-cover shadow-[0_0_0_2px_#fff,0_8px_16px_-6px_rgb(28_27_24/0.5)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
+          <img src="/brand/devable-mark.png" alt="" className="size-7 max-w-none rounded-[8px] shadow-[0_0_0_2px_#fff,0_10px_20px_-8px_rgb(28_27_24/0.55)]" />
         </Billboard>
 
         {CAST.map(({ p, i, at, featured }) => (
@@ -285,7 +296,11 @@ function LaunchCard() {
         <span className="rounded-full bg-ink px-1.5 py-[3px] font-mono text-[7.5px] leading-none tracking-[0.12em] text-white uppercase">Launch</span>
       </header>
       <p className="mt-2 line-clamp-3 text-[11px] leading-snug whitespace-pre-line text-ink/80">{HERO_LAUNCH.text}</p>
-      <p className="mt-1.5 text-[10px] text-ink/45">{HERO_LAUNCH.author.name}</p>
+      <p className="mt-2 flex items-center gap-1.5 text-[10px] text-ink/50">
+        {/* eslint-disable-next-line @next/next/no-img-element -- creator photo */}
+        <img src={HERO_LAUNCH.author.photo} alt="" className="size-4 rounded-full object-cover" />
+        {HERO_LAUNCH.author.name}
+      </p>
       <Footer when="Hour 0" views={HERO_LAUNCH.views} />
     </article>
   );
