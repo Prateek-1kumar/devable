@@ -52,14 +52,17 @@ export type LaunchPost = { creator: number; platform: Platform; hour: number; te
 
 export const HERO_LAUNCH = {
   company: { name: "webAI", handle: "@thewebAI", logo: "/clients/webai.svg" },
-  text: "Introducing webAI Navigator: run frontier models privately on the devices you already own.",
+  text: "webAI Navigator is live: frontier models, running privately on devices you own.",
   views: 120_000,
   total: 2_400_000,
   posts: [
-    { creator: 1, platform: "x", hour: 1, text: "Ran a 70B model on my MacBook with webAI, no cloud, no API key. Local AI just got real.", views: 410_000 },
-    { creator: 3, platform: "linkedin", hour: 2, text: "Private AI on the hardware your team already has. Here's how we tested webAI on our docs.", views: 186_000 },
-    { creator: 0, platform: "x", hour: 4, text: "On-device inference used to be a demo. webAI made it a product. Thread ↓", views: 320_000 },
-    { creator: 7, platform: "linkedin", hour: 7, text: "Every enterprise asking for private AI should look at what webAI shipped today.", views: 144_000 },
+    { creator: 1, platform: "x", hour: 1, text: "Ran a 70B model on my MacBook with webAI. No cloud, no API key.", views: 410_000 },
+    { creator: 6, platform: "x", hour: 1, text: "webAI Navigator is out. Local models, zero setup.", views: 96_000 },
+    { creator: 3, platform: "linkedin", hour: 2, text: "Private AI on the hardware your team already has.", views: 186_000 },
+    { creator: 0, platform: "x", hour: 4, text: "On-device inference used to be a demo. webAI made it a product.", views: 320_000 },
+    { creator: 4, platform: "x", hour: 5, text: "Benchmarked webAI against three cloud APIs. Thread ↓", views: 72_000 },
+    { creator: 7, platform: "linkedin", hour: 7, text: "Every enterprise asking for private AI should look at what webAI shipped.", views: 144_000 },
+    { creator: 5, platform: "linkedin", hour: 9, text: "What on-device AI means for regulated teams.", views: 58_000 },
   ] as LaunchPost[],
 };
 

@@ -92,10 +92,12 @@ export function IsoScene({
   return (
     <div ref={box} aria-hidden="true" className={`relative overflow-hidden ${className}`} style={{ aspectRatio: `${w} / ${h}`, background: t.tone }}>
       <div className="absolute top-0 left-0 origin-top-left" style={{ width: w, height: h, transform: `scale(${k})` }}>
-        {/* The dashed grid, fading out toward the floor's edges; the scene sits on its own layer above. */}
-        <div style={{ ...place, maskImage: "radial-gradient(closest-side, #000 60%, transparent)" }}>
-          <GridLines size={floor} step={grid} line={t.line} />
-        </div>
+        {/* The dashed grid (grid={0} for none), fading out toward the floor's edges; the scene sits on its own layer above. */}
+        {grid > 0 && (
+          <div style={{ ...place, maskImage: "radial-gradient(closest-side, #000 60%, transparent)" }}>
+            <GridLines size={floor} step={grid} line={t.line} />
+          </div>
+        )}
         <div style={place}>
           <ThemeContext value={t}>{children}</ThemeContext>
         </div>
