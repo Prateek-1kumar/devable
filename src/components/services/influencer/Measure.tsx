@@ -3,17 +3,19 @@
 import { Label, useInView } from "../kit";
 import { MEASURE } from "./content";
 
-// Bar height and green strength per layer: reach is broad and light, business is narrow and strong.
+// Bar height and green strength per layer: reach is broad and light, business is narrow and strong. The
+// shortest bar still holds its number comfortably.
 const LEVELS = [
   { h: "100%", tone: "bg-primary/20" },
-  { h: "62%", tone: "bg-primary/50" },
-  { h: "34%", tone: "bg-primary" },
+  { h: "68%", tone: "bg-primary/50" },
+  { h: "42%", tone: "bg-primary" },
 ];
 
-// The three layers we report on, left to right as a narrowing funnel: each column opens on a bar that
-// shrinks and deepens in green (grown in once on view), then names what we track at that layer.
+// The three layers we report on, left to right as a narrowing funnel. Each column's figure is its main
+// element, sitting inside a bar that shrinks and deepens in green; what we track at that layer follows below.
+// On first view the bars unveil bottom to top, staggered, and each number lifts into place once (no loop).
 export default function Measure() {
-  const [ref, seen] = useInView<HTMLDivElement>(0.4);
+  const [ref, seen] = useInView<HTMLDivElement>(0.35);
   return (
     <section aria-labelledby="measure-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
@@ -24,15 +26,30 @@ export default function Measure() {
 
         <div ref={ref} className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-3">
           {MEASURE.layers.map((layer, i) => (
-            <div key={layer.name} className="bg-white p-7 sm:p-8">
-              <div aria-hidden="true" className="flex h-28 items-end">
-                <span
-                  style={{ height: seen ? LEVELS[i].h : "4%", transitionDelay: `${i * 150}ms` }}
-                  className={`w-full rounded-[6px] transition-[height] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${LEVELS[i].tone}`}
-                />
+            <div key={layer.name} className="flex flex-col bg-white p-6 sm:p-8">
+              {/* Stepped heights only side by side; stacked on phones, each bar just fits its figure. */}
+              <div className="flex items-end md:h-[19rem]">
+                <div
+                  style={{
+                    ["--h" as string]: LEVELS[i].h,
+                    clipPath: seen ? "inset(0 0 0 0 round 10px)" : "inset(100% 0 0 0 round 10px)",
+                    transitionDelay: `${i * 120}ms`,
+                  }}
+                  className={`flex w-full flex-col rounded-[10px] p-5 md:h-(--h) transition-[clip-path] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:[clip-path:none] sm:p-6 ${LEVELS[i].tone}`}
+                >
+                  <p
+                    style={{ transitionDelay: `${i * 120 + 250}ms` }}
+                    className={`transition-[opacity,translate] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
+                      seen ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+                    }`}
+                  >
+                    <span className="block text-[clamp(2.6rem,4.4vw,4rem)] leading-[0.95] font-medium tracking-[-0.055em] text-ink tabular-nums">{layer.stat}</span>
+                    <span className="mt-2 block text-[0.98rem] font-medium tracking-[-0.01em] text-ink/70">{layer.unit}</span>
+                  </p>
+                </div>
               </div>
-              <h3 className="mt-6 flex items-baseline gap-3 text-[1.25rem] font-medium tracking-[-0.025em] text-ink">
-                <span className="font-mono text-[0.7rem] tracking-[0.1em] text-muted">0{i + 1}</span>
+              <h3 className="mt-7 flex items-center gap-2.5 text-[1.2rem] font-medium tracking-[-0.025em] text-ink">
+                <span className="grid h-6 min-w-6 place-items-center rounded-[5px] bg-ink/[0.06] px-1.5 font-mono text-[0.68rem] tracking-normal text-ink/70">0{i + 1}</span>
                 {layer.name}
               </h3>
               <ul className="mt-4 space-y-2 text-[0.95rem] text-ink/65">

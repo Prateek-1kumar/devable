@@ -211,9 +211,9 @@ export const MEASURE = {
   title: "Impressions matter.",
   subtitle: "The right impressions matter more.",
   layers: [
-    { name: "Distribution", items: ["Total reach", "Impressions by channel", "Creator coverage"] },
-    { name: "Engagement", items: ["Replies", "Reposts", "Engagement quality", "Audience response"] },
-    { name: "Business", items: ["Clicks", "Signups", "Demo requests", "Pipeline where measurable"] },
+    { name: "Distribution", stat: "1M+", unit: "reach", items: ["Total reach", "Impressions by channel", "Creator coverage"] },
+    { name: "Engagement", stat: "5,000+", unit: "engagements", items: ["Replies", "Reposts", "Engagement quality", "Audience response"] },
+    { name: "Business", stat: "1,000+", unit: "high-intent actions", items: ["Clicks", "Signups", "Demo requests", "Pipeline where measurable"] },
   ],
 };
 
