@@ -7,7 +7,7 @@ const SignalMark = dynamic(() => import("./SignalMark"), { ssr: false });
 
 // *Starred* phrases get the green terminal-select sweep.
 const STATEMENT =
-  "Most marketing partners never get past the surface of the product. So we built the team that does: we *learn the product deeply*, *know exactly who it’s for*, and *own the execution* across the channels that drive growth.";
+  "Most marketing partners never get past the surface of the product. So we built the team that does: we *learn the product deeply*, know exactly who it’s for, and own the execution across the channels that drive growth.";
 // Plain and marked segments alternate; tokens keep their spaces so commas sit flush. Each word knows its
 // place in the reveal.
 const SEGMENTS = (() => {
@@ -28,6 +28,9 @@ const REVEAL_FROM = 0.62;
 const REVEAL_TO = 0.94;
 const STEP = (REVEAL_TO - REVEAL_FROM) / WORD_COUNT;
 const wordAt = (i: number) => REVEAL_FROM + i * STEP;
+// The highlighted phrase's selection window, so the mark can step back further while it lands.
+const MARKED = SEGMENTS.filter((s) => s.mark).flatMap((s) => s.tokens.filter((t) => t.word >= 0).map((t) => t.word));
+const FOCUS: [number, number] = [wordAt(MARKED[0]), wordAt(MARKED[MARKED.length - 1]) + 2.5 * STEP];
 
 // How far a marked phrase is selected (0 → 1): from its first word lighting to just after its last.
 const fillOf = (first: number, last: number) => {
@@ -99,7 +102,7 @@ export default function SignalStory() {
       <div className="sticky top-0 h-svh overflow-hidden">
         {/* Above the premise: the cells are solid, so they occlude it as they sweep past. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
-          <SignalMark progress={progress} approach={approach} reveal={reveal} active={onScreen} />
+          <SignalMark progress={progress} approach={approach} reveal={reveal} focus={FOCUS} active={onScreen} />
         </div>
 
         {/* Beat 1: the premise, under the forming mark; it steps aside as the mark splits. */}

@@ -10,13 +10,13 @@ const LINKS: { label: string; platform: Platform; href: string }[] = [
 ];
 
 // The founder as an editorial spread: a large, square-cut black-and-white portrait with a magazine-style
-// caption, and the brief's words set low beside it, ending on a hairline with the audience and his links.
-// Same columns as the page's other label/text sections.
+// caption, and the brief's words beside it, tops aligned so it reads as one block, ending on a hairline with
+// the audience and his links.
 export default function Founder() {
   return (
     <section aria-labelledby="founder-title" className="@container px-6 py-32 sm:px-12 sm:py-44 xl:px-[6vw]">
-      <div className="mx-auto grid max-w-[76rem] gap-14 lg:grid-cols-12 lg:items-end lg:gap-10">
-        <figure className="lg:col-span-5 lg:ml-[calc(min(0px,(76rem-100cqw)/2)+2.5vw)]">
+      <div className="mx-auto grid max-w-[76rem] gap-14 lg:grid-cols-12 lg:items-start lg:gap-10">
+        <figure className="lg:col-span-5">
           <div className="relative aspect-[4/5] w-full max-w-[30rem] bg-black">
             <Image
               src={photo}
@@ -33,7 +33,7 @@ export default function Founder() {
           </figcaption>
         </figure>
 
-        <div className="max-w-[38rem] lg:col-span-6 lg:col-start-7 lg:pb-10">
+        <div className="max-w-[38rem] lg:col-span-7 lg:col-start-6 lg:pl-4">
           <p className="w-fit rounded-[4px] bg-ink/[0.06] px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-ink/80 uppercase">
             Founder
           </p>
@@ -41,7 +41,7 @@ export default function Founder() {
             id="founder-title"
             className="mt-8 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"
           >
-            Built by someone who understands both the product and the audience.
+            From the developer community, for the companies building for it.
           </h2>
           <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink/70">
             <p>
@@ -71,7 +71,7 @@ export default function Founder() {
                   href={l.href}
                   aria-label={l.label}
                   title={l.label}
-                  className="grid size-12 place-items-center rounded-full border border-ink/15 text-ink/75 transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-white"
+                  className="grid size-12 place-items-center rounded-full border border-ink/15 text-ink/75 transition-colors duration-300 hover:border-primary hover:bg-primary hover:text-ink focus-visible:border-primary focus-visible:bg-primary focus-visible:text-ink focus-visible:outline-none"
                 >
                   <PlatformIcon platform={l.platform} className="size-5" />
                 </a>

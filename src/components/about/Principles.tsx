@@ -42,9 +42,10 @@ export default function Principles() {
       className="relative mx-[2.5vw] mb-[2.5vw] h-[400svh] rounded-[1.25rem] bg-[#1a1918] text-white"
     >
       <div className="@container sticky top-0 flex h-svh items-center px-6 pt-20 sm:px-12 xl:px-[6vw]">
-        <div className="mx-auto grid w-full max-w-[76rem] gap-10 lg:grid-cols-12">
-          {/* Out to the stage's left padding, past the centred grid; the rail and steps stay put. */}
-          <header className="lg:col-span-6 lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
+        <div className="mx-auto grid w-full max-w-[76rem] gap-10 lg:grid-cols-12 lg:items-center lg:gap-y-[clamp(1.5rem,5svh,3.5rem)]">
+          {/* Out to the stage's left padding, past the centred grid; on its own row so the drawing below can sit
+              level with the steps. */}
+          <header className="lg:col-span-12 lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
             <h2
               id="how-we-operate-title"
               className="w-fit rounded-[4px] bg-white/10 px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-white/80 uppercase"
@@ -54,12 +55,12 @@ export default function Principles() {
             <p className="mt-5 max-w-[20rem] text-lg leading-snug tracking-[-0.01em] text-white/50">
               What stays the same across every client and every channel.
             </p>
-            {/* Desktop: the active step's drawing, large; the others fade out beneath it. Flush with the text on
-                the left, and held short of the column's right edge so it clears the rail's marker. */}
-            <div
-              aria-hidden="true"
-              className="relative mt-[clamp(2rem,6svh,4rem)] hidden aspect-[2/1] w-[min(30rem,100%-3rem)] lg:block"
-            >
+          </header>
+
+          {/* Desktop: the active step's drawing, large and centred on the steps beside it; the others fade out
+              beneath it. Flush with the text on the left, held short of the column's edge to clear the marker. */}
+          <div className="hidden lg:col-span-6 lg:block lg:ml-[min(0px,calc((76rem-100cqw)/2))]">
+            <div aria-hidden="true" className="relative aspect-[2/1] w-[min(38rem,100%-3rem)]">
               {PRINCIPLES.map(({ title, Visual }, i) => (
                 <div
                   key={title}
@@ -70,7 +71,7 @@ export default function Principles() {
                 </div>
               ))}
             </div>
-          </header>
+          </div>
 
           <ol
             style={{ "--t": "clamp(2.3rem, 4.4vw, 4.25rem)", "--i": active } as CSSProperties}

@@ -168,14 +168,18 @@ const PARK_TURN = 0.35; // and while parked at the start: less, so the D reads f
 const FADE_BESIDE = 0.4;
 const FADE_BEHIND = 0.14; // keeps white copy ≥ 4.5:1 over the brightest cell (measured at 375 and 768)
 const FADE_LEN = 0.14;
+// Then, while the highlighted phrase is being selected (`focus`, a window of the story's timeline), they step back
+// further still, so the message holds the eye.
+const FOCUS_BESIDE = 0.2;
+const FOCUS_BEHIND = 0.1;
 
 type Progress = RefObject<number>;
 
-type Timelines = { progress: Progress; approach: Progress; reveal: Progress };
+type Timelines = { progress: Progress; approach: Progress; reveal: Progress; focus: [number, number] };
 type Data = ReturnType<typeof markData>;
 type HalfProps = Timelines & { side: 1 | -1; data: Data; uniforms: Record<string, { value: unknown }> };
 
-function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
+function Half({ side, progress, approach, reveal, focus, data, uniforms }: HalfProps) {
   const outer = useRef<Group>(null);
   const material = useRef<ShaderMaterial>(null);
 
@@ -207,7 +211,9 @@ function Half({ side, progress, approach, reveal, data, uniforms }: HalfProps) {
     // Open most halfway in, closed at both ends.
     u.uSpread.value = 4 * arrived * (1 - arrived);
     // ponytail: fit < 1 stands in for "the halves overlap the text"; measure the copy if layouts change.
-    u.uFade.value = 1 - clamp01((p - SPLIT) / FADE_LEN) * (1 - (fit < 1 ? FADE_BEHIND : FADE_BESIDE));
+    const focused = ease(clamp01((p - focus[0]) / (focus[1] - focus[0])));
+    const floor = fit < 1 ? FADE_BEHIND + (FOCUS_BEHIND - FADE_BEHIND) * focused : FADE_BESIDE + (FOCUS_BESIDE - FADE_BESIDE) * focused;
+    u.uFade.value = 1 - clamp01((p - SPLIT) / FADE_LEN) * (1 - floor);
 
     const o = outer.current!;
     o.position.x = side * (0.03 + apart * edge);
