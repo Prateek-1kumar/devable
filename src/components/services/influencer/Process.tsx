@@ -6,7 +6,7 @@ import { At, Billboard, Box, Flag, IsoScene, Panel, Tile } from "../iso";
 import { Label, PlatformIcon, type Platform } from "../kit";
 import { CREATORS, LAUNCH, PROCESS } from "./content";
 
-const SCENES = [FindScene, NarrativeScene, RunScene, LearnScene];
+const SCENES = [FindScene, NarrativeScene, RunScene, GoalScene];
 const STEPS = PROCESS.steps.length;
 
 // "How we run it" as a pinned scroll stage: a warm charcoal (#1a1918) card inset from the page's white
@@ -388,129 +388,120 @@ function RunScene({ active }: SceneProps) {
   );
 }
 
-// 04 · The learning loop as columns, one per thing we learned from (three formats and the top creator), in a
-// row across the floor. Back of each column: this campaign's result, a bar (green for the winner) with an
-// upright flag. Front: the next campaign, a stack of slot cubes that changes as the learning arrives (a bead
-// carries it across): deep dives grow 2 → 4, walkthroughs keep, hot takes drop 2 → 1, the creator becomes lead.
-const LEAD = 3; // the creator who performed best (SAMPLE)
-const LEARN = [
-  { title: "Deep dives", value: "3.1×", h: 118, change: "↑ More", from: 2, to: 4, win: true },
-  { title: "Walkthroughs", value: "1.4×", h: 62, change: "= Keep", from: 2, to: 2 },
-  { title: "Hot takes", value: "0.6×", h: 32, change: "↓ Fewer", from: 2, to: 1 },
-  { title: CREATORS[LEAD].name, value: "2.4× avg", h: 0, change: "★ Lead", from: 1, to: 1, creator: true },
+// 04 · One goal, and steady progress toward it. The goal is visible from the first frame: a dashed target plane hangs
+// over the row, labelled with what we are after (signups here; it could as well be awareness or impressions). Six bars
+// climb toward it week by week; three notes in front of the row mark where we adjust (a new angle, a shift of budget, a
+// different creator), and each is followed by a steeper step, so it is plain we don't just launch and wait. The last bar
+// meets the plane: the plane lights green, the label turns to "Goal reached" and a ring pings out from the base.
+const GOAL_H = 128;
+const COL = { w: 46, step: 84, y: 252 };
+const colX = (i: number) => 280 - (5 * COL.step) / 2 - COL.w / 2 + i * COL.step;
+const BARS = [
+  { h: 22, at: 0.1 },
+  { h: 38, at: 0.22 },
+  { h: 50, at: 0.34, adjust: "New angle", lift: 0 },
+  { h: 80, at: 0.5, adjust: "Shift budget", lift: 0 },
+  { h: 106, at: 0.66, adjust: "New creator", lift: 0 },
+  { h: GOAL_H, at: 0.8 },
 ];
-const STEP = 72; // between columns, along the floor's diagonal (reads left → right); column 0 is the legend
-const DEPTH = 74; // from a column's centre back to its result and forward to its next-campaign stack
-const colAt = (i: number) => {
-  const k = (i + 1 - LEARN.length / 2) * STEP; // data columns are 1…n, the legend sits at 0
-  return { x: 280 + k, y: 280 + k };
-};
-const back = (i: number) => ({ x: colAt(i).x + DEPTH, y: colAt(i).y - DEPTH });
-const front = (i: number) => ({ x: colAt(i).x - DEPTH, y: colAt(i).y + DEPTH });
-const LEGEND = -1;
-const learnAt = (i: number) => 0.34 + i * 0.13;
-const BAR = 46;
-const CUBE = 34;
+const REACHED = 0.88;
 
-function LearnScene({ active }: SceneProps) {
-  const t = usePlay(active, 5200);
-  const grow = ease(clamp01(t / 0.28));
-  const applied = LEARN.map((_, i) => ease(clamp01((t - learnAt(i) - 0.1) / 0.1)));
-  const legendBack = back(LEGEND);
-  const legendFront = front(LEGEND);
+/** A flag-style note centred on its point, faded by `show`; `live` is the lit, goal-reached look. */
+function Note({ x, y, z = 0, show = 1, live = false, children }: { x: number; y: number; z?: number; show?: number; live?: boolean; children: React.ReactNode }) {
+  return (
+    <Billboard x={x} y={y} z={z - (1 - show) * 14} center style={{ ...still, opacity: show }}>
+      <span
+        className={`flex items-center gap-2 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10.5px] leading-none tracking-[0.08em] whitespace-nowrap uppercase transition-colors duration-500 ${
+          live ? "border-primary/50 bg-[#1f2a22] text-primary" : "border-white/12 bg-[#232220] text-white/70"
+        }`}
+      >
+        {children}
+      </span>
+    </Billboard>
+  );
+}
+
+function GoalScene({ active }: SceneProps) {
+  const t = usePlay(active, 6200);
+  const reached = t >= REACHED;
+  const ping = ease(clamp01((t - REACHED) / 0.1));
+  const lastX = colX(5) + COL.w / 2;
   return (
     <IsoScene {...SCENE} shift={[0, 70]}>
       <Pool x={280} y={280} size={460} />
 
-      {/* The legend column: this campaign at the back, the next one in front, the way the learnings run. */}
-      <Tag x={legendBack.x} y={legendBack.y} z={8}>
-        This campaign
-      </Tag>
-      <Tag x={legendFront.x} y={legendFront.y} z={8} live>
-        Next campaign
-      </Tag>
+      {/* The goal, there from the start: a target plane over the row, dashed until it is met. */}
+      <Tile
+        x={colX(5) - 22}
+        y={COL.y - 22}
+        z={GOAL_H + 2}
+        w={COL.w + 44}
+        h={COL.w + 44}
+        shadow={false}
+        className={`border-2 transition-[border-color,background-color,box-shadow] duration-700 ${
+          reached ? `border-primary bg-primary/[0.12] ${GLOW}` : "border-dashed border-white/30 bg-white/[0.03]"
+        }`}
+        style={still}
+      />
+      <Note x={lastX} y={COL.y + COL.w / 2} z={GOAL_H + 54} live={reached}>
+        <span className={`size-1.5 rounded-full ${reached ? "bg-primary" : "bg-white/40"}`} />
+        {reached ? "Goal reached ✓" : "Goal · signups"}
+      </Note>
 
-      {/* The paths from each result to its next-campaign stack, a bead carrying each learning across. */}
-      <At x={0} y={0} style={still}>
-        <svg width={560} height={560} className="overflow-visible">
-          {LEARN.map((_, i) => {
-            const a = back(i);
-            const b = front(i);
-            const k = clamp01((t - learnAt(i)) / 0.1);
-            const p = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
-            return (
-              <g key={i}>
-                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgb(255 255 255 / 0.14)" strokeWidth={2} strokeDasharray="4 6" />
-                {k > 0 && k < 1 && (
-                  <>
-                    <circle cx={p.x} cy={p.y} r={7} fill="#ffffff" />
-                    <circle cx={p.x} cy={p.y} r={4.5} fill="var(--primary)" />
-                  </>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </At>
+      <Tile
+        x={colX(0) - 8}
+        y={COL.y + COL.w / 2 - 1}
+        z={GOAL_H + 2}
+        w={5 * COL.step + 8}
+        h={2}
+        shadow={false}
+        className={`transition-colors duration-700 ${reached ? "bg-primary/60" : "bg-white/25"}`}
+        style={still}
+      />
 
-      {LEARN.map((l, i) => {
-        const a = back(i);
-        const b = front(i);
-        const k = applied[i];
-        const barH = l.creator ? 14 : Math.max(6, l.h * grow);
-        const stack = Math.max(l.from, l.to);
+      {/* The row of bars climbing toward it. */}
+      {BARS.map((b, i) => {
+        const h = 4 + (b.h - 4) * ease(clamp01((t - b.at) / 0.12));
+        const goal = i === BARS.length - 1;
+        const lit = goal && reached;
         return (
-          <Fragment key={l.title}>
-            {/* This campaign: the result. */}
-            <Box
-              x={a.x - BAR / 2}
-              y={a.y - BAR / 2}
-              w={BAR}
-              d={BAR}
-              h={barH}
-              top={l.win ? "var(--primary)" : l.creator ? "#3a3936" : undefined}
-              front={l.win ? "#12a454" : undefined}
-              side={l.win ? "#0b7a3d" : undefined}
-              style={still}
-            />
-            <Billboard x={a.x} y={a.y} z={barH + 14} center style={{ ...still, opacity: grow }}>
-              <Chip title={l.title} photo={l.creator ? CREATORS[LEAD].photo : undefined} detail={l.value} live={l.win} />
-            </Billboard>
-
-            {/* The next campaign: a stack of slots, changed by the learning. */}
-            {Array.from({ length: stack }, (_, n) => {
-              const added = n >= l.from;
-              const dropped = n >= l.to;
-              const lit = l.creator ? k : 0;
-              return (
-                <Box
-                  key={n}
-                  x={b.x - CUBE / 2}
-                  y={b.y - CUBE / 2}
-                  z={n * 16 + (added ? (1 - k) * 40 : 0)}
-                  w={CUBE}
-                  d={CUBE}
-                  h={14}
-                  shadow={n === 0}
-                  top={added || lit > 0.5 ? "var(--primary)" : "#3a3936"}
-                  front={added || lit > 0.5 ? "#12a454" : "#2a2927"}
-                  side={added || lit > 0.5 ? "#0b7a3d" : "#201f1d"}
-                  style={{ ...still, opacity: added ? k : dropped ? 1 - 0.85 * k : 1 }}
-                />
-              );
-            })}
-            <Billboard x={b.x} y={b.y} z={Math.max(l.from, l.to) * 16 + 16} center style={{ ...still, opacity: 0.25 + 0.75 * k }}>
-              <span
-                className={`block rounded-[4px] border px-2 py-1 font-mono text-[10px] tracking-[0.08em] whitespace-nowrap uppercase ${
-                  l.change.startsWith("↓") || l.change.startsWith("=") ? "border-white/14 bg-[#232220] text-white/70" : "border-primary/60 bg-[#1f2a22] text-primary"
-                }`}
-              >
-                {l.change}
-              </span>
-            </Billboard>
-          </Fragment>
+          <Box
+            key={i}
+            x={colX(i)}
+            y={COL.y}
+            w={COL.w}
+            d={COL.w}
+            h={h}
+            top={lit ? "var(--primary)" : "#3a3936"}
+            front={lit ? "#12a454" : "#2a2927"}
+            side={lit ? "#0b7a3d" : "#201f1d"}
+            style={still}
+          />
         );
       })}
+
+      {/* Where we adjust: a note above its bar, just before the next, steeper, step. */}
+      {BARS.map((b, i) =>
+        b.adjust ? (
+          <Note key={i} x={colX(i) + COL.w / 2} y={COL.y + COL.w / 2} z={b.h + 22 + (b.lift ?? 0)} show={ease(clamp01((t - (b.at - 0.04)) / 0.06))}>
+            <span className="text-primary">↻</span>
+            {b.adjust}
+          </Note>
+        ) : null,
+      )}
+
+      {/* The payoff: a ring pinging out from the bar that reached it. */}
+      <At x={0} y={0} style={still}>
+        <svg width={560} height={560} className="overflow-visible">
+          {ping > 0 && ping < 1 && (
+            <>
+              <circle cx={colX(5) + COL.w / 2} cy={COL.y + COL.w / 2} r={28 + 70 * ping} fill="none" stroke="var(--primary)" strokeWidth={2} opacity={0.7 * (1 - ping)} />
+              <circle cx={colX(5) + COL.w / 2} cy={COL.y + COL.w / 2} r={20 + 46 * ping} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.5 * (1 - ping)} />
+            </>
+          )}
+        </svg>
+      </At>
     </IsoScene>
   );
 }
+

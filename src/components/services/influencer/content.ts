@@ -225,8 +225,8 @@ export const PROCESS = {
       body: "We handle outreach, negotiation, scheduling, approvals, and execution across the campaign. For launches, we sequence creators around key moments. For dedicated campaigns, we coordinate different creators, formats, and channels over time.",
     },
     {
-      title: "Learn what performs",
-      body: "We track which creators, angles, and formats perform best, and use those learnings to improve the next campaign.",
+      title: "Track against the goal",
+      body: "We track every campaign against the goals we set together, and keep adjusting until we reach them.",
     },
   ],
   cta: "Plan a creator campaign",
