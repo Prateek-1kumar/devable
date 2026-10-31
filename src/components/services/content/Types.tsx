@@ -26,7 +26,7 @@ export default function Types() {
         <div ref={ref} style={delay(0)} className={`${rise(seen)} mt-10 grid overflow-hidden rounded-2xl border border-line bg-card lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]`}>
           <div aria-hidden="true" className={`${CANVAS} flex items-center justify-center border-b border-line p-2 sm:p-4 lg:border-r lg:border-b-0`}>
             <div className="w-full max-w-[40rem]">
-              <TypesScene active={active} />
+              <TypesScene active={active} run={seen} />
             </div>
           </div>
 
