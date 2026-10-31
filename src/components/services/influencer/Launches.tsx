@@ -1,5 +1,5 @@
 import { Label, PLATFORM_NAME, PlatformIcon } from "../kit";
-import { CREATORS, LAUNCHES, LOGOS, type Post } from "./content";
+import { LAUNCHES, LOGOS, type LaunchPost } from "./content";
 
 // Fade a rail out at both edges.
 const EDGES = "[mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,transparent)]";
@@ -44,28 +44,39 @@ export default function Launches() {
   );
 }
 
-function PostCard({ post, copy }: { post: Post; copy: boolean }) {
-  const c = CREATORS[post.creator];
+const views = (n: number) => (n < 10_000 ? `${(n / 1000).toFixed(1)}K` : n < 1e6 ? `${Math.round(n / 1000)}K` : `${(n / 1e6).toFixed(1)}M`);
+
+/** A real post, linking to the original. The rail repeats its list, so the copy's links stay out of the tab order. */
+function PostCard({ post, copy }: { post: LaunchPost; copy: boolean }) {
   return (
-    <li aria-hidden={copy || undefined} className="flex w-[19rem] flex-col rounded-xl border border-line bg-white p-5">
-      <div className="flex items-center gap-2.5">
-        {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-        <img src={c.photo} alt="" className="size-9 rounded-full object-cover" />
-        <p className="min-w-0 flex-1 leading-tight">
-          <span className="block truncate text-[0.85rem] font-semibold text-ink">{c.name}</span>
-          <span className="block truncate text-[0.74rem] text-muted">{c.handle}</span>
-        </p>
-        <PlatformIcon platform={post.platform} className="size-4 text-ink/80" />
-        <span className="sr-only">on {PLATFORM_NAME[post.platform]}</span>
-      </div>
-      <p className="mt-3.5 mb-5 line-clamp-4 text-[0.88rem] leading-snug text-ink/85">{post.text}</p>
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-line pt-3.5">
-        <span className="rounded-full bg-[#f4f2eb] px-2.5 py-1 text-[0.72rem] font-medium text-ink/75">for {post.client}</span>
-        <span className="text-right leading-none">
-          <span className="block text-[1.35rem] font-medium tracking-[-0.04em] text-ink">{post.views}</span>
-          <span className="mt-1 block font-mono text-[0.6rem] tracking-[0.1em] text-muted uppercase">views</span>
-        </span>
-      </div>
+    <li aria-hidden={copy || undefined} className="flex w-[19rem]">
+      <a
+        href={post.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        tabIndex={copy ? -1 : undefined}
+        className="group flex w-full flex-col rounded-xl border border-line bg-white p-5 transition-[border-color,box-shadow,translate] duration-300 hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_18px_36px_-22px_rgb(23_44_33/0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/50"
+      >
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+          <img src={`/services/creators/webai/${post.handle}.jpg`} alt="" className="size-9 rounded-full object-cover" />
+          <p className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[0.85rem] font-semibold text-ink">{post.name}</span>
+            <span className="block truncate text-[0.74rem] text-muted">@{post.handle}</span>
+          </p>
+          <PlatformIcon platform={post.platform} className="size-4 text-ink/80" />
+          <span className="sr-only">on {PLATFORM_NAME[post.platform]}</span>
+        </div>
+        <p className="mt-3.5 mb-5 line-clamp-4 text-[0.88rem] leading-snug whitespace-pre-line text-ink/85">{post.text}</p>
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-line pt-3.5">
+          <span className="rounded-full bg-[#f4f2eb] px-2.5 py-1 text-[0.72rem] font-medium text-ink/75">for {LAUNCHES.client}</span>
+          <span className="text-right leading-none">
+            <span className="block text-[1.35rem] font-medium tracking-[-0.04em] text-ink tabular-nums">{views(post.views)}</span>
+            <span className="mt-1 block font-mono text-[0.6rem] tracking-[0.1em] text-muted uppercase">views</span>
+          </span>
+        </div>
+        <span className="sr-only">(opens the post in a new tab)</span>
+      </a>
     </li>
   );
 }

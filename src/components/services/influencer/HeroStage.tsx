@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Billboard, At, IsoScene } from "../iso";
 import { PLATFORM_COLOR, PlatformIcon } from "../kit";
-import { HERO_LAUNCH, type LaunchPost } from "./content";
+import { HERO_LAUNCH, WINDOW_HOURS, type LaunchPost } from "./content";
 
-// The hero visual: webAI's TwIL-LM3-Pro launch over its first 48 hours, in three beats on the iso floor.
+// The hero visual: webAI's TwIL-LM3-Pro launch over its first 24 hours, in three beats on the iso floor.
 // 1. webAI posts. On its own the post reaches webAI's followers: the small dark disc under it.
 // 2. Creators pick it up at their real hour marks. An arc draws out to each one and their post lands over
 //    their own audience, a green disc sized by views. Three posts show in full; the biggest of the rest show
@@ -34,10 +34,14 @@ const LAUNCH_AT = floorAt(250, 350);
 const FEATURED_AT = [floorAt(118, 215), floorAt(395, 175), floorAt(430, 375)];
 const FACES_AT = [floorAt(66, 300), floorAt(245, 128), floorAt(470, 478), floorAt(158, 380), floorAt(262, 45), floorAt(52, 470)];
 const LIFT = 36;
+const MARK_DROP = 40; // the Devable mark sits this far in front of the launch card (straight down on screen), so its label is clear of it
 
-const POSTS = HERO_LAUNCH.posts; // in hour order
+const POSTS = HERO_LAUNCH.posts.filter((p) => p.hour <= WINDOW_HOURS); // in hour order; later posts fall outside the window
 const FEATURED = POSTS.filter((p) => p.featured).slice(0, FEATURED_AT.length);
-const FACES = POSTS.filter((p) => !FEATURED.includes(p)).sort((a, b) => b.views - a.views); // biggest get spots
+// The creators shown as faces on the floor, in the order they take the spots. The rest still count toward the reach; they just
+// aren't drawn.
+const FACE_HANDLES = ["BenGeskin", "Hesamation", "rohanpaul_ai", "haider1", "0xCodila", "ai_for_success"];
+const FACES = FACE_HANDLES.map((h) => POSTS.find((p) => p.handle === h)).filter((p): p is LaunchPost => !!p);
 // Creators past the face spots still count toward the reach; they just aren't drawn.
 const CAST = POSTS.map((p, i) => {
   const f = FEATURED.indexOf(p);
@@ -46,7 +50,7 @@ const CAST = POSTS.map((p, i) => {
 
 const CREATOR_VIEWS = POSTS.reduce((sum, p) => sum + p.views, 0);
 const TOTAL = HERO_LAUNCH.views + CREATOR_VIEWS;
-const END_HOUR = 48;
+const END_HOUR = WINDOW_HOURS; // the window: the launch over its first 24 hours
 const photo = (handle: string) => `/services/creators/webai/${handle}.jpg`;
 
 // The beats on the clock (0–1 of a cycle).
@@ -128,7 +132,6 @@ export default function HeroStage() {
   const beats = [
     { label: "webAI's own post", value: HERO_LAUNCH.views * own, on: own, swatch: "bg-ink" },
     { label: `${POSTS.length} creators pick it up`, value: creators, on: landed[0], swatch: "bg-primary" },
-    { label: "X pushes it further", value: null, on: push, swatch: "bg-ink/15" },
   ];
 
   return (
@@ -192,10 +195,13 @@ export default function HeroStage() {
           </PostLink>
         </Billboard>
 
-        {/* The Devable mark, standing on webAI's audience pool as a token. */}
-        <Billboard x={LAUNCH_AT.x} y={LAUNCH_AT.y} z={2} center style={{ ...still, opacity: own }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
-          <img src="/brand/devable-mark.png" alt="" className="size-7 max-w-none rounded-[8px] shadow-[0_0_0_2px_#fff,0_10px_20px_-8px_rgb(28_27_24/0.55)]" />
+        {/* The Devable mark, standing on webAI's audience pool as a token, with its name so people recognise it. */}
+        <Billboard x={LAUNCH_AT.x - MARK_DROP} y={LAUNCH_AT.y + MARK_DROP} z={2} center style={{ ...still, opacity: own }}>
+          <span className="flex flex-col items-center gap-1">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark */}
+            <img src="/brand/devable-mark.png" alt="" className="size-7 max-w-none rounded-[8px] shadow-[0_0_0_2px_#fff,0_10px_20px_-8px_rgb(28_27_24/0.55)]" />
+            <span className="rounded-full bg-white px-1.5 py-[2px] text-[9px] leading-none font-medium tracking-wide text-ink shadow-[0_2px_6px_-2px_rgb(28_27_24/0.35)]">Devable</span>
+          </span>
         </Billboard>
 
         {CAST.map(({ p, i, at, featured }) => (
@@ -316,7 +322,7 @@ function CreatorCard({ post }: { post: LaunchPost }) {
         <PlatformIcon platform={post.platform} className="size-3" style={{ color: PLATFORM_COLOR[post.platform] }} />
       </header>
       <p className="mt-2 line-clamp-3 text-[10.5px] leading-snug whitespace-pre-line text-ink/75">{post.text}</p>
-      <Footer when={post.hour < 1 ? `+${Math.round(post.hour * 60)}m` : `+${Math.round(post.hour)}h`} views={post.views} />
+      <Footer when={post.hour < 1 ? `+${Math.round(post.hour * 60)} min` : `+${Math.round(post.hour)} hr`} views={post.views} />
     </article>
   );
 }

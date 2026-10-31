@@ -50,6 +50,9 @@ export const LAUNCH = {
 // `featured` posts show in full on the floor; the rest show as faces. Texts are verbatim from each post.
 export type LaunchPost = { name: string; handle: string; url: string; platform: Platform; hour: number; text: string; views: number; featured?: boolean };
 
+/** The hero shows the launch over its first 24 hours: posts after this many hours are outside the window. */
+export const WINDOW_HOURS = 24;
+
 export const HERO_LAUNCH = {
   company: { name: "webAI", handle: "@thewebAI", logo: "/clients/webai.svg" },
   author: { name: "David Stout", photo: "/services/creators/webai/Davidstout.jpg" },
@@ -61,7 +64,7 @@ export const HERO_LAUNCH = {
     { name: "Hasan Toor", handle: "hasantoxr", url: "https://x.com/hasantoxr/status/2105373534377959673", platform: "x", hour: 0.42, text: "China's small reasoning models have been embarrassing everyone on price and size.\nThis time one of them lost.\n@thewebai's TwIL-LM3-Pro (3.6B, built in Austin) leads VibeThinker-3B on all six formal-logic tasks in webAI's evals.", views: 12_169 },
     { name: "Santiago", handle: "svpino", url: "https://x.com/svpino/status/2105380308258521104", platform: "x", hour: 0.87, text: "This open-source model scores 95.4% on BIG-Bench Hard’s logic subset with just 3.66B parameters.\nTwIL-LM3-Pro is a model small enough to run locally on a laptop.\nSpecialized post-training is super cool.", views: 14_691, featured: true },
     { name: "Ben Geskin", handle: "BenGeskin", url: "https://x.com/BenGeskin/status/2105385471505256920", platform: "x", hour: 1.21, text: "A reasoning model that fits on your laptop can match one more than twice its size on formal logic.\n@thewebai’s new TwIL-LM3-Pro has 3.6B parameters.", views: 11_768 },
-    { name: "marcus", handle: "marcusyul", url: "https://x.com/marcusyul/status/2105391082238628123", platform: "x", hour: 1.59, text: "AN AI THAT FITS ON YOUR LAPTOP JUST WENT UP AGAINST MODELS 33X ITS SIZE\nHere's how it did:\n→ Only 2 GB\n→ Works offline\n→ No usage fees\nOn math problems, it lands just 3 points behind a 120-billion-parameter model. It has 3.6 billion.", views: 45_221 },
+    { name: "marcus", handle: "marcusyul", url: "https://x.com/marcusyul/status/2105391082238628123", platform: "x", hour: 1.59, text: "AN AI THAT FITS ON YOUR LAPTOP JUST WENT UP AGAINST MODELS 33X ITS SIZE\nHere's how it did:\n→ Only 2 GB\n→ Works offline\n→ No usage fees\nOn math problems, it lands just 3 points behind a 120-billion-parameter model. It has 3.6 billion.", views: 45_221, featured: true },
     { name: "Rohan Paul", handle: "rohanpaul_ai", url: "https://x.com/rohanpaul_ai/status/2105407648338428049", platform: "x", hour: 2.68, text: "China's best small reasoning model (VibeThinker-3B) just got beaten by a 3.6B model from Austin.\n> webAI's TwIL-LM3-Pro, a 3.66B local model, lifts IBM Granite's formal-logic score by 28%", views: 6_400 },
     { name: "Charly Wargnier", handle: "DataChaz", url: "https://x.com/DataChaz/status/2105418739600806351", platform: "x", hour: 3.42, text: "THIS MODEL IS ONLY 2.09 GIB. LET THAT SINK IN\nWhat @thewebai managed to fit into just 3.6B parameters with TwIL-LM3-Pro is kinda ridiculous:\n→ beats VibeThinker-3B across all 6 formal-logic tasks tested", views: 22_546, featured: true },
     { name: "neural nets.", handle: "cneuralnetwork", url: "https://x.com/cneuralnetwork/status/2105421118249283728", platform: "x", hour: 3.58, text: "I read through the model card right now and tbh a 3.66B model beating VibeThinker-3B and GPT-OSS 120B across all six formal-logic tasks tested is pretty wild.\nWhat makes it interesting is the scale gap.", views: 2_395 },
@@ -70,7 +73,7 @@ export const HERO_LAUNCH = {
     { name: "ℏεsam", handle: "Hesamation", url: "https://x.com/Hesamation/status/2105456475594195418", platform: "x", hour: 5.92, text: "smaller models are getting insanely smart. this new 3.66B model comes close to the 120B gpt-oss on math word problems:\nin webAI’s GSM8K evaluation:\n> TwIL-LM3-Pro: 94.3%\n> gpt-oss-120b: 97.7%\n> x33 FEWER PARAMS", views: 8_728 },
     { name: "bodila", handle: "51bodila", url: "https://x.com/51bodila/status/2105460075166924916", platform: "x", hour: 6.16, text: "Andrej Karpathy predicted the future of AI once again:\n\"The next leap in AI could come from packing big-model intelligence: GPT & Claude - into tiny models\"\n- this is what caught my attention about thewebai’s TwIL-LM3-Pro", views: 2_919 },
     { name: "Haider.", handle: "haider1", url: "https://x.com/haider1/status/2105605031261282544", platform: "x", hour: 15.76, text: "last month, qwen 3.8 27b surprised me running locally on my RTX 3090\nnow webAI has released a 3.66B model with a quantized build of just 2GB hitting 95.4% on BBH logic\ni think we're going to see a lot more of this.", views: 6_342 },
-    { name: "elvis", handle: "omarsar0", url: "https://x.com/omarsar0/status/2105730500811719056", platform: "x", hour: 24.06, text: "Small models are getting really good at reasoning.\nIt's exciting because SLMs can unlock so much at the harness layer.\nTwIL-LM3-Pro from @thewebAI has 3.6B parameters and runs locally on everyday computers.", views: 15_776, featured: true },
+    { name: "elvis", handle: "omarsar0", url: "https://x.com/omarsar0/status/2105730500811719056", platform: "x", hour: 24.06, text: "Small models are getting really good at reasoning.\nIt's exciting because SLMs can unlock so much at the harness layer.\nTwIL-LM3-Pro from @thewebAI has 3.6B parameters and runs locally on everyday computers.", views: 15_776 },
     { name: "me", handle: "twetsfyp", url: "https://x.com/twetsfyp/status/2105731675833745610", platform: "x", hour: 24.14, text: "These guys just released a 3.6B model that matches Qwen3-8B on formal logic with less than half the parameters.", views: 131_176 },
     { name: "Chubby", handle: "kimmonismus", url: "https://x.com/kimmonismus/status/2105911541384224800", platform: "x", hour: 36.05, text: "webAI has released a 3.66B model for formal logic that can run locally on a laptop.\nIn webAI’s tests, TwIL-LM3-Pro is roughly level with Qwen3-8B on the headline formal-logic composite, with less than half the parameters.", views: 14_176 },
     { name: "Movez", handle: "0xMovez", url: "https://x.com/0xMovez/status/2106026961134895407", platform: "x", hour: 43.7, text: "Small Language Models are the Future of Agentic AI\nMost agent calls are small decisions: route, classify, check, gate.\nnone of them need a frontier model.\nHere are my notes 👇\n→ An agent loop is mostly bounded choices, not deep reasoning", views: 3_618 },
@@ -93,19 +96,12 @@ export const LOGOS = [
   { src: "/clients/kilo.svg", alt: "Kilo Code", h: 34 },
 ];
 
-export type Post = { creator: number; platform: Platform; client: string; text: string; views: string };
-
+/** The creator campaigns rail: webAI's real launch posts, most-viewed first, each linking to the post itself. */
 export const LAUNCHES = {
-  label: "Launches we've run",
-  title: "Launches we've put in front of the right people.",
-  posts: [
-    { creator: 0, platform: "x", client: "Glean", text: "Glean just shipped agents that actually know your company's context. Tried it on our eng wiki, genuinely useful.", views: "412K" },
-    { creator: 3, platform: "linkedin", client: "webAI", text: "Running frontier models fully on-device used to be a demo. webAI made it a product. Here's what I built in a weekend.", views: "286K" },
-    { creator: 6, platform: "youtube", client: "Telnyx", text: "I built a voice AI agent that answers real phone calls in under 300ms, full build with Telnyx.", views: "198K" },
-    { creator: 1, platform: "x", client: "LangWatch", text: "If you ship LLM agents without simulations you are testing in prod. LangWatch Scenarios fixes that.", views: "530K" },
-    { creator: 4, platform: "newsletter", client: "LINER", text: "This week: the research assistant I now use daily, and why its citations are the part that matters.", views: "94K" },
-    { creator: 7, platform: "linkedin", client: "Glean", text: "Enterprise search was never the problem. Context was. Glean's new release is the first that gets that right.", views: "167K" },
-  ] as Post[],
+  label: "Creator campaigns",
+  title: "Products we've put in front of technical audiences.",
+  posts: [...HERO_LAUNCH.posts].sort((a, b) => b.views - a.views),
+  client: HERO_LAUNCH.company.name,
 };
 
 export const MODES = {
