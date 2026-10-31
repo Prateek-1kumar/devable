@@ -12,52 +12,77 @@ export const HERO = {
   body: "We combine technical writers, engineers, and growth expertise to build content that resonates with developers, ranks in search, gets cited in AI answers, and supports pipeline.",
   primary: "Speak with the Team",
   secondary: "See Our Work",
-  // The workflow from the copy doc's design direction, in order.
-  stages: ["Research", "Technical brief", "Build & test", "Editorial review", "Publish", "Search, AI & distribution"],
-  // SAMPLE: the article moving through it (a real LandingAI guide we shipped).
+  // The four beats of the hero's animation, from the client's brief.
+  beats: ["Inputs", "Brief", "Build & review", "Published"],
+  // SAMPLE: one article (a real LandingAI guide we shipped) built from four inputs. `dot` ties each input to the
+  // brief field it becomes.
+  inputs: [
+    { name: "Product context", detail: "POST /v2/split", mark: "github", dot: "#1f9e8f" },
+    { name: "Developer pain points", detail: "“Bundled PDFs break our parser”", mark: "stackoverflow", dot: "#3e6fd8" },
+    { name: "Search + AI opportunities", detail: "split pdf api · 2.4k / mo", mark: "google", dot: "#7a5af5" },
+    { name: "Technical research", detail: "ADE Split changelog", mark: "docs", dot: "#e8833a" },
+  ] as { name: string; detail: string; mark: Icon; dot: string }[],
+  // In the order the inputs send them, so the brief fills top to bottom.
+  brief: [
+    { field: "Product relevance", value: "ADE Split endpoint", input: 0 },
+    { field: "Topic / angle", value: "Splitting bundled PDFs", input: 1 },
+    { field: "Search intent", value: "how to split a pdf by type", input: 2 },
+    { field: "Key technical points", value: "split() · classify=True", input: 3 },
+  ],
+  // The review layers added to the draft, in order.
+  reviews: [
+    { name: "Writer + developer input", short: "Writer + dev", note: "A technical writer and a developer draft it from the brief." },
+    { name: "SME / engineering review", short: "Engineering", note: "An engineer runs every snippet against the product." },
+    { name: "Editorial review", short: "Editorial", note: "An editor sharpens the structure, voice and claims." },
+    { name: "Search + AI optimization", short: "Search + AI", note: "Structured to rank in search and be cited in AI answers." },
+  ],
   article: {
     client: "LandingAI",
     title: "Splitting Multi-Document PDFs at Scale with ADE Split",
-    sources: ["ADE API reference", "Split endpoint changelog"],
     code: "client.split(\"bundle.pdf\", classify=True)",
-    review: "Tested against API v2 · output verified",
-    surfaces: ["google", "chatgpt", "reddit"] as Icon[],
-    // SAMPLE: how each of its three readers (the headline's developers, search engines, LLMs) uses it.
-    readers: {
-      developer: { cmd: "python split.py bundle.pdf", out: "3 documents · invoice, id, contract" },
-      search: { query: "split multi-document pdf", url: "landing.ai › blog" },
-      llm: { answer: "Use ADE Split to separate a bundled PDF into classified documents through one API call.", cite: "landing.ai" },
-    },
+    intro: "Bundled scans often arrive as one 400-page PDF. ADE Split classifies every page and returns each document in one API call.",
+    tested: "Tested against API v2",
+    url: "landing.ai/blog/splitting-multi-document-pdfs…",
   },
+  // Where the published article starts creating value (`proof` is SAMPLE).
+  outcomes: [
+    { name: "Developers", icon: "docs", line: "read it, run the code", proof: "✓ 3 documents · split.py" },
+    { name: "Google", icon: "google", line: "ranks it for the query", proof: "#1 · split multi-document pdf" },
+    { name: "AI tools", icon: "chatgpt", line: "cite it as the source", proof: "Cited · landing.ai" },
+  ] as { name: string; icon: Icon; line: string; proof: string }[],
 };
 
 export const PROBLEM = {
   label: "The problem",
   title: "Developer content is easy to publish. Hard to get right.",
   items: [
-    {
-      name: "Technical depth",
-      body: "Developers notice quickly when content is written without understanding the product or technology.",
-      // SAMPLE: the tell, a code sample that doesn't run.
-      example: { code: "client.parse(file, mode=\"auto\")", error: "TypeError: unexpected keyword 'mode'" },
-    },
+    { name: "Technical depth", body: "Developers notice quickly when content is written without understanding the product or technology." },
     {
       name: "Strategic direction",
       body: "Publishing consistently means little if the topics do not align with product priorities, search demand, or what your audience actually needs.",
-      // SAMPLE: a busy calendar of topics nobody searches for.
-      example: [
-        { topic: "5 AI trends for 2026", demand: 6 },
-        { topic: "Why we love our team", demand: 2 },
-        { topic: "Our Q3 product recap", demand: 4 },
-      ],
     },
-    {
-      name: "Distribution",
-      body: "Even strong content needs a path to discovery across search, AI answers, communities, and the channels developers follow.",
-      // SAMPLE: a good article, published to silence.
-      example: { title: "Deep dive: streaming inference", views: "212 views", days: "90 days" },
-    },
+    { name: "Distribution", body: "Even strong content needs a path to discovery across search, AI answers, communities, and the channels developers follow." },
   ],
+  // SAMPLE: the artifact beside each failure.
+  examples: {
+    // The tell: a code sample that doesn't run.
+    depth: {
+      file: "quickstart.py",
+      pre: "client = Client(api_key=KEY)",
+      code: "result = client.parse(file, mode=\"auto\")",
+      broken: "mode=\"auto\"",
+      cmd: "python quickstart.py",
+      error: "TypeError: parse() got an unexpected keyword argument 'mode'",
+    },
+    // A busy calendar of topics nobody searches for.
+    direction: [
+      { day: "Mon", topic: "5 AI trends for 2026", searches: 30, demand: 6 },
+      { day: "Wed", topic: "Why we love our team", searches: 10, demand: 2 },
+      { day: "Fri", topic: "Our Q3 product recap", searches: 20, demand: 4 },
+    ],
+    // A good article, published to silence.
+    distribution: { title: "Deep dive: streaming inference", views: 212, days: 90, channels: ["google", "chatgpt", "reddit"] as Icon[] },
+  },
 };
 
 export const ENGINE = {
@@ -70,6 +95,34 @@ export const ENGINE = {
     { name: "Search & AI Optimization", body: "Every relevant piece is structured to improve discovery across traditional and AI search." },
     { name: "Distribution & Compounding", body: "Publishing is the beginning, not the end of the content lifecycle." },
   ],
+  loopNote: "Feeds the next cycle",
+  // SAMPLE: the artifact shown for each stage (LandingAI topics).
+  samples: {
+    topics: {
+      caption: "Topic priorities",
+      rows: [
+        { topic: "Split multi-document PDFs by type", score: 92, tag: "Gap" },
+        { topic: "ADE vs. traditional OCR APIs", score: 74 },
+        { topic: "Automate KYC document parsing", score: 68 },
+      ],
+    },
+    doc: { title: "Splitting multi-document PDFs with ADE Split", code: "client.split(\"bundle.pdf\", classify=True)", check: "Run against API v2" },
+    serp: {
+      url: "landing.ai › blog",
+      title: "Splitting Multi-Document PDFs at Scale with ADE Split",
+      snippet: "Separate a bundled PDF into classified documents with one API call.",
+      ai: "Use ADE Split to separate a bundled PDF into classified documents.",
+      cite: "landing.ai",
+    },
+    channels: {
+      rows: [
+        { name: "Search", value: "3.1k", w: 82, mark: "google" },
+        { name: "AI answers", value: "412", w: 46, mark: "chatgpt" },
+        { name: "Reddit", value: "1.2k", w: 64, mark: "reddit" },
+      ] as { name: string; value: string; w: number; mark: Icon }[],
+      refresh: "Top performer refreshed · next brief updated",
+    },
+  },
 };
 
 export const PROCESS = {
