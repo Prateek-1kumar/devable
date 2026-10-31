@@ -1,185 +1,126 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Label, useInView } from "../kit";
-import { Beacon, SHEET, SheetHead, StepChip, Tick, delay, rise } from "../parts";
-import { HERO, PROCESS } from "./content";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Label } from "../kit";
+import { StepChip } from "../parts";
+import { PROCESS } from "./content";
+import { clamp01, usePlay } from "./play";
+import { SCENES } from "./ProcessScenes";
 
-const RAISED = "bg-white shadow-[0_1px_2px_rgb(23_44_33_/_0.04),0_12px_32px_-12px_rgb(23_44_33_/_0.12)]";
-const OPEN_WASH = "bg-[color-mix(in_srgb,var(--accent)_9%,white)]";
-const DONE_WASH = "bg-[color-mix(in_srgb,var(--light-green-soft)_65%,white)]";
-
-const REDUCED = "(prefers-reduced-motion: reduce)";
+const N = PROCESS.steps.length;
+const LG = "(min-width: 1024px)";
 const subscribe = (onChange: () => void) => {
-  const mq = window.matchMedia(REDUCED);
+  const mq = window.matchMedia(LG);
   mq.addEventListener("change", onChange);
   return () => mq.removeEventListener("change", onChange);
 };
 
-// The signature section: all six steps at once on Why Devable's warm tray, with Review raised as the white
-// column and opening, like a tab, into a wide panel that shows a real review. On the left the draft, with
-// the lines under review highlighted; on the right the reviewers' comments, numbered to those lines. Once in
-// view the comments resolve one by one (each highlight turns from coral to green, the code and the
-// benchmark update), then nothing moves. Phones: a vertical list with the review opening under step 04.
+// The workflow as one stage you scroll through. A full-width rail of the six steps sits on top, each step's
+// hairline filling continuously with scroll and the active one in ink (the signature step carries a coral dot);
+// below it the active step on the left and, on the right, the artifact that step produces, played once when it
+// becomes active. The stage pins while you scroll the steps (clicking the rail jumps to one). Phones don't pin:
+// the rail scrolls sideways and a tap changes the step.
 export default function Process() {
-  const [ref, seen] = useInView<HTMLDivElement>(0.25);
-  const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
-  const [n, setN] = useState(0);
-  const total = PROCESS.review.comments.length;
+  const track = useRef<HTMLDivElement>(null);
+  const wide = useSyncExternalStore(subscribe, () => window.matchMedia(LG).matches, () => false);
+  const [p, setP] = useState(0); // scroll progress through the stage (wide screens)
+  const [tapped, setTapped] = useState(0); // the step on narrow screens
 
   useEffect(() => {
-    if (!seen || still) return;
-    const ids = PROCESS.review.comments.map((_, i) => setTimeout(() => setN(i + 1), 1600 + i * 1300));
-    return () => ids.forEach(clearTimeout);
-  }, [seen, still]);
+    const el = track.current;
+    if (!el || !wide) return;
+    const update = () => setP(clamp01(-el.getBoundingClientRect().top / (el.offsetHeight - window.innerHeight)));
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [wide]);
 
-  const done = still ? total : n;
-  const resolved = (i: number) => i < done;
-  const sig = PROCESS.signature;
+  const active = wide ? Math.min(N - 1, Math.floor(p * N)) : tapped;
+  // The pill follows the active step, not the raw scroll: its leading edge moves first and the trailing edge a beat
+  // later (whichever way you are going), so it stretches and settles instead of tracking every scroll tick.
+  const [prev, setPrev] = useState({ at: active, dir: 1 });
+  if (prev.at !== active) setPrev({ at: active, dir: active > prev.at ? 1 : -1 });
+  const lead = "560ms cubic-bezier(0.22,1,0.36,1)";
+  const trail = "560ms cubic-bezier(0.22,1,0.36,1) 120ms";
 
+  const go = (i: number) => {
+    const el = track.current;
+    if (!wide || !el) return setTapped(i);
+    const top = window.scrollY + el.getBoundingClientRect().top;
+    window.scrollTo({ top: top + ((i + 0.5) / N) * (el.offsetHeight - window.innerHeight), behavior: "smooth" });
+  };
+
+  const step = PROCESS.steps[active];
   return (
-    <section aria-labelledby="process-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
-      <div className="mx-auto max-w-[76rem]">
-        <Label>{PROCESS.label}</Label>
-        <h2 id="process-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
-          {PROCESS.title}
-        </h2>
+    <section aria-labelledby="process-title" className="bg-[#f6f5f1]">
+      <div ref={track} className="px-6 py-20 sm:px-12 lg:h-[560svh] lg:py-0 xl:px-[6vw]">
+        <div className="lg:sticky lg:top-0 lg:flex lg:h-svh lg:flex-col lg:justify-center lg:pt-20 lg:pb-6">
+          <div className="mx-auto w-full max-w-[76rem]">
+            <Label>{PROCESS.label}</Label>
+            <h2 id="process-title" className="mt-5 text-[clamp(1.8rem,3vw,2.6rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
+              {PROCESS.title}
+            </h2>
 
-        <div ref={ref} className="mt-14 rounded-3xl bg-[#f7f6f2] p-2 sm:p-3">
-          <ol className="grid lg:grid-cols-6">
-            {PROCESS.steps.map((step, i) => (
-              <li
-                key={step.name}
-                className={`px-5 py-5 lg:order-none lg:px-4 lg:pt-5 lg:pb-7 ${i <= sig ? "max-lg:order-1" : "max-lg:order-3"} ${
-                  i === sig ? `${RAISED} rounded-t-2xl` : ""
-                }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  <StepChip n={i + 1} />
-                  {i === sig && (done < total ? <Beacon /> : <Tick className="size-4" />)}
-                </span>
-                <h3 className="mt-4 text-[1.05rem] font-medium tracking-[-0.015em] text-ink">{step.name}</h3>
-                <p className={`mt-2 text-[0.88rem] leading-relaxed ${i === sig ? "text-ink/75" : "text-ink/60"}`}>{step.body}</p>
-              </li>
-            ))}
-
-            {/* The review itself, opening out of step 04. */}
-            <li aria-label="Example review" className={`${RAISED} rounded-b-2xl max-lg:order-2 max-lg:mb-2 lg:col-span-6 lg:rounded-2xl`}>
-              <div className="grid gap-4 border-t border-line p-3 sm:p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6 lg:border-t-0 lg:p-7">
-                <Draft resolved={resolved} />
-                <div className="flex flex-col gap-3">
-                  <p className="flex items-center justify-between px-1 text-[12px] text-ink/50">
-                    <span>Comments</span>
-                    <span className="tabular-nums">
-                      {done} of {total} resolved
-                    </span>
-                  </p>
-                  {PROCESS.review.comments.map((c, i) => (
-                    <div key={i} style={delay(300 + i * 200)} className={`${SHEET} ${rise(seen)} p-3.5`}>
-                      <div className="flex items-center gap-2.5">
-                        <Badge n={i + 1} done={resolved(i)} />
-                        <p className="text-[12.5px] font-medium text-ink">{c.who}</p>
-                        <p className="text-[11px] text-ink/45">{c.kind === "technical" ? "Technical review" : "Editorial review"}</p>
-                        <span className="ml-auto">
-                          {resolved(i) ? (
-                            <span className="flex items-center gap-1.5 text-[11px] text-[#1a7f47]">
-                              <Tick className="size-4" />
-                              Resolved
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1.5 text-[11px] text-ink/50">
-                              <span className="size-2 rounded-full bg-accent" />
-                              Open
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-[12.5px] leading-snug text-ink/70">{c.text}</p>
-                    </div>
-                  ))}
-                </div>
+            {/* The track: one capsule, with an ink indicator that slides to the active step. */}
+            <div className="-mx-6 mt-8 overflow-x-auto px-6 pb-2 sm:-mx-12 sm:px-12 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0">
+              <div className="relative min-w-[44rem] rounded-full border border-black/[0.06] bg-white/80 p-1.5 shadow-[0_1px_2px_rgb(23_44_33/0.04),0_12px_28px_-16px_rgb(23_44_33/0.18)] lg:min-w-0">
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1.5 bottom-1.5 rounded-full bg-primary shadow-[0_6px_14px_-8px_rgb(23_44_33/0.45)]"
+                  style={{
+                    left: `calc(0.375rem + (100% - 0.75rem) / ${N} * ${active})`,
+                    right: `calc(0.375rem + (100% - 0.75rem) / ${N} * ${N - 1 - active})`,
+                    transition: `left ${prev.dir === 1 ? trail : lead}, right ${prev.dir === 1 ? lead : trail}`,
+                  }}
+                />
+                <ol className="relative grid" style={{ gridTemplateColumns: `repeat(${N}, minmax(0, 1fr))` }}>
+                  {PROCESS.steps.map((s, i) => {
+                    const on = i === active;
+                    return (
+                      <li key={s.name}>
+                        <button
+                          type="button"
+                          onClick={() => go(i)}
+                          aria-current={on ? "step" : undefined}
+                          className={`flex w-full items-center justify-center gap-2 rounded-full px-2 py-3 text-[0.88rem] whitespace-nowrap transition-colors duration-500 ${
+                            on ? "text-ink" : "text-ink/45 hover:text-ink"
+                          }`}
+                        >
+                          <span className="font-mono text-[0.68rem] opacity-60">0{i + 1}</span>
+                          {s.name}
+                          {i === PROCESS.signature && <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
-            </li>
-          </ol>
+            </div>
+
+            <div className="mt-8 grid items-center gap-8 lg:mt-9 lg:grid-cols-[minmax(0,0.34fr)_minmax(0,0.66fr)] lg:gap-14">
+              <div key={active} style={{ animation: "arrive 600ms cubic-bezier(0.22,1,0.36,1) both" }}>
+                <StepChip n={active + 1} />
+                <h3 className="mt-5 text-[clamp(1.7rem,2.6vw,2.4rem)] leading-[1.08] font-medium tracking-[-0.035em] text-ink">{step.name}</h3>
+                <p className="mt-4 max-w-[26rem] text-[1.02rem] leading-relaxed text-ink/65">{step.body}</p>
+              </div>
+              <div aria-hidden="true">
+                <Stage key={active} i={active} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/** A comment's number, matching its highlight in the draft: coral while open, green once resolved. */
-function Badge({ n, done }: { n: number; done: boolean }) {
-  return (
-    <span
-      className={`grid size-5 shrink-0 place-items-center rounded-full font-mono text-[10px] transition-colors duration-700 ${
-        done ? "bg-[#e3f3e8] text-[#1a7f47]" : "bg-[color-mix(in_srgb,var(--accent)_14%,white)] text-[color-mix(in_srgb,var(--accent)_85%,var(--ink))]"
-      }`}
-    >
-      {n}
-    </span>
-  );
-}
-
-const ink = (o: number) => `color-mix(in srgb, var(--ink) ${o}%, transparent)`;
-
-/** Skeleton prose lines. */
-function Lines({ widths }: { widths: number[] }) {
-  return (
-    <span className="block space-y-[7px]">
-      {widths.map((w, i) => (
-        <span key={i} className="block h-[4.5px] rounded-full" style={{ width: `${w}%`, background: ink(13) }} />
-      ))}
-    </span>
-  );
-}
-
-/** A highlighted passage under review, tagged with its comment's number. */
-function Mark({ n, done, children }: { n: number; done: boolean; children: ReactNode }) {
-  return (
-    <span className={`relative -mx-2 block rounded-lg px-2 py-2 pr-9 transition-colors duration-700 ${done ? DONE_WASH : OPEN_WASH}`}>
-      {children}
-      <span className="absolute top-2 right-2">
-        <Badge n={n} done={done} />
-      </span>
-    </span>
-  );
-}
-
-/** The draft under review, comments numbered top to bottom: 1 the opening, 2 the code sample, 3 the benchmark. */
-function Draft({ resolved }: { resolved: (i: number) => boolean }) {
-  return (
-    <div className={`${SHEET} overflow-hidden`}>
-      <SheetHead title={PROCESS.review.file}>
-        <span className="text-[11px] text-ink/45">Draft</span>
-      </SheetHead>
-      <div className="space-y-4 px-4 py-4">
-        <p className="text-[14px] leading-snug font-semibold tracking-[-0.015em] text-ink">{HERO.article.title}</p>
-        <Mark n={1} done={resolved(0)}>
-          <Lines widths={[96, 88, 54]} />
-        </Mark>
-        <Mark n={2} done={resolved(1)}>
-          <span className="block rounded-md bg-paper px-3 py-2.5 font-mono text-[11px] leading-relaxed [overflow-wrap:anywhere]">
-            <span className="text-ink/40">{"# split a bundled PDF"}</span>
-            <br />
-            {resolved(1) ? (
-              <span className="text-ink">{HERO.article.code}</span>
-            ) : (
-              <span className="text-ink/45 line-through decoration-accent/60">{'client.split_pdf("bundle.pdf", mode="auto")'}</span>
-            )}
-          </span>
-        </Mark>
-        <Lines widths={[92, 70]} />
-        <Mark n={3} done={resolved(2)}>
-          <span className="block text-[12px] text-ink/70">
-            A 400-page bundle splits in{" "}
-            <span className={`font-medium tabular-nums transition-colors duration-700 ${resolved(2) ? "text-[#1a7f47]" : "text-ink/45 line-through"}`}>
-              {resolved(2) ? "38s" : "52s"}
-            </span>
-            .
-          </span>
-        </Mark>
-        <Lines widths={[84, 60]} />
-      </div>
-    </div>
-  );
+/** The active step's artifact, remounted per step so it plays from the start. */
+function Stage({ i }: { i: number }) {
+  const { Scene, ms } = SCENES[i];
+  const p = usePlay(true, ms);
+  return <Scene p={p} />;
 }

@@ -147,6 +147,63 @@ export const PROCESS = {
       { who: "Engineer", kind: "technical", text: "Benchmark re-run on a 400-page bundle: 38s, not 52s.", resolved: true },
     ],
   },
+  // SAMPLE: the artifact shown for each step.
+  samples: {
+    understand: {
+      title: "Discovery · ADE Split",
+      cmd: "curl -X POST api.landing.ai/v2/split -F file=@bundle.pdf",
+      out: ['{ "documents": 3,', '  "classes": ["invoice", "id", "contract"],', '  "latency_ms": 1840 }'],
+      notes: [
+        { k: "Product", v: "Document extraction API" },
+        { k: "Audience", v: "ML and platform engineers" },
+        { k: "Positioning", v: "Agentic document intelligence" },
+        { k: "Environment", v: "Python SDK · REST · API v2" },
+        { k: "Priorities", v: "Developer adoption, AI citations" },
+      ],
+    },
+    prioritize: {
+      title: "Topic backlog",
+      rows: [
+        { topic: "ADE vs. traditional OCR APIs", format: "Comparison", score: 74 },
+        { topic: "Split multi-document PDFs by type", format: "Guide", score: 92 },
+        { topic: "Document AI glossary", format: "Reference", score: 31 },
+        { topic: "Automate KYC document parsing", format: "Use case", score: 68 },
+        { topic: "Why we built ADE", format: "Thought", score: 45 },
+        { topic: "Parse invoices in Python", format: "Tutorial", score: 81 },
+      ],
+      cut: "Q4 plan",
+    },
+    build: {
+      title: "Tested draft",
+      lines: [
+        "Bundled scans often arrive as one 400-page PDF. ADE Split classifies every page and returns each document in one API call.",
+        "Install the SDK, point it at a bundle, and ask for classes. The response lists every document it found, page ranges included.",
+      ],
+      cmd: "python split.py bundle.pdf",
+      out: ["✓ 3 documents · invoice, id, contract", "✓ 400 pages in 38s"],
+      sources: ["ADE API reference", "Split changelog"],
+    },
+    publish: {
+      title: "Publish checklist",
+      checks: ["Title and meta description", "FAQ + HowTo schema", "Internal links", "Code samples as text", "Answer-first summary"],
+      score: [58, 94],
+      scoreLabel: "Search + AI readiness",
+      url: "landing.ai/blog/splitting-multi-document-pdfs…",
+      channels: ["Newsletter", "X", "Reddit"],
+    },
+    improve: {
+      title: "Performance · last 12 weeks",
+      weeks: [4, 7, 11, 12, 11, 10, 9, 22, 31, 36, 38, 41],
+      refreshAt: 7,
+      refreshLabel: "Refreshed for API v2",
+      queue: [
+        { title: "Splitting PDFs guide", note: "Rank 9 → 3 after refresh" },
+        { title: "KYC parsing walkthrough", note: "Update for new fields" },
+        { title: "OCR vs. ADE comparison", note: "Add benchmark" },
+      ],
+      next: "Learnings go into the next brief",
+    },
+  },
 };
 
 export type Shipped = { client: string; logo: string; type: "guide" | "use-case" | "thought"; typeLabel: string; title: string; body: string; href: string };
