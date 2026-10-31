@@ -162,6 +162,14 @@ body {
 @keyframes float-in {
   from { opacity: 0; transform: translateY(16px); }
 }
+/* A line drawing itself on (give the path pathLength="1" and stroke-dasharray: 1), and a soft fade for what follows it. */
+@keyframes draw-line {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes soft-in {
+  from { opacity: 0; }
+}
 
 @keyframes nav-pop-in {
   from {

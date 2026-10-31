@@ -4,7 +4,9 @@ import { COMMITMENTS, CREATORS } from "./content";
 // What we commit to: three promises, one per phrase of the headline, each a warm card. The top of each card
 // shows, small and static, the thing the client actually gets for that promise (the agreed objective and its
 // metrics; the budget split across the plan; the result read against the goal), so each one reads as
-// something you can check rather than a claim. No motion. SAMPLE figures in the examples.
+// something you can check rather than a claim. At rest it is still; on hover each card comes a little alive (a light colour
+// shift, then its own example plays: the metric chips light one by one, the budget segments fill in from the left, the line
+// draws up to the goal), in CSS only and off for reduced motion. SAMPLE figures in the examples.
 export default function Commitments() {
   return (
     <section aria-labelledby="commit-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
@@ -24,7 +26,10 @@ export default function Commitments() {
           {COMMITMENTS.items.map((c, i) => {
             const Example = EXAMPLES[i];
             return (
-              <li key={c.tag} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-[#f9f8f4]">
+              <li
+                key={c.tag}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-[#f9f8f4] transition-[background-color,box-shadow] duration-500 hover:bg-[color-mix(in_srgb,var(--primary)_8%,#f9f8f4)] hover:shadow-[0_22px_44px_-30px_rgb(23_44_33/0.4)]"
+              >
                 <div aria-hidden="true" className="flex h-[17rem] items-center justify-center px-6 py-7">
                   <Example />
                 </div>
@@ -58,8 +63,12 @@ function Goals() {
       <p className="mt-1 text-[1.05rem] font-medium tracking-[-0.02em] text-ink">Product adoption</p>
       <p className={`${CAPTION} mt-4`}>Measured by</p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
-        {["Signups", "Activation", "Demo requests"].map((m) => (
-          <li key={m} className="rounded-full border border-ink/12 px-2.5 py-1 text-[0.72rem] whitespace-nowrap text-ink/80">
+        {["Signups", "Activation", "Demo requests"].map((m, i) => (
+          <li
+            key={m}
+            style={{ ["--d" as string]: `${i * 170}ms` }}
+            className="rounded-full border border-ink/12 px-2.5 py-1 text-[0.72rem] whitespace-nowrap text-ink/80 transition-[background-color,border-color,color] duration-300 group-hover:border-primary/60 group-hover:bg-light-green-soft group-hover:text-[#1a7f47] group-hover:delay-(--d)"
+          >
             {m}
           </li>
         ))}
@@ -92,8 +101,12 @@ function Spend() {
         </span>
       </div>
       <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full">
-        {SPLIT.map((s) => (
-          <span key={s.name} className={s.tone} style={{ width: `${s.share}%` }} />
+        {SPLIT.map((s, i) => (
+          <span
+            key={s.name}
+            className={`${s.tone} origin-left motion-safe:group-hover:animate-fill`}
+            style={{ width: `${s.share}%`, animationDuration: "700ms", animationDelay: `${i * 180}ms`, animationTimingFunction: "cubic-bezier(0.22,1,0.36,1)" }}
+          />
         ))}
       </div>
       <ul className="mt-3.5 space-y-1.5">
@@ -129,10 +142,20 @@ function Accountability() {
         <text x="0" y="14" className="fill-muted font-mono text-[8px] tracking-[0.08em]">
           GOAL
         </text>
-        <path d="M0 80 C 40 76, 70 66, 110 52 S 190 26, 234 17 L 234 86 L 0 86 Z" fill="url(#commit-area)" />
-        <path d="M0 80 C 40 76, 70 66, 110 52 S 190 26, 234 17" fill="none" stroke="var(--ink)" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="234" cy="17" r="4.5" fill="#fff" stroke="var(--ink)" strokeOpacity="0.2" />
-        <circle cx="234" cy="17" r="2.8" fill="var(--primary)" />
+        <path d="M0 80 C 40 76, 70 66, 110 52 S 190 26, 234 17 L 234 86 L 0 86 Z" fill="url(#commit-area)" className="motion-safe:group-hover:animate-[soft-in_900ms_ease_350ms_both]" />
+        <path
+          d="M0 80 C 40 76, 70 66, 110 52 S 190 26, 234 17"
+          pathLength={1}
+          fill="none"
+          stroke="var(--ink)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          className="[stroke-dasharray:1] motion-safe:group-hover:animate-[draw-line_1200ms_cubic-bezier(0.22,1,0.36,1)_both]"
+        />
+        <g className="motion-safe:group-hover:animate-[soft-in_450ms_ease_1000ms_both]">
+          <circle cx="234" cy="17" r="4.5" fill="#fff" stroke="var(--ink)" strokeOpacity="0.2" />
+          <circle cx="234" cy="17" r="2.8" fill="var(--primary)" />
+        </g>
       </svg>
       <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-[0.72rem] text-ink/65">
         <span className="size-1.5 rounded-full bg-primary" />
