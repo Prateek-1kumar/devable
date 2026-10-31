@@ -131,6 +131,8 @@ export type Case = {
   href: string;
 };
 
+// SAMPLE: four case studies for the tabbed section. Every result, quote and summary below is a placeholder to judge the
+// design (the quotes included); replace each with the client-approved figures and quote before this ships.
 export const CASES = {
   label: "Case studies",
   title: "Launches that moved the numbers.",
@@ -163,6 +165,44 @@ export const CASES = {
       ],
       summary:
         "webAI wanted developers to understand local AI, not just hear about it. We ran a recurring program of tutorials and explainers across YouTube, LinkedIn, and newsletters.",
+      quote: {
+        text: "They explained running models on-device better than our own docs did, and developers noticed.",
+        by: "Head of Brand, webAI",
+      },
+      href: "#",
+    },
+    {
+      client: "Glean",
+      logo: "/clients/glean.svg",
+      outcome: "Enterprise search, explained by the engineers who build with it.",
+      stats: [
+        { value: "14", label: "creators" },
+        { value: "2.4M", label: "impressions" },
+        { value: "3.2×", label: "demo requests vs. paid social" },
+      ],
+      summary:
+        "Glean wanted technical buyers to see what agents with company context actually do. We paired creators with real internal-wiki and support workflows and published walkthroughs on LinkedIn and X.",
+      quote: {
+        text: "The posts showed the product doing real work, which is what our buyers were asking to see.",
+        by: "Growth lead, Glean",
+      },
+      href: "#",
+    },
+    {
+      client: "Telnyx",
+      logo: "/clients/telnyx.svg",
+      outcome: "A voice AI launch, built in public, demo by demo.",
+      stats: [
+        { value: "12", label: "creators" },
+        { value: "1.8M", label: "impressions" },
+        { value: "+52%", label: "developer signups" },
+      ],
+      summary:
+        "Telnyx needed developers to hear a voice agent answering real phone calls, not read about it. We commissioned build-along videos and short demos across YouTube and X.",
+      quote: {
+        text: "Developers could hear the latency in every demo. That did more than any benchmark chart could.",
+        by: "Product marketing, Telnyx",
+      },
       href: "#",
     },
   ] as Case[],

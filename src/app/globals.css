@@ -158,6 +158,10 @@ body {
 @keyframes arrive {
   from { opacity: 0; transform: translateY(3px); }
 }
+/* A block floating up into place (staggered by the caller with animation-delay): the case studies' entrance. */
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(16px); }
+}
 
 @keyframes nav-pop-in {
   from {

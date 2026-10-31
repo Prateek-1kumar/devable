@@ -3,23 +3,25 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Edges, Line, OrthographicCamera } from "@react-three/drei";
-import { RingGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial, type OrthographicCamera as OrthoCam } from "three";
+import { RingGeometry, Vector3, type Group, type Mesh, type MeshBasicMaterial, type OrthographicCamera as OrthoCam, type Texture } from "three";
 import type { Line2, LineMaterial } from "three-stdlib";
 import { FACE_CAMERA, VIEW_DIR, toScreen } from "../../growth-engine/layout";
 import { MARKS } from "../../growth-engine/marks";
 import { boxFaces, edgeColor, palette } from "../../growth-engine/palette";
 import { useCanvasTexture } from "../../growth-engine/useCanvasTexture";
-import type { Platform } from "../kit";
+import { PLATFORM_COLOR, type Platform } from "../kit";
 import { CREATORS } from "./content";
 
 // The two engagement models as small 3D diagrams, drawn like the homepage's growth engine: a fixed
 // isometric view, flat faces shaded per side, soft ink outlines, crisp canvas-texture text, plus soft contact
 // shadows so the pieces sit on the floor. Each tells its model in its shape, so it reads without the title:
-//   Launch: one fixed post at the centre of a 48-hour dial. A hand sweeps the launch window; as it passes each
-//   creator's hour their post rises out of the dial, each a different angle, and a pulse runs in to the launch.
+//   Launch: one fixed post at the centre of a 24-hour dial. A hand sweeps the launch window, slowing through the
+//   first hour (highlighted), where most of the push happens: six creators' posts fan out above that segment, and three
+//   more land across the rest of the day, each a different angle, with a pulse running in to the launch.
 //   Campaign: four channel lanes running Week 1 → 12. Different creators' posts in different formats land
 //   along them week by week, and every one feeds a single objective at the far end, whose line climbs.
-// SAMPLE creators, angles and formats; one clock per scene; a settled still frame for reduced motion.
+// SAMPLE creators (drawn as monogram discs), angles, hours and formats; one clock per scene; a settled still frame for
+// reduced motion.
 
 const StillContext = createContext(false);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -91,21 +93,21 @@ function Camera({ fit }: { fit: Vector3[] }) {
 
 function Shadows() {
   const p = palette();
-  return <ContactShadows position={[0, -0.001, 0]} scale={12} resolution={512} blur={2.4} far={1.6} opacity={0.32} color={p.ink} />;
+  return <ContactShadows position={[0, -0.001, 0]} scale={12} resolution={512} blur={2} far={2.6} opacity={0.5} color={p.ink} />;
 }
 
 /**
  * A small pill that rides a moving part (the dial's hand, the "now" bar) and says where the clock is, so the
  * time reads inside the scene rather than in an overlay. `follow` places it and returns its text, or null to hide.
  */
-function ClockTag({ follow, clock }: { follow: (t: number, at: Vector3) => string | null; clock: (e: number) => number }) {
+function ClockTag({ follow, clock, w = TAG.w }: { follow: (t: number, at: Vector3) => string | null; clock: (e: number) => number; w?: number }) {
   const p = palette();
   const mesh = useRef<Mesh>(null);
   const text = useRef("");
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       begin(ctx);
-      const W = TAG.w * 100;
+      const W = w * 100;
       const H = TAG.h * 100;
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = "rgba(23,44,33,0.18)";
@@ -123,9 +125,9 @@ function ClockTag({ follow, clock }: { follow: (t: number, at: Vector3) => strin
       ctx.textBaseline = "middle";
       ctx.fillText(text.current, 24, H / 2 + 0.5);
     },
-    [p],
+    [p, w],
   );
-  const tex = useCanvasTexture(Math.round(TAG.w * PX), Math.round(TAG.h * PX), draw);
+  const tex = useCanvasTexture(Math.round(w * PX), Math.round(TAG.h * PX), draw);
   useFrame((state) => {
     const m = mesh.current;
     if (!m) return;
@@ -138,50 +140,39 @@ function ClockTag({ follow, clock }: { follow: (t: number, at: Vector3) => strin
   });
   return (
     <mesh ref={mesh} quaternion={FACE_CAMERA} renderOrder={20} visible={false}>
-      <planeGeometry args={[TAG.w, TAG.h]} />
+      <planeGeometry args={[w, TAG.h]} />
       <meshBasicMaterial map={tex.texture} transparent toneMapped={false} depthTest={false} />
     </mesh>
   );
 }
 const TAG = { w: 0.92, h: 0.3 };
 
-/** The creator photos, loaded once for drawing into textures. */
-const PHOTOS = CREATORS.map((c) => c.photo);
-function usePhotos() {
-  const [imgs, setImgs] = useState<Record<string, HTMLImageElement>>({});
-  useEffect(() => {
-    let live = true;
-    Promise.all(
-      PHOTOS.map(
-        (src) =>
-          new Promise<[string, HTMLImageElement]>((done) => {
-            const im = new Image();
-            im.onload = im.onerror = () => done([src, im]);
-            im.src = src;
-          }),
-      ),
-    ).then((list) => live && setImgs(Object.fromEntries(list)));
-    return () => {
-      live = false;
-    };
-  }, []);
-  return imgs;
-}
-
 // Canvas drawing helpers. Textures are drawn in "card units": 100 units = 1 world unit.
 const PX = 440; // texture pixels per world unit
 const begin = (ctx: CanvasRenderingContext2D) => ctx.setTransform(PX / 100, 0, 0, PX / 100, 0, 0);
-function avatar(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, x: number, y: number, r: number) {
+/** Monogram discs: initials on soft brand tints, so a creator reads as a person without a (sample) photo. */
+const TINTS = ["#dcf7e7", "#e6e1f8", "#fde5d3", "#dbe8fb", "#f5ebcb", "#f8dfe5", "#d6efee", "#e9e8e2"];
+const initials = (creator: number) =>
+  CREATORS[creator].name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+function avatar(ctx: CanvasRenderingContext2D, creator: number, x: number, y: number, r: number, font: string) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = "#e9e7e1";
+  ctx.fillStyle = TINTS[creator % TINTS.length];
   ctx.fill();
-  if (img?.naturalWidth) {
-    ctx.clip();
-    const s = Math.min(img.naturalWidth, img.naturalHeight);
-    ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, x - r, y - r, r * 2, r * 2);
-  }
+  ctx.strokeStyle = "rgba(23,44,33,0.12)";
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(23,44,33,0.78)";
+  ctx.font = `700 ${r * 0.86}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(initials(creator), x, y + r * 0.06);
   ctx.restore();
 }
 function glyph(ctx: CanvasRenderingContext2D, platform: Platform, x: number, y: number, size: number, color: string) {
@@ -289,31 +280,38 @@ function Pulse({ points, at, clock }: { points: Vector3[]; at: (t: number) => nu
   );
 }
 
-// ── Launch: the 48-hour dial ───────────────────────────────────────────────────────────────────────────
+// ── Launch: the 24-hour dial ───────────────────────────────────────────────────────────────────────────
 
 const R = 2.3; // dial radius
 const PLATE = 0.16; // dial thickness
-const WINDOW = 48; // hours on the dial
+const WINDOW = 24; // hours on the dial, as in the hero
+const FIRST_HOUR = 1; // the segment that gets the highlight: where the push happens
+const FIRST_SHARE = 0.3; // of the hand's sweep, spent on that first hour
 const LAUNCH_CYCLE = 22;
-const SWEEP = [0.06, 0.8] as const; // the hand runs 0→48h
+const SWEEP = [0.06, 0.8] as const; // the hand runs 0→24h
 const SLANT = 0.5; // cards turn a little to the reader's left, so their thickness shows
 
-// SAMPLE: the creators who picked the launch up, each with their own angle, at their hour.
-const ANGLES: { creator: number; platform: Platform; tag: string; hour: number; views: number }[] = [
-  { creator: 1, platform: "x", tag: "Live demo", hour: 1, views: 410_000 },
-  { creator: 3, platform: "linkedin", tag: "Use case", hour: 6, views: 186_000 },
-  { creator: 0, platform: "x", tag: "Thread", hour: 11, views: 320_000 },
-  { creator: 6, platform: "x", tag: "Benchmark", hour: 17, views: 140_000 },
-  { creator: 7, platform: "linkedin", tag: "Hot take", hour: 23, views: 144_000 },
-  { creator: 2, platform: "x", tag: "Deep dive", hour: 30, views: 96_000 },
+// SAMPLE: the creators who picked the launch up, each with their own angle, at their hour. Most land in the first hour
+// (six posts); a few more spread across the rest of the day.
+type Angle = { creator: number; platform: Platform; tag: string; hour: number; views: number };
+const ANGLES: Angle[] = [
+  { creator: 1, platform: "x", tag: "Live demo", hour: 0.1, views: 410_000 },
+  { creator: 3, platform: "linkedin", tag: "Use case", hour: 0.2, views: 186_000 },
+  { creator: 0, platform: "x", tag: "Thread", hour: 0.32, views: 320_000 },
+  { creator: 6, platform: "x", tag: "Benchmark", hour: 0.45, views: 140_000 },
+  { creator: 7, platform: "linkedin", tag: "Hot take", hour: 0.62, views: 144_000 },
+  { creator: 2, platform: "x", tag: "Deep dive", hour: 0.82, views: 96_000 },
+  { creator: 4, platform: "x", tag: "Walkthrough", hour: 7, views: 120_000 },
+  { creator: 5, platform: "linkedin", tag: "Explainer", hour: 13, views: 88_000 },
+  { creator: 1, platform: "x", tag: "Recap", hour: 20, views: 76_000 },
 ];
 const LAUNCH_VIEWS = 120_000;
 
-// Where hour h sits on the dial: clockwise on screen from the upper right, so the hours the posts land in
-// stay clear of the back of the dial, which the launch card hides.
+// Where hour h sits on the dial: clockwise on screen from the top, so the first hour (and the block of posts that
+// floats over it) sits centred above the dial.
 const BACK = new Vector3(-1, 0, -1).normalize();
 const RIGHT = new Vector3(1, 0, -1).normalize();
-const alpha = (h: number) => Math.PI / 4 + (h / WINDOW) * Math.PI * 2;
+const alpha = (h: number) => (h / WINDOW) * Math.PI * 2;
 const onDial = (h: number, r: number) => {
   const a = alpha(h);
   return BACK.clone().multiplyScalar(Math.cos(a) * r).addScaledVector(RIGHT, Math.sin(a) * r);
@@ -321,17 +319,36 @@ const onDial = (h: number, r: number) => {
 /** The same direction as a rotation about y for something whose local +x should point along it. */
 const yaw = (h: number) => (3 * Math.PI) / 4 - alpha(h);
 
-const LAUNCH_CARD = { w: 1.55, h: 1.14, d: 0.08 };
-const ANGLE_CARD = { w: 1.26, h: 0.56, d: 0.06 };
+const LAUNCH_CARD = { w: 1.55, h: 1.14, d: 0.14 };
+const ANGLE_CARD = { w: 1.62, h: 0.5, d: 0.1 };
 const LAUNCH_SCALE = 0.86; // the slabs are drawn at these sizes and scaled to sit on the dial
 const ANGLE_SCALE = 0.84;
 const CARD_R = 0.8 * R;
+
+// The first hour's posts sit close in time, so they land as one block: six cards in a tidy 2 × 3 floating above that
+// segment, filling in from the bottom row up as they land, carried down to the dial by a single stem. The other posts
+// spread around the dial, one card and one line each, so concentrated versus spread reads at a glance.
+const CLUSTER = ANGLES.filter((a) => a.hour < FIRST_HOUR);
+const REST = ANGLES.filter((a) => a.hour >= FIRST_HOUR);
+const FAN_AT = FIRST_HOUR / 2; // the hour the block floats over
+const BLOCK = { at: onDial(FAN_AT, R * 1.0 + 0.2), y: PLATE + 0.55, col: 0.8, row: 0.56 }; // col: half the gap between the columns
+const blockSlot = (k: number) => ({ x: (k % 2 ? 1 : -1) * BLOCK.col, y: Math.floor(k / 2) * BLOCK.row });
+const BLOCK_TOP = BLOCK.y + (Math.ceil(CLUSTER.length / 2) - 1) * BLOCK.row + ANGLE_CARD.h * ANGLE_SCALE;
+const REST_LIFT = 0.3; // how far the spread cards float above the dial
+const IN_R = 0.95; // how far in the lines run toward the launch: to its card's edge, so a pulse never rides over its text
+const tangentAt = (h: number) => {
+  const a = alpha(h);
+  return BACK.clone().multiplyScalar(-Math.sin(a)).addScaledVector(RIGHT, Math.cos(a));
+};
 
 const LAUNCH_FIT = [
   ...Array.from({ length: 24 }, (_, i) => onDial((i / 24) * WINDOW, R)),
   new Vector3(0, PLATE + LAUNCH_CARD.h * LAUNCH_SCALE + 0.1, 0),
   ...Array.from({ length: 12 }, (_, i) => onDial((i / 12) * WINDOW, R).setY(PLATE + 0.36 + 0.3)),
-  ...ANGLES.map((a) => onDial(a.hour, CARD_R).setY(PLATE + ANGLE_CARD.h * ANGLE_SCALE)),
+  ...REST.map((a) => onDial(a.hour, CARD_R).setY(PLATE + REST_LIFT + ANGLE_CARD.h * ANGLE_SCALE)),
+  BLOCK.at.clone().addScaledVector(tangentAt(FAN_AT), BLOCK.col + 0.9).setY(BLOCK.y),
+  BLOCK.at.clone().addScaledVector(tangentAt(FAN_AT), -(BLOCK.col + 0.9)).setY(BLOCK.y),
+  BLOCK.at.clone().setY(BLOCK_TOP + 0.5),
 ];
 
 export function LaunchDialScene({ still }: { still: boolean }) {
@@ -346,8 +363,21 @@ export function LaunchDialScene({ still }: { still: boolean }) {
 function LaunchDial() {
   const p = palette();
   const clock = useClock(LAUNCH_CYCLE, 0.86);
-  const photos = usePhotos();
-  const hourAt = useCallback((t: number) => WINDOW * ease(phase(t, SWEEP[0], SWEEP[1]) ** 1.15) * (1 - phase(t, 0.93, 0.99)), []);
+  // The hour on the dial: the first hour takes its share of the sweep, since that is where the push happens.
+  const hourAt = useCallback((t: number) => {
+    const u = phase(t, SWEEP[0], SWEEP[1]);
+    const h = u < FIRST_SHARE ? (u / FIRST_SHARE) * FIRST_HOUR : FIRST_HOUR + ((u - FIRST_SHARE) / (1 - FIRST_SHARE)) * (WINDOW - FIRST_HOUR);
+    return h * (1 - phase(t, 0.93, 0.99));
+  }, []);
+  // A soft round shadow for the cards that float over the dial.
+  const softDraw = useCallback((ctx: CanvasRenderingContext2D, w: number) => {
+    const g = ctx.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    g.addColorStop(0, "rgba(23,44,33,0.55)");
+    g.addColorStop(1, "rgba(23,44,33,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, w);
+  }, []);
+  const soft = useCanvasTexture(128, 128, softDraw);
 
   // The plate: a solid disc with the hours engraved on its face.
   const plateFaces = useMemo(
@@ -381,6 +411,19 @@ function LaunchDial() {
       ctx.beginPath();
       ctx.arc(c, c, c * 0.83, 0, Math.PI * 2);
       ctx.stroke();
+      // The first hour, highlighted: the segment where most of the push happens.
+      const ang = (h: number) => Math.atan2(onDial(h, 1).z, onDial(h, 1).x);
+      const [a0, a1] = [ang(0), ang(FIRST_HOUR)];
+      const ccw = Math.sin(a1 - a0) < 0;
+      ctx.fillStyle = "rgba(25,231,110,0.7)";
+      ctx.beginPath();
+      ctx.arc(c, c, c * 0.985, a0, a1, ccw);
+      ctx.arc(c, c, c * 0.5, a1, a0, !ccw);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(14,150,70,0.85)";
+      ctx.lineWidth = k * 0.014;
+      ctx.stroke();
       // Hour ticks: every hour, longer every six.
       for (let h = 0; h < WINDOW; h++) {
         const major = h % 6 === 0;
@@ -398,7 +441,7 @@ function LaunchDial() {
       ctx.font = `500 ${k * 0.15}px ${p.monoFont}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      for (const h of [0, 12, 24, 36]) {
+      for (const h of [0, 6, 12, 18]) {
         const [x, y] = at(h, R * 0.72);
         ctx.fillText(`${h}H`, x, y);
       }
@@ -439,15 +482,16 @@ function LaunchDial() {
       // The post, in one short sentence.
       ctx.textAlign = "left";
       ctx.fillStyle = p.ink;
-      ctx.font = `500 12.5px ${p.bodyFont}`;
-      ctx.fillText("Introducing v2: ship AI", 10, 54);
-      ctx.fillText("features in an afternoon.", 10, 70);
+      ctx.font = `500 11.5px ${p.bodyFont}`;
+      ctx.fillText("We're excited to introduce", 10, 52);
+      ctx.fillText("our new open-source", 10, 66);
+      ctx.fillText("model.", 10, 80);
       // Footer: views, climbing.
       ctx.strokeStyle = "rgba(23,44,33,0.1)";
       ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.moveTo(10, 82);
-      ctx.lineTo(W - 10, 82);
+      ctx.moveTo(10, 88);
+      ctx.lineTo(W - 10, 88);
       ctx.stroke();
       ctx.fillStyle = p.muted;
       ctx.font = `500 8.5px ${p.monoFont}`;
@@ -473,7 +517,7 @@ function LaunchDial() {
       hand.current.visible = t < 0.985;
     }
     if (tip.current) tip.current.visible = hour > 0.05;
-    const views = LAUNCH_VIEWS + ANGLES.reduce((sum, a) => sum + (hour >= a.hour + 1 ? a.views : 0), 0);
+    const views = LAUNCH_VIEWS + ANGLES.reduce((sum, a) => sum + (hour >= (a.hour < FIRST_HOUR ? a.hour + 0.12 : a.hour + 1) ? a.views : 0), 0);
     if (views !== viewsRef.current) {
       viewsRef.current = views;
       launchPaint.current();
@@ -526,79 +570,83 @@ function LaunchDial() {
         follow={(t, at) => {
           const hour = hourAt(t);
           if (hour < 0.5 || t > 0.93) return null;
-          at.copy(onDial(hour, R * 0.965)).setY(PLATE + 0.36);
-          return `Hour ${Math.min(WINDOW, Math.floor(hour))}`;
+          at.copy(onDial(hour, R * 0.8)).setY(PLATE + 0.36);
+          return hour < FIRST_HOUR ? `${Math.round(hour * 60)} min` : `Hour ${Math.min(WINDOW, Math.floor(hour))}`;
+        }}
+      />
+      {/* Names the highlighted segment and what lands in it. */}
+      <ClockTag
+        clock={clock}
+        w={1.78}
+        follow={(t, at) => {
+          if (hourAt(t) < 0.12 || t > 0.93) return null;
+          at.set(BLOCK.at.x, BLOCK_TOP + 0.42, BLOCK.at.z);
+          return `First hour · ${CLUSTER.length} posts`;
         }}
       />
 
-      {ANGLES.map((a, i) => (
-        <AngleCard key={i} a={a} photo={photos[CREATORS[a.creator].photo]} hourAt={hourAt} clock={clock} />
+      <FirstHour hourAt={hourAt} clock={clock} />
+      {REST.map((a, i) => (
+        <AngleCard key={i} a={a} soft={soft.texture} hourAt={hourAt} clock={clock} />
       ))}
     </group>
   );
 }
 
-function AngleCard({
-  a,
-  photo,
-  hourAt,
-  clock,
-}: {
-  a: (typeof ANGLES)[number];
-  photo: HTMLImageElement | undefined;
-  hourAt: (t: number) => number;
-  clock: (e: number) => number;
-}) {
+/** One post as a compact card: who, the angle, when it landed, where, and how far it went. */
+function useChipDraw(a: Angle) {
   const p = palette();
-  const rise = useRef<Group>(null);
-  const line = useRef<Line2>(null);
-  const at = useMemo(() => onDial(a.hour, CARD_R), [a.hour]);
-  // The inward path: from in front of the card to the foot of the launch stand.
-  const path = useMemo(() => [onDial(a.hour, CARD_R - 0.22).setY(PLATE + 0.01), onDial(a.hour, 0.55).setY(PLATE + 0.01)], [a.hour]);
-
-  const draw = useCallback(
+  const early = a.hour < FIRST_HOUR;
+  return useCallback(
     (ctx: CanvasRenderingContext2D) => {
       const W = ANGLE_CARD.w * 100;
       const H = ANGLE_CARD.h * 100;
-      card(ctx, W, H, 6);
-      // The angle, big: the reason this post is different from the others.
-      avatar(ctx, photo, 18, 19, 10);
+      card(ctx, W, H, 7);
+      avatar(ctx, a.creator, 21, H / 2, 12.5, p.bodyFont);
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      // Fit the tag to the room right of the avatar: a long angle steps its size down rather than spill.
-      const room = W - 33 - 9 - 16;
-      let size = 13;
-      ctx.font = `600 ${size}px ${p.bodyFont}`;
-      while (ctx.measureText(a.tag).width > room && size > 9) ctx.font = `600 ${(size -= 0.5)}px ${p.bodyFont}`;
-      const tw = ctx.measureText(a.tag).width;
-      ctx.fillStyle = "#dcf7e7";
-      ctx.beginPath();
-      ctx.roundRect(33, 9, tw + 16, 21, 10.5);
-      ctx.fill();
+      // The angle, big: the reason this post is different from the others.
       ctx.fillStyle = p.ink;
-      ctx.fillText(a.tag, 41, 19.5 + size * 0.35);
-      // When it landed, where, and how far it went.
+      ctx.font = `600 14px ${p.bodyFont}`;
+      ctx.fillText(a.tag, 42, 23);
+      // When it landed on the left; the channel and how far it went on the right.
       ctx.fillStyle = p.muted;
-      ctx.font = `500 10px ${p.monoFont}`;
-      ctx.fillText(`+${a.hour}H`, 9, H - 10);
+      ctx.font = `500 9.5px ${p.monoFont}`;
+      ctx.fillText(early ? `+${Math.round(a.hour * 60)} MIN` : `+${Math.round(a.hour)} H`, 42, 40);
       ctx.textAlign = "right";
       ctx.fillStyle = p.ink;
-      ctx.font = `600 12px ${p.bodyFont}`;
-      ctx.fillText(fmt(a.views), W - 9, H - 9.5);
+      ctx.font = `600 13.5px ${p.bodyFont}`;
+      ctx.fillText(fmt(a.views), W - 10, 41);
       const vw = ctx.measureText(fmt(a.views)).width;
-      glyph(ctx, a.platform, W - 9 - vw - 15, H - 20.5, 11, a.platform === "linkedin" ? "#0a66c2" : p.ink);
+      glyph(ctx, a.platform, W - 10 - vw - 17, H - 21.5, 12.5, PLATFORM_COLOR[a.platform]);
     },
-    [p, a, photo],
+    [p, a, early],
   );
+}
+
+/** A post that lands later in the day: one card floating over its hour on the dial, one line in to the launch. */
+function AngleCard({ a, soft, hourAt, clock }: { a: Angle; soft: Texture; hourAt: (t: number) => number; clock: (e: number) => number }) {
+  const p = palette();
+  const rise = useRef<Group>(null);
+  const shadow = useRef<Mesh>(null);
+  const line = useRef<Line2>(null);
+  const at = useMemo(() => onDial(a.hour, CARD_R), [a.hour]);
+  const path = useMemo(() => [onDial(a.hour, CARD_R - 0.22).setY(PLATE + 0.01), onDial(a.hour, IN_R).setY(PLATE + 0.01)], [a.hour]);
+  const draw = useChipDraw(a);
 
   const colors = useMemo(() => ({ rest: "#d9d6cf", on: p.primary }), [p]);
   useFrame((state) => {
     const t = clock(state.clock.elapsedTime);
     const hour = hourAt(t);
     const k = ease(clamp01((hour - a.hour) / 2.4));
+    const h = ANGLE_CARD.h * ANGLE_SCALE;
     if (rise.current) {
-      rise.current.position.y = PLATE - (ANGLE_CARD.h * ANGLE_SCALE + 0.04) * (1 - k);
+      rise.current.position.y = PLATE + REST_LIFT - (h + REST_LIFT + 0.04) * (1 - k);
       rise.current.visible = k > 0;
+    }
+    if (shadow.current) {
+      shadow.current.visible = k > 0.02;
+      (shadow.current.material as MeshBasicMaterial).opacity = 0.34 * k;
     }
     const mat = line.current?.material as LineMaterial | undefined;
     mat?.color.set(hour >= a.hour + 0.6 ? colors.on : colors.rest);
@@ -608,9 +656,63 @@ function AngleCard({
     <group>
       <Line ref={line} points={path} color={colors.rest} lineWidth={1.5} />
       <Pulse points={path} clock={clock} at={(t) => clamp01((hourAt(t) - a.hour - 0.6) / 3.2)} />
-      <group ref={rise} position={[at.x, PLATE, at.z]} rotation-y={SLANT} scale={ANGLE_SCALE} visible={false}>
+      {/* A soft shadow on the dial under the card, so the lift reads. */}
+      <group position={[at.x, PLATE + 0.004, at.z]} rotation-y={SLANT}>
+        <mesh ref={shadow} rotation-x={-Math.PI / 2} visible={false}>
+          <planeGeometry args={[ANGLE_CARD.w * ANGLE_SCALE * 1.15, 0.7]} />
+          <meshBasicMaterial map={soft} transparent opacity={0} depthWrite={false} toneMapped={false} />
+        </mesh>
+      </group>
+      <group ref={rise} position={[at.x, PLATE + REST_LIFT, at.z]} rotation-y={SLANT} scale={ANGLE_SCALE} visible={false}>
         <Slab w={ANGLE_CARD.w} h={ANGLE_CARD.h} d={ANGLE_CARD.d} draw={draw} />
       </group>
+    </group>
+  );
+}
+
+/** The first hour: the block of cards, and the one stem that carries them down to the highlighted segment and in. */
+function FirstHour({ hourAt, clock }: { hourAt: (t: number) => number; clock: (e: number) => number }) {
+  const p = palette();
+  const line = useRef<Line2>(null);
+  const trunk = useMemo(
+    () => [new Vector3(BLOCK.at.x, BLOCK.y, BLOCK.at.z), onDial(FAN_AT, R * 0.96).setY(PLATE + 0.01), onDial(FAN_AT, IN_R).setY(PLATE + 0.01)],
+    [],
+  );
+  const colors = useMemo(() => ({ rest: "#d9d6cf", on: p.primary }), [p]);
+  useFrame((state) => {
+    const hour = hourAt(clock(state.clock.elapsedTime));
+    (line.current?.material as LineMaterial | undefined)?.color.set(hour >= CLUSTER[0].hour + 0.2 ? colors.on : colors.rest);
+  });
+  return (
+    <group>
+      <Line ref={line} points={trunk} color={colors.rest} lineWidth={2} />
+      {CLUSTER.map((a, k) => (
+        <Pulse key={k} points={trunk} clock={clock} at={(t) => clamp01((hourAt(t) - a.hour - 0.12) / 0.5)} />
+      ))}
+      <group position={[BLOCK.at.x, BLOCK.y, BLOCK.at.z]} rotation-y={SLANT}>
+        {CLUSTER.map((a, k) => (
+          <BlockCard key={k} a={a} slot={blockSlot(k)} hourAt={hourAt} clock={clock} />
+        ))}
+      </group>
+    </group>
+  );
+}
+
+/** One card of the block: it pops up into its slot at its minute. */
+function BlockCard({ a, slot, hourAt, clock }: { a: Angle; slot: { x: number; y: number }; hourAt: (t: number) => number; clock: (e: number) => number }) {
+  const g = useRef<Group>(null);
+  const draw = useChipDraw(a);
+  useFrame((state) => {
+    const k = ease(clamp01((hourAt(clock(state.clock.elapsedTime)) - a.hour) / 0.14));
+    const grp = g.current;
+    if (!grp) return;
+    grp.visible = k > 0.01;
+    grp.position.set(slot.x, slot.y - 0.3 * (1 - k), 0);
+    grp.scale.setScalar(ANGLE_SCALE * (0.72 + 0.28 * k));
+  });
+  return (
+    <group ref={g} visible={false}>
+      <Slab w={ANGLE_CARD.w} h={ANGLE_CARD.h} d={ANGLE_CARD.d} draw={draw} />
     </group>
   );
 }
@@ -620,10 +722,10 @@ function AngleCard({
 const CAMPAIGN_CYCLE = 24;
 const WEEKS = [0.06, 0.8] as const; // the cursor runs week 1 → 12
 const LANES: Platform[] = ["x", "linkedin", "youtube", "newsletter"];
-const LANE = { w: 0.6, gap: 0.14, h: 0.05, front: 2.1, back: -2.1 };
+const LANE = { w: 0.6, gap: 0.14, h: 0.1, front: 2.1, back: -2.1 };
 const laneX = (i: number) => (i - (LANES.length - 1) / 2) * (LANE.w + LANE.gap);
 const weekZ = (w: number) => LANE.front - ((w - 0.5) / 12) * (LANE.front - LANE.back);
-const OBJECTIVE = { w: 2.1, h: 1.36, d: 0.08, z: LANE.back - 1.2 };
+const OBJECTIVE = { w: 2.8, h: 1.78, d: 0.12, z: LANE.back - 1.5 };
 const MERGE = new Vector3(0, LANE.h, LANE.back - 0.6); // where the lanes' wires join
 const INLET = new Vector3(0, LANE.h, OBJECTIVE.z + 0.2); // the front of the objective's stand
 /** The wire from lane i's end: on along the lane's line, then a smooth turn into the trunk at MERGE. */
@@ -689,7 +791,6 @@ export function CampaignLanesScene({ still }: { still: boolean }) {
 function CampaignLanes() {
   const p = palette();
   const clock = useClock(CAMPAIGN_CYCLE, 0.9);
-  const photos = usePhotos();
   const weekAt = useCallback((t: number) => 0.5 + 12 * phase(t, WEEKS[0], WEEKS[1]), []);
   const out = useCallback((t: number) => 1 - phase(t, 0.93, 0.99), []);
   const length = LANE.front - LANE.back;
@@ -715,25 +816,33 @@ function CampaignLanes() {
     (ctx: CanvasRenderingContext2D) => {
       const W = OBJECTIVE.w * 100;
       const H = OBJECTIVE.h * 100;
-      card(ctx, W, H, 6);
+      card(ctx, W, H, 8);
+      const upTo = drawn.current;
+      const posts = PROGRAM.filter((q) => q.week <= upTo);
+      const n = posts.length;
+      const who = new Set(posts.map((q) => q.creator)).size;
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = p.muted;
-      ctx.font = `500 8px ${p.monoFont}`;
-      ctx.fillText("ONE OBJECTIVE", 11, 18);
+      ctx.fillStyle = "rgba(23,44,33,0.62)";
+      ctx.font = `600 10.5px ${p.monoFont}`;
+      ctx.fillText("ONE OBJECTIVE", 14, 25);
       ctx.fillStyle = p.ink;
-      ctx.font = `600 16px ${p.bodyFont}`;
-      ctx.fillText("Product adoption", 11, 37);
+      ctx.font = `600 27px ${p.bodyFont}`;
+      ctx.fillText("Product adoption", 14, 58);
+      // What is feeding it so far, right-aligned beside the title.
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(23,44,33,0.72)";
+      ctx.font = `500 12.5px ${p.bodyFont}`;
+      ctx.fillText(`${n} ${n === 1 ? "post" : "posts"} · ${who} ${who === 1 ? "creator" : "creators"}`, W - 14, 25);
       // The line, drawn week by week up to where the chart has reached, eased between posts.
-      const upTo = drawn.current;
-      const x0 = 11;
-      const x1 = W - 11;
-      const y0 = H - 18;
-      const y1 = 62;
+      const x0 = 14;
+      const x1 = W - 14;
+      const y0 = H - 30;
+      const y1 = 80;
       const xAt = (w: number) => x0 + ((w - 0.5) / 12) * (x1 - x0);
       const yAt = (w: number) => y0 - (y0 - y1) * adoption(w);
-      ctx.strokeStyle = "rgba(23,44,33,0.07)";
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = "rgba(23,44,33,0.09)";
+      ctx.lineWidth = 0.8;
       for (const y of [y0, (y0 + y1) / 2, y1]) {
         ctx.beginPath();
         ctx.moveTo(x0, y);
@@ -746,7 +855,7 @@ function CampaignLanes() {
         pts.push([xAt(upTo), yAt(upTo)]);
         const [lx, ly] = pts[pts.length - 1];
         const g = ctx.createLinearGradient(0, y1, 0, y0);
-        g.addColorStop(0, "rgba(25,231,110,0.22)");
+        g.addColorStop(0, "rgba(25,231,110,0.26)");
         g.addColorStop(1, "rgba(25,231,110,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -755,7 +864,7 @@ function CampaignLanes() {
         ctx.lineTo(lx, y0);
         ctx.fill();
         ctx.strokeStyle = p.ink;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2.2;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -764,25 +873,22 @@ function CampaignLanes() {
         // The head: a green bead with a white rim, like the pulses that feed it.
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(lx, ly, 4.2, 0, Math.PI * 2);
+        ctx.arc(lx, ly, 5.6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(23,44,33,0.18)";
-        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = "rgba(23,44,33,0.2)";
+        ctx.lineWidth = 0.8;
         ctx.stroke();
         ctx.fillStyle = p.primary;
         ctx.beginPath();
-        ctx.arc(lx, ly, 2.7, 0, Math.PI * 2);
+        ctx.arc(lx, ly, 3.6, 0, Math.PI * 2);
         ctx.fill();
       }
-      const n = PROGRAM.filter((q) => q.week <= upTo).length;
-      ctx.fillStyle = p.muted;
-      ctx.font = `500 7.5px ${p.monoFont}`;
-      ctx.fillText("WEEK 1", x0, H - 6);
+      ctx.fillStyle = "rgba(23,44,33,0.6)";
+      ctx.font = `600 9.5px ${p.monoFont}`;
+      ctx.textAlign = "left";
+      ctx.fillText("WEEK 1", x0, H - 10);
       ctx.textAlign = "right";
-      ctx.fillText("WEEK 12", x1, H - 6);
-      ctx.fillStyle = p.muted;
-      ctx.font = `500 10px ${p.bodyFont}`;
-      ctx.fillText(`${n} posts · ${new Set(PROGRAM.filter((q) => q.week <= upTo).map((q) => q.creator)).size} creators`, x1, 54);
+      ctx.fillText("WEEK 12", x1, H - 10);
     },
     [p],
   );
@@ -863,14 +969,13 @@ function CampaignLanes() {
       </group>
 
       {PROGRAM.map((q, i) => (
-        <ProgramPost key={i} q={q} photo={photos[CREATORS[q.creator].photo]} weekAt={weekAt} out={out} clock={clock} />
+        <ProgramPost key={i} q={q} weekAt={weekAt} out={out} clock={clock} />
       ))}
     </group>
   );
 }
 
 function ChannelBlock({ platform, faces }: { platform: Platform; faces: MeshBasicMaterial[] }) {
-  const p = palette();
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, w: number) => {
       ctx.fillStyle = "#ffffff";
@@ -879,13 +984,13 @@ function ChannelBlock({ platform, faces }: { platform: Platform; faces: MeshBasi
       ctx.save();
       ctx.translate(w / 2, w / 2);
       ctx.rotate(-Math.PI / 4);
-      glyph(ctx, platform, -w * 0.22, -w * 0.22, w * 0.44, p.ink);
+      glyph(ctx, platform, -w * 0.27, -w * 0.27, w * 0.54, PLATFORM_COLOR[platform]);
       ctx.restore();
     },
-    [platform, p],
+    [platform],
   );
   const top = useCanvasTexture(256, 256, draw);
-  const H = 0.36;
+  const H = 0.5;
   const z = LANE.front + 0.18 + LANE.w / 2;
   return (
     <group position={[0, 0, z]}>
@@ -901,7 +1006,7 @@ function ChannelBlock({ platform, faces }: { platform: Platform; faces: MeshBasi
   );
 }
 
-const CHIP = { w: 1.08, h: 0.34 };
+const CHIP = { w: 1.32, h: 0.36 };
 const WIRE = "#cdc9c0";
 /** The weeks on an unclamped clock, so pulses and the chart carry on past week 12 into the hold. */
 const flowAt = (t: number) => 0.5 + 12 * ((t - WEEKS[0]) / (WEEKS[1] - WEEKS[0]));
@@ -947,13 +1052,11 @@ function WeekMark({ week }: { week: number }) {
 
 function ProgramPost({
   q,
-  photo,
   weekAt,
   out,
   clock,
 }: {
   q: (typeof PROGRAM)[number];
-  photo: HTMLImageElement | undefined;
   weekAt: (t: number) => number;
   out: (t: number) => number;
   clock: (e: number) => number;
@@ -980,13 +1083,16 @@ function ProgramPost({
       ctx.roundRect(0.5, 0.5, W - 1, H - 1, H / 2);
       ctx.fill();
       ctx.stroke();
-      avatar(ctx, photo, H / 2, H / 2, H / 2 - 3);
+      avatar(ctx, q.creator, H / 2, H / 2, H / 2 - 3, p.bodyFont);
       ctx.fillStyle = p.ink;
       ctx.font = `600 12.5px ${p.bodyFont}`;
+      ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(q.format, H + 1, H / 2 + 0.5);
+      // The channel it went out on, in its own colour.
+      glyph(ctx, LANES[q.lane], W - 22, H / 2 - 7, 14, PLATFORM_COLOR[LANES[q.lane]]);
     },
-    [p, q.format, photo],
+    [p, q.format, q.creator, q.lane],
   );
   const chip = useCanvasTexture(Math.round(CHIP.w * PX), Math.round(CHIP.h * PX), draw);
 
@@ -1004,15 +1110,15 @@ function ProgramPost({
       <group ref={drop} position={[0, 0.9, 0]} visible={false}>
         <group position={[x, LANE.h, z]}>
           {/* The post: a white block in its week, with a green edge. */}
-          <mesh position={[0, 0.05, 0]} material={faces}>
-            <boxGeometry args={[LANE.w - 0.1, 0.1, 0.3]} />
+          <mesh position={[0, 0.09, 0]} material={faces}>
+            <boxGeometry args={[LANE.w - 0.1, 0.18, 0.34]} />
             <Edges color={edgeColor()} />
           </mesh>
-          <mesh position={[0, 0.103, 0.11]} material={accent}>
-            <boxGeometry args={[LANE.w - 0.1, 0.006, 0.06]} />
+          <mesh position={[0, 0.183, 0.12]} material={accent}>
+            <boxGeometry args={[LANE.w - 0.1, 0.006, 0.07]} />
           </mesh>
           {/* Its label, floating just above and to the left of the block. */}
-          <mesh position={[0, 0.36, 0]} quaternion={FACE_CAMERA} renderOrder={depth}>
+          <mesh position={[0, 0.52, 0]} quaternion={FACE_CAMERA} renderOrder={depth}>
             <planeGeometry args={[CHIP.w, CHIP.h]} />
             <meshBasicMaterial map={chip.texture} transparent toneMapped={false} depthTest={false} />
           </mesh>
