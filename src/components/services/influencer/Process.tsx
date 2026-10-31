@@ -388,115 +388,141 @@ function RunScene({ active }: SceneProps) {
   );
 }
 
-// 04 · One goal, and steady progress toward it. The goal is visible from the first frame: a dashed target plane hangs
-// over the row, labelled with what we are after (signups here; it could as well be awareness or impressions). Six bars
-// climb toward it week by week; three notes in front of the row mark where we adjust (a new angle, a shift of budget, a
-// different creator), and each is followed by a steeper step, so it is plain we don't just launch and wait. The last bar
-// meets the plane: the plane lights green, the label turns to "Goal reached" and a ring pings out from the base.
-const GOAL_H = 128;
-const COL = { w: 46, step: 84, y: 252 };
-const colX = (i: number) => 280 - (5 * COL.step) / 2 - COL.w / 2 + i * COL.step;
-const BARS = [
-  { h: 22, at: 0.1 },
-  { h: 38, at: 0.22 },
-  { h: 50, at: 0.34, adjust: "New angle", lift: 0 },
-  { h: 80, at: 0.5, adjust: "Shift budget", lift: 0 },
-  { h: 106, at: 0.66, adjust: "New creator", lift: 0 },
-  { h: GOAL_H, at: 0.8 },
-];
-const REACHED = 0.88;
+// 04 · One goal, and one track to it, a single object: a long dark track running straight into the goal block, with the
+// goal visible from the first frame (the dashed target on the block, a card reading 0 / 10,000 signups; it could as well be
+// awareness or impressions). A green bar grows along the track toward it, and the goal card's number climbs with the bar's
+// leading edge. Three flags are planted on the track at the points where we adjust (a new angle, a shift of budget, a new
+// creator), each on a pole standing on the track and lit as the bar passes it; the bar picks up speed after each, so it is
+// plain we do not launch and wait. At the end the bar meets the goal block: it lights, the card turns green with "Goal
+// reached", and a ring pings out.
+const FLAGS = ["Launch", "New angle", "Shift budget", "New creator"] as const;
+const SEGMENTS = 20; // the goal card's meter: one segment per 5% of the goal
+const GOAL = 10_000;
+const PROGRESS = [0.12, 0.35, 0.59, 0.83, 1]; // share of the goal at each flag; the last is the goal itself
+const AT = [0.1, 0.3, 0.48, 0.64, 0.8]; // when the bar's edge reaches each (0–1 of the scene): shorter gaps, so it speeds up
+const TRACK = { x: 30, y: 252, w: 392, d: 56, h: 12 }; // runs up and to the right, into the goal block
+const BAR = { x0: 36, len: 380, inset: 9, h: 9 }; // the green bar, on the track
+const FLAG_AT = PROGRESS.slice(0, 4).map((u) => BAR.x0 + u * BAR.len);
+const GOAL_AT = { x: 424, y: 238, w: 96, d: 84, h: 34 }; // the block the track runs into
+const MID_Y = TRACK.y + TRACK.d / 2;
+const POLE = 46;
+const lerp = (a: number, b: number, u: number) => a + (b - a) * u;
 
-/** A flag-style note centred on its point, faded by `show`; `live` is the lit, goal-reached look. */
-function Note({ x, y, z = 0, show = 1, live = false, children }: { x: number; y: number; z?: number; show?: number; live?: boolean; children: React.ReactNode }) {
-  return (
-    <Billboard x={x} y={y} z={z - (1 - show) * 14} center style={{ ...still, opacity: show }}>
-      <span
-        className={`flex items-center gap-2 rounded-[4px] border px-2.5 py-1.5 font-mono text-[10.5px] leading-none tracking-[0.08em] whitespace-nowrap uppercase transition-colors duration-500 ${
-          live ? "border-primary/50 bg-[#1f2a22] text-primary" : "border-white/12 bg-[#232220] text-white/70"
-        }`}
-      >
-        {children}
-      </span>
-    </Billboard>
-  );
+/** The share of the goal reached at time t: nothing until the launch, then linear between flags (a steeper line each time). */
+function shareAt(t: number) {
+  if (t < 0.04) return 0;
+  if (t < AT[0]) return PROGRESS[0] * ease(clamp01((t - 0.04) / (AT[0] - 0.04)));
+  for (let k = 0; k < AT.length - 1; k++) {
+    if (t < AT[k + 1]) return lerp(PROGRESS[k], PROGRESS[k + 1], (t - AT[k]) / (AT[k + 1] - AT[k]));
+  }
+  return 1;
 }
 
 function GoalScene({ active }: SceneProps) {
-  const t = usePlay(active, 6200);
-  const reached = t >= REACHED;
-  const ping = ease(clamp01((t - REACHED) / 0.1));
-  const lastX = colX(5) + COL.w / 2;
+  const t = usePlay(active, 7200);
+  const p = shareAt(t);
+  const reached = t >= AT[4];
+  const ping = ease(clamp01((t - AT[4]) / 0.1));
+  const edge = BAR.x0 + p * BAR.len;
   return (
-    <IsoScene {...SCENE} shift={[0, 70]}>
-      <Pool x={280} y={280} size={460} />
+    <IsoScene {...SCENE} shift={[0, 56]}>
+      <Pool x={290} y={280} size={500} />
 
-      {/* The goal, there from the start: a target plane over the row, dashed until it is met. */}
-      <Tile
-        x={colX(5) - 22}
-        y={COL.y - 22}
-        z={GOAL_H + 2}
-        w={COL.w + 44}
-        h={COL.w + 44}
-        shadow={false}
-        className={`border-2 transition-[border-color,background-color,box-shadow] duration-700 ${
-          reached ? `border-primary bg-primary/[0.12] ${GLOW}` : "border-dashed border-white/30 bg-white/[0.03]"
-        }`}
+      {/* The track and the goal block it runs into: one piece. */}
+      <Box x={TRACK.x} y={TRACK.y} w={TRACK.w} d={TRACK.d} h={TRACK.h} top="#2d2c2a" front="#242321" side="#1c1b19" style={still} />
+      <Box
+        x={GOAL_AT.x}
+        y={GOAL_AT.y}
+        w={GOAL_AT.w}
+        d={GOAL_AT.d}
+        h={GOAL_AT.h}
+        top={reached ? "#1f6b3f" : "#34322f"}
+        front={reached ? "#175330" : "#2a2927"}
+        side={reached ? "#10401f" : "#201f1d"}
         style={still}
       />
-      <Note x={lastX} y={COL.y + COL.w / 2} z={GOAL_H + 54} live={reached}>
-        <span className={`size-1.5 rounded-full ${reached ? "bg-primary" : "bg-white/40"}`} />
-        {reached ? "Goal reached ✓" : "Goal · signups"}
-      </Note>
-
       <Tile
-        x={colX(0) - 8}
-        y={COL.y + COL.w / 2 - 1}
-        z={GOAL_H + 2}
-        w={5 * COL.step + 8}
-        h={2}
+        x={GOAL_AT.x + 16}
+        y={GOAL_AT.y + 10}
+        z={GOAL_AT.h + 2}
+        w={64}
+        h={64}
         shadow={false}
-        className={`transition-colors duration-700 ${reached ? "bg-primary/60" : "bg-white/25"}`}
+        className={`border-2 transition-[border-color,background-color,box-shadow] duration-700 ${reached ? `border-primary bg-primary/[0.22] ${GLOW}` : "border-dashed border-white/35 bg-white/[0.03]"}`}
         style={still}
       />
 
-      {/* The row of bars climbing toward it. */}
-      {BARS.map((b, i) => {
-        const h = 4 + (b.h - 4) * ease(clamp01((t - b.at) / 0.12));
-        const goal = i === BARS.length - 1;
-        const lit = goal && reached;
+      {/* The progress bar, growing along the track, with a bright point at its leading edge. */}
+      {p > 0.002 && (
+        <>
+          <Box x={BAR.x0} y={TRACK.y + BAR.inset} z={TRACK.h} w={Math.max(1, p * BAR.len)} d={TRACK.d - 2 * BAR.inset} h={BAR.h} top="var(--primary)" front="#12a454" side="#0b7a3d" shadow={false} style={still} />
+          <Billboard x={edge} y={MID_Y} z={TRACK.h + BAR.h} center style={still}>
+            <span className="block size-[9px] rounded-full bg-white shadow-[0_0_0_2.5px_var(--primary)]" />
+          </Billboard>
+        </>
+      )}
+
+      {/* The adjustments: a flag on a pole standing on the track, lit once the bar has passed it. */}
+      {FLAGS.map((f, k) => {
+        const x = FLAG_AT[k];
+        const hit = p >= PROGRESS[k] - 0.002 && t >= AT[k] - 0.02;
+        const shown = ease(clamp01((t - (AT[k] - 0.05)) / 0.06));
         return (
-          <Box
-            key={i}
-            x={colX(i)}
-            y={COL.y}
-            w={COL.w}
-            d={COL.w}
-            h={h}
-            top={lit ? "var(--primary)" : "#3a3936"}
-            front={lit ? "#12a454" : "#2a2927"}
-            side={lit ? "#0b7a3d" : "#201f1d"}
-            style={still}
-          />
+          <Fragment key={f}>
+            <Billboard x={x} y={MID_Y} z={TRACK.h + BAR.h - 1} center style={{ ...still, opacity: shown }}>
+              <span className={`block w-px transition-colors duration-500 ${hit ? "bg-primary" : "bg-white/30"}`} style={{ height: POLE + 1 }} />
+            </Billboard>
+            <Billboard x={x} y={MID_Y} z={TRACK.h + BAR.h + POLE - 2 - (1 - shown) * 10} center style={{ ...still, opacity: shown }}>
+              {/* The process rail's marker (a green square with an ink dot once passed), then a mono label, in the flags' style. */}
+              <span className="flex items-center gap-2 rounded-[4px] border border-white/12 bg-[#232220] py-1 pr-2.5 pl-1 whitespace-nowrap shadow-[0_12px_22px_-12px_rgb(0_0_0/0.9)]">
+                <span className={`grid size-[18px] place-items-center rounded-[3px] transition-colors duration-500 ${hit ? "bg-primary" : "bg-white/10"}`}>
+                  <span className={`size-1.5 rounded-full transition-colors duration-500 ${hit ? "bg-ink" : "bg-white/40"}`} />
+                </span>
+                <span className={`font-mono text-[10px] leading-none tracking-[0.08em] uppercase transition-colors duration-500 ${hit ? "text-white" : "text-white/60"}`}>{f}</span>
+                <span className="font-mono text-[10px] leading-none tracking-[0.04em] text-white/40">{Math.round(PROGRESS[k] * 100)}%</span>
+              </span>
+            </Billboard>
+          </Fragment>
         );
       })}
 
-      {/* Where we adjust: a note above its bar, just before the next, steeper, step. */}
-      {BARS.map((b, i) =>
-        b.adjust ? (
-          <Note key={i} x={colX(i) + COL.w / 2} y={COL.y + COL.w / 2} z={b.h + 22 + (b.lift ?? 0)} show={ease(clamp01((t - (b.at - 0.04)) / 0.06))}>
-            <span className="text-primary">↻</span>
-            {b.adjust}
-          </Note>
-        ) : null,
-      )}
+      {/* The goal card, above its block: the count climbs with the bar, on a segmented meter. */}
+      <Billboard x={GOAL_AT.x + GOAL_AT.w / 2} y={GOAL_AT.y + GOAL_AT.d / 2} z={GOAL_AT.h + 70} center style={still}>
+        <div className="w-[13.5rem] rounded-[6px] border border-white/14 bg-[#232220] shadow-[0_14px_28px_-14px_rgb(0_0_0/0.9)]">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
+            <span className="flex items-center gap-1.5 font-mono text-[9px] tracking-[0.1em] whitespace-nowrap text-white/55 uppercase">
+              <span className="size-1.5 rounded-full bg-white/40" />
+              Goal · signups
+            </span>
+            <span
+              className={`rounded-[3px] px-1.5 py-[3px] font-mono text-[8px] leading-none tracking-[0.1em] whitespace-nowrap uppercase transition-colors duration-500 ${
+                reached ? "bg-primary font-semibold text-ink" : "bg-white/10 text-white/50"
+              }`}
+            >
+              {reached ? "Reached" : "In progress"}
+            </span>
+          </div>
+          <div className="px-3 pt-2.5 pb-3">
+            <p className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-[26px] leading-none font-medium tracking-[-0.045em] text-white tabular-nums">{Math.round(p * GOAL).toLocaleString("en-US")}</span>
+              <span className="font-mono text-[10px] text-white/40">/ {GOAL.toLocaleString("en-US")}</span>
+            </p>
+            <span className="mt-2.5 flex gap-[2px]">
+              {Array.from({ length: SEGMENTS }, (_, n) => (
+                <span key={n} className={`h-[7px] flex-1 rounded-[1px] ${n < Math.round(p * SEGMENTS) ? "bg-primary" : "bg-white/12"}`} />
+              ))}
+            </span>
+          </div>
+        </div>
+      </Billboard>
 
-      {/* The payoff: a ring pinging out from the bar that reached it. */}
+      {/* The payoff: a ring pinging out from the goal. */}
       <At x={0} y={0} style={still}>
         <svg width={560} height={560} className="overflow-visible">
           {ping > 0 && ping < 1 && (
             <>
-              <circle cx={colX(5) + COL.w / 2} cy={COL.y + COL.w / 2} r={28 + 70 * ping} fill="none" stroke="var(--primary)" strokeWidth={2} opacity={0.7 * (1 - ping)} />
-              <circle cx={colX(5) + COL.w / 2} cy={COL.y + COL.w / 2} r={20 + 46 * ping} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.5 * (1 - ping)} />
+              <circle cx={GOAL_AT.x + GOAL_AT.w / 2} cy={GOAL_AT.y + GOAL_AT.d / 2} r={40 + 90 * ping} fill="none" stroke="var(--primary)" strokeWidth={2} opacity={0.7 * (1 - ping)} />
+              <circle cx={GOAL_AT.x + GOAL_AT.w / 2} cy={GOAL_AT.y + GOAL_AT.d / 2} r={30 + 58 * ping} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.5 * (1 - ping)} />
             </>
           )}
         </svg>
@@ -504,4 +530,3 @@ function GoalScene({ active }: SceneProps) {
     </IsoScene>
   );
 }
-
