@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { hrefOf, type Resource } from "@/lib/resources";
 import logo from "../../public/brand/devable-logo.png";
 import ArcButton from "./ArcButton";
+import { Cover } from "./resources/parts";
 import { CREATORS } from "./services/influencer/content";
 import {
   MobileNav,
@@ -14,10 +16,29 @@ import {
   NavBody,
   Navbar as ResizableNavbar,
   NavItems,
+  type NavFeature,
   type NavItem,
 } from "./ui/resizable-navbar";
 
-const LINKS: NavItem[] = [
+const RESOURCES = [
+  { name: "Blog", link: "/blog", description: "Field notes on search, AI answers, creators and developer communities." },
+  { name: "Guides & Playbooks", link: "/guides", description: "Long-form, step-by-step resources for reaching technical audiences." },
+];
+
+/** The CMS-picked guide or article (layout fetches it) as the Resources menu's featured card. */
+function toFeature(r: Resource): NavFeature {
+  const kind = r.kind === "guide" ? r.format : "Article";
+  return {
+    href: hrefOf(r),
+    eyebrow: `Featured ${kind}`,
+    title: r.title,
+    description: r.excerpt,
+    cta: `Read the ${kind.toLowerCase()}`,
+    visual: <Cover item={r} sizes="22rem" className="aspect-[16/9] rounded-lg" />,
+  };
+}
+
+const links = (feature: Resource | null): NavItem[] => [
   {
     name: "Services",
     link: "/services/influencer-marketing",
@@ -35,9 +56,15 @@ const LINKS: NavItem[] = [
     ],
   },
   { name: "Case Studies", link: "#case-studies" },
-  { name: "Resources", link: "#resources", dropdown: true },
-  { name: "Company", link: "#company", dropdown: true },
-  { name: "About Us", link: "/about" },
+  { name: "Resources", link: "/blog", items: RESOURCES, feature: feature ? toFeature(feature) : undefined },
+  {
+    name: "Company",
+    link: "/about",
+    items: [
+      { name: "About", link: "/about", description: "Who we are and how we work." },
+      { name: "Careers", link: "/careers", description: "Join a small, ambitious team." },
+    ],
+  },
 ];
 
 function Logo() {
@@ -48,8 +75,9 @@ function Logo() {
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ resourcesFeature = null }: { resourcesFeature?: Resource | null }) {
   const [open, setOpen] = useState(false);
+  const LINKS = links(resourcesFeature);
 
   return (
     <ResizableNavbar>

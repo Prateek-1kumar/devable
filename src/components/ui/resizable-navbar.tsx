@@ -66,7 +66,9 @@ export function NavBody({ children, className, visible }: { children: React.Reac
  * the large card on the left of the menu, with a line about it and a few faces.
  */
 export type NavSubItem = { name: string; link?: string; description?: string; featured?: boolean; faces?: string[] };
-export type NavItem = { name: string; link: string; dropdown?: boolean; items?: NavSubItem[] };
+/** A promoted piece shown on the right of a dropdown (the Resources menu's featured guide or article). */
+export type NavFeature = { href: string; eyebrow: string; title: string; description: string; cta: string; visual: React.ReactNode };
+export type NavItem = { name: string; link: string; dropdown?: boolean; items?: NavSubItem[]; feature?: NavFeature };
 
 /** The sliding hover pill behind whichever top-level item the cursor is on. */
 function Pill({ on }: { on: boolean }) {
@@ -91,7 +93,11 @@ export function NavItems({ items, className, onItemClick }: { items: NavItem[]; 
                     <span className="relative z-10">{item.name}</span>
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ServicesPanel items={item.items} onItemClick={onItemClick} />
+                    {item.feature ? (
+                      <FeaturePanel items={item.items} feature={item.feature} onItemClick={onItemClick} />
+                    ) : (
+                      <ServicesPanel items={item.items} onItemClick={onItemClick} />
+                    )}
                   </NavigationMenuContent>
                 </>
               ) : (
@@ -119,7 +125,8 @@ function ServicesPanel({ items, onItemClick }: { items: NavSubItem[]; onItemClic
   const featured = items.find((s) => s.featured);
   const rest = items.filter((s) => !s.featured);
   return (
-    <ul className="grid w-[40rem] grid-cols-[1fr_1.1fr] gap-1.5">
+    // Without a featured card it's just a short list (Company), so the panel narrows to one column.
+    <ul className={featured ? "grid w-[40rem] grid-cols-[1fr_1.1fr] gap-1.5" : "grid w-[19rem] gap-0.5"}>
       {featured?.link && (
         <li className="row-span-3">
           <NavigationMenuLink
@@ -167,6 +174,47 @@ function ServicesPanel({ items, onItemClick }: { items: NavSubItem[]; onItemClic
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A short list of links on the left and one promoted piece as a card on the right, with its visual on top. */
+function FeaturePanel({ items, feature, onItemClick }: { items: NavSubItem[]; feature: NavFeature; onItemClick?: () => void }) {
+  return (
+    <div className="grid w-[42rem] grid-cols-[1fr_1.15fr] gap-1.5">
+      <ul className="flex flex-col gap-0.5">
+        {items.map((sub) => (
+          <li key={sub.name}>
+            <NavigationMenuLink href={sub.link} onClick={onItemClick} className="group/link block rounded-xl px-3.5 py-3 hover:bg-ink/[0.04] focus-visible:bg-ink/[0.04]">
+              <span className="flex items-center justify-between text-[0.92rem] font-medium text-ink">
+                {sub.name}
+                <span aria-hidden="true" className="text-ink/30 transition-[translate,color] duration-300 group-hover/link:translate-x-0.5 group-hover/link:text-ink">
+                  →
+                </span>
+              </span>
+              {sub.description && <span className="mt-1 block text-[0.8rem] leading-snug text-ink/55">{sub.description}</span>}
+            </NavigationMenuLink>
+          </li>
+        ))}
+      </ul>
+      <NavigationMenuLink
+        href={feature.href}
+        onClick={onItemClick}
+        className="group/card group flex flex-col rounded-xl bg-[#f6f5f0] p-1.5 hover:bg-[#f1efe7] focus-visible:bg-[#f1efe7]"
+      >
+        {feature.visual}
+        <span className="flex flex-1 flex-col px-3 pt-3.5 pb-2.5">
+          <span className="font-mono text-[0.6rem] tracking-[0.14em] text-muted uppercase">{feature.eyebrow}</span>
+          <span className="mt-1.5 block text-[1.02rem] leading-snug font-medium tracking-[-0.02em] text-ink">{feature.title}</span>
+          <span className="mt-1 line-clamp-2 block text-[0.8rem] leading-snug text-ink/60">{feature.description}</span>
+          <span className="mt-3 inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-ink">
+            {feature.cta}
+            <span aria-hidden="true" className="transition-transform duration-300 group-hover/card:translate-x-0.5">
+              →
+            </span>
+          </span>
+        </span>
+      </NavigationMenuLink>
+    </div>
   );
 }
 
