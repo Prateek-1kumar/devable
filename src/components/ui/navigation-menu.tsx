@@ -4,13 +4,24 @@
 // items, Escape to close, focus returned to the trigger. Adapted to this codebase: shadcn's theme tokens
 // (popover, accent, muted-foreground, ring) are mapped to the site's own palette, our `cn` is a plain join
 // (no tailwind-merge) so classes are chosen up front rather than overridden, and the open/close motion is
-// the `nav-pop-in`/`nav-pop-out` keyframes in globals.css instead of tw-animate-css.
+// the keyframes and classes in this file (open, close, and the slide between menus) instead of tw-animate-css.
 
 import * as React from "react";
 import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
 import { NavigationMenu as NavigationMenuPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
+
+// The panel's keyframes, defined here so the whole motion lives in this file; one <style> serves every panel.
+const KEYFRAMES = `
+@keyframes nav-menu-in { from { opacity: 0; transform: translateY(-10px) scale(0.95); } }
+@keyframes nav-menu-out { to { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+@keyframes nav-menu-from-start { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes nav-menu-from-end { from { opacity: 0; transform: translateX(28px); } }
+@keyframes nav-menu-to-start { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes nav-menu-to-end { to { opacity: 0; transform: translateX(28px); } }
+@keyframes nav-menu-row { from { opacity: 0; transform: translateY(8px); } }
+`;
 
 function NavigationMenu({
   className,
@@ -25,6 +36,7 @@ function NavigationMenu({
       className={cn("group/navigation-menu relative flex flex-1 items-center justify-center", className)}
       {...props}
     >
+      <style>{KEYFRAMES}</style>
       {children}
       {viewport && <NavigationMenuViewport />}
     </NavigationMenuPrimitive.Root>
@@ -73,7 +85,12 @@ function NavigationMenuContent({ className, ...props }: React.ComponentProps<typ
         "top-0 left-0 w-full md:absolute md:w-auto",
         // Without the shared viewport, each panel is its own popover under its trigger.
         "group-data-[viewport=false]/navigation-menu:top-full group-data-[viewport=false]/navigation-menu:mt-3 group-data-[viewport=false]/navigation-menu:overflow-hidden group-data-[viewport=false]/navigation-menu:rounded-2xl group-data-[viewport=false]/navigation-menu:border group-data-[viewport=false]/navigation-menu:border-black/[0.06] group-data-[viewport=false]/navigation-menu:bg-white group-data-[viewport=false]/navigation-menu:p-1.5 group-data-[viewport=false]/navigation-menu:text-ink group-data-[viewport=false]/navigation-menu:shadow-[0_24px_50px_-20px_rgb(23_44_33/0.35)]",
-        "origin-top-left data-[state=open]:animate-[nav-pop-in_180ms_cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:animate-[nav-pop-out_120ms_ease-in_forwards] motion-reduce:animate-none",
+        "origin-top-left motion-reduce:animate-none motion-reduce:[&_li]:animate-none",
+        // Opens by unfolding from under its trigger, rows following one after another; closes quicker than it opens.
+        "data-[state=open]:not-data-[motion]:animate-[nav-menu-in_360ms_cubic-bezier(0.16,1,0.3,1)] data-[state=closed]:not-data-[motion]:animate-[nav-menu-out_180ms_ease-out_forwards]",
+        // Moving to a neighbouring menu (Radix sets data-motion): the two panels slide past each other, not cut.
+        "data-[motion=from-start]:animate-[nav-menu-from-start_320ms_cubic-bezier(0.16,1,0.3,1)] data-[motion=from-end]:animate-[nav-menu-from-end_320ms_cubic-bezier(0.16,1,0.3,1)] data-[motion=to-start]:animate-[nav-menu-to-start_200ms_ease-in_forwards] data-[motion=to-end]:animate-[nav-menu-to-end_200ms_ease-in_forwards]",
+        "data-[state=open]:[&_li]:animate-[nav-menu-row_460ms_cubic-bezier(0.16,1,0.3,1)_both] data-[state=open]:[&_li:nth-child(1)]:[animation-delay:70ms] data-[state=open]:[&_li:nth-child(2)]:[animation-delay:120ms] data-[state=open]:[&_li:nth-child(3)]:[animation-delay:170ms] data-[state=open]:[&_li:nth-child(4)]:[animation-delay:220ms] data-[state=open]:[&_li:nth-child(5)]:[animation-delay:270ms]",
         className,
       )}
       {...props}
