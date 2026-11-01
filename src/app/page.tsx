@@ -3,8 +3,8 @@ import CaseStudies from "@/components/case-studies/CaseStudies";
 import ChannelProblems from "@/components/channel-problems/ChannelProblems";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
-import GrowthSystem from "@/components/growth-system/GrowthSystem";
 import Hero from "@/components/Hero";
+import ServicesBand from "@/components/services-band/ServicesBand";
 import HowWeWork from "@/components/how-we-work/HowWeWork";
 import WhyDevable from "@/components/WhyDevable";
 // import Stats from "@/components/Stats";
@@ -15,7 +15,7 @@ export default function Home() {
     <main className="overflow-x-clip">
       <Hero />
       <ChannelProblems />
-      {/* <GrowthSystem /> */}
+      <ServicesBand />
       <HowWeWork />
       <CaseStudies />
       <WhyDevable />
