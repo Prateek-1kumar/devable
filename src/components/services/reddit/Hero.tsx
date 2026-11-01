@@ -41,7 +41,7 @@ export default function Hero() {
   }, [seen, still, pin, turn]);
 
   return (
-    <section className="px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
+    <section className="px-4 pt-24 pb-10 sm:px-8 sm:pt-28 lg:pb-12">
       <div className="mx-auto max-w-[76rem] rounded-2xl bg-[#f9f8f4] px-4 pt-14 pb-10 sm:px-10 sm:pt-20 sm:pb-14">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center text-center">
           <Label>{HERO.label}</Label>
@@ -153,7 +153,7 @@ function ThreadCard({ thread: t, on, quiet, play, stamp }: { thread: Thread; on:
 }
 
 /** A stretch of the comment. Plain text, or highlighted once the card is active: the product in solid green, the useful part in a softer one. */
-function Piece({ part, on }: { part: Part; on: boolean }) {
+export function Piece({ part, on }: { part: Part; on: boolean }) {
   if (!part.mark) return <>{part.t}</>;
   const product = part.mark === "product";
   // The product gets a marker stroke along the lower half of the word; the point a light tint behind the whole stretch.

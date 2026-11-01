@@ -101,14 +101,21 @@ export const CONTRAST = {
   title: "The fastest way to lose Reddit is to treat it like another content channel.",
   body: "Reddit rewards useful contributions and punishes forced promotion.",
   body2: "The brands that earn trust understand the communities, contribute to conversations that matter, and introduce their product only when it genuinely belongs.",
-  // SAMPLE: one question, two answers.
-  thread: { sub: "r/devops", title: "What are you using to catch flaky tests in CI?" },
-  forced: { user: "u/YourProduct_Official", text: "🚀 Check out Your product, the #1 platform for test reliability! Sign up free today 👉", votes: -14 },
+  // SAMPLE: one question, two answers. The useful one is upvoted to the top; the plug is downvoted, then collapsed.
+  thread: { sub: "r/MachineLearning", title: "How are people handling scanned PDFs with tables and mixed layouts in production?", meta: { score: "1.8k", comments: 112 } },
   helpful: {
-    user: "u/sre_dana",
-    text: "Flaky tests are usually shared state or timing. Isolate fixtures per test and add retries with a quarantine list. We use Your product for the quarantine part since it tracks flake rate per branch.",
+    user: "u/layout_nerd",
+    age: "2h",
+    parts: [
+      { t: "We stopped relying on plain OCR for this. For messy PDFs, especially invoices and forms, layout-aware parsing made a big difference. We’re using " },
+      { t: "Your Product", mark: "product" },
+      { t: " for the extraction step now and " },
+      { t: "it’s been much more reliable on tables, checkboxes, and multi-column docs.", mark: "point" },
+    ] as Part[],
     votes: 214,
+    from: 1,
   },
+  forced: { user: "u/YourProduct_Official", age: "1m", text: "🚀 Your Product is the #1 Document AI platform for OCR and extraction. Try it free today.", votes: -14, from: 1 },
 };
 
 export const STEPS = {
