@@ -142,10 +142,10 @@ function Projector() {
  * The last beat pulls back over the whole floor.
  */
 const FRAMES = [
-  { at: new Vector3(0, 1.0, 0), w: 8.8, h: 6.2 },
-  { at: AT.content.clone().add(new Vector3(0.4, 1.0, -0.2)), w: 9.8, h: 6.4 },
-  { at: AT.search.clone().add(new Vector3(-0.5, 1.8, 0.45)), w: 9.2, h: 6.3 },
-  { at: AT.reddit.clone().add(new Vector3(0.35, 0.95, 0.15)), w: 9.2, h: 5.7 },
+  { at: new Vector3(0.75, 1.0, -0.1), w: 7.2, h: 4.8 },
+  { at: AT.content.clone().add(new Vector3(0.2, 1.1, -0.2)), w: 8.6, h: 5.0 },
+  { at: AT.search.clone().add(new Vector3(-0.95, 1.55, 0.5)), w: 8.6, h: 5.0 },
+  { at: AT.reddit.clone().add(new Vector3(0.2, 0.92, -0.3)), w: 9.0, h: 4.6 },
   {
     at: AT.creators.clone().add(new Vector3(0.95, 1.25, -0.35)),
     w: 7.7,

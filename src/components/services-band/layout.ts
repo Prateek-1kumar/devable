@@ -9,10 +9,10 @@ export const AT = {
   creators: new Vector3(0, 0, 11),
 };
 
-/** The hub's platform: a base with a stepped deck on it. `h` is the deck's top. */
-export const PLATFORM = { size: 4.6, base: 0.22, deck: 4.1, h: 0.36 };
-/** Port modules dock on the base's edges and run out along their pipe to `reach` from the centre. */
-export const PORT_MODULE = { from: 2.0, reach: 3.55, w: 0.56, h: 0.5 };
+/** The hub's plinth: `size` across, its top plate's surface at `h`. */
+export const PLATFORM = { size: 4.4, h: 0.2 };
+/** Port connectors dock on the plinth's edges and run out along their trace to `reach` from the centre. */
+export const PORT_MODULE = { from: 2.16, reach: 2.9, w: 0.4, h: 0.32 };
 
 /** The four lanes leave the hub in visiting order: content (−x), search (−z), Reddit (+x), creators (+z). */
 export const DIRS = [
@@ -21,10 +21,9 @@ export const DIRS = [
   new Vector3(1, 0, 0),
   new Vector3(0, 0, 1),
 ];
-/** Pipe radius: the glass shell, and the fibre running down its middle. */
-export const PIPE = { r: 0.02, fibre: 0.011 };
-const R = PIPE.r;
-// Channels start under the port modules, so they emerge from beneath them.
+/** Height routes are given (the traces always lie in the floor). */
+const R = 0.02;
+// Traces start under the port connectors, so they emerge from beneath them.
 const PORT = PORT_MODULE.from + 0.4;
 /**
  * Each pipe's route over the floor (world points, corners rounded when built): from its hub port out to its
@@ -48,10 +47,11 @@ export const ROUTES: [number, number, number][][] = [
     [0.6, R, -11.85],
     [0.6, R, -11.6],
   ],
-  // Reddit: straight in, to the foot of the roundtable.
+  // Reddit: out to the station, then into the foot of the research board, where the work starts.
   [
     [PORT, R, 0],
-    [10.38, R, 0],
+    [8.75, R, 0],
+    [8.75, R, 1.35],
   ],
   // Creators: round the audience stand, into the back of the creator's desk.
   [

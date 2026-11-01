@@ -11,12 +11,12 @@ import {
   Vector3,
   type Mesh,
 } from "three";
-import { colors } from "./kit";
+import { BEATS } from "./content";
+import { colors, useBand } from "./kit";
 
-// Floor channels: the connections run in a shallow channel cut into the floor, covered by a frosted glass
-// strip flush with the surface and edged with brushed metal lips. Under the glass a soft green light glides
-// from the source outward, and fine sparks race along it. Channels start under the hub's port modules and
-// vanish under each station, so no cable ever crosses a piece.
+// Floor traces: every connection is a shallow groove engraved in the floor, ruled with hairlines like a circuit
+// trace, with short green packets running along it. Traces start under the hub's ports and vanish under each
+// station, so none ever crosses a piece.
 
 /** A route as a smooth path on the floor: straight runs joined by rounded corners. */
 export function routePath(points: [number, number, number][], round = 0.42) {
@@ -80,14 +80,12 @@ function channelMaterial(length: number) {
   const c = colors();
   return new ShaderMaterial({
     uniforms: {
-      lit: { value: 1.02 },
       phase: { value: 0 },
       len: { value: length },
-      metal: { value: new Color("#dcd9d0") },
+      groove: { value: new Color("#efede7") },
       edge: { value: new Color(c.ink) },
-      glass: { value: new Color("#e6ece5") },
-      glow: { value: new Color("#5fd892") },
-      core: { value: new Color(c.primary) },
+      packet: { value: new Color(c.primary) },
+      head: { value: new Color(c.ink) },
     },
     side: 2,
     polygonOffset: true,
@@ -99,41 +97,29 @@ function channelMaterial(length: number) {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: /* glsl */ `
-      uniform float lit, phase, len;
-      uniform vec3 metal, edge, glass, glow, core;
+      uniform float phase, len;
+      uniform vec3 groove, edge, packet, head;
       varying vec2 vUv;
+      // Spacing between packets and each packet's length, in world units.
+      const float GAP = 3.4;
+      const float LEN = 0.42;
       void main() {
-        float u = vUv.x;
         float v = vUv.y;
-        float along = u * len;
+        float along = vUv.x * len;
+        float aw = fwidth(v);
         float m = min(v, 1.0 - v);
-        float aw = fwidth(v) * 1.2;
-        // Brushed metal lips either side, with fine hairlines at their outer and inner edges.
-        float lip = 0.15;
-        float inLip = 1.0 - smoothstep(lip - aw, lip, m);
-        float outer = 1.0 - smoothstep(0.0, aw * 1.6, m);
-        float inner = 1.0 - smoothstep(0.0, aw * 1.4, abs(m - lip));
-        float brush = 0.97 + 0.03 * sin(along * 260.0);
-        // Frosted glass in panels with fine joints; the light beneath it, up to how far it has reached.
-        float fa = fwidth(along) * 1.5;
-        float joint = 1.0 - smoothstep(0.0, fa, abs(fract(along / 1.2 + 0.5) - 0.5) * 1.2);
-        float k = 1.0 - smoothstep(lit - 0.01, lit, u);
-        float y = (v - 0.5) / (0.5 - lip);
-        float bed = exp(-y * y * 2.2);
-        vec3 col = mix(glass, glow, bed * k);
-        // A bright fibre line down the middle once lit.
-        col = mix(col, core, exp(-y * y * 60.0) * k * 0.9);
-        // Sparks: soft bright heads with quick tails, two trains at different speeds.
-        float a = fract(along * 0.35 - phase);
-        float b = fract(along * 0.9 - phase * 1.7 + 0.37);
-        float s = smoothstep(0.0, 0.02, a) * (1.0 - smoothstep(0.02, 0.22, a));
-        float s2 = smoothstep(0.0, 0.03, b) * (1.0 - smoothstep(0.03, 0.12, b));
-        float spark = max(s, s2 * 0.6) * k * exp(-y * y * 9.0);
-        col = mix(col, vec3(0.86, 1.0, 0.92), spark * 0.9);
-        col = mix(col, vec3(1.0), spark * exp(-y * y * 40.0) * 0.6);
-        col *= 1.0 - joint * 0.07 * (1.0 - inLip);
-        col = mix(col, metal * brush, inLip);
-        col = mix(col, edge, max(outer, inner) * 0.55);
+        // The groove: a shade under the floor, cut by a crisp one-pixel rule on each side.
+        vec3 col = groove;
+        float rim = 1.0 - smoothstep(aw * 0.6, aw * 1.6, m);
+        col = mix(col, edge, rim * 0.32);
+        // A packet: a short solid dash down the middle with a darker leading tick. No glow.
+        float fa = fwidth(along);
+        float d = fract(along / GAP - phase) * GAP;
+        float body = smoothstep(0.0, fa, d) * (1.0 - smoothstep(LEN - fa, LEN, d));
+        float tip = smoothstep(LEN - 0.07 - fa, LEN - 0.07, d) * body;
+        float lane = 1.0 - smoothstep(0.2 - aw, 0.2 + aw, abs(v - 0.5));
+        col = mix(col, packet, body * lane);
+        col = mix(col, head, tip * lane * 0.55);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -141,18 +127,20 @@ function channelMaterial(length: number) {
 }
 
 /**
- * A floor channel along `route` (only x and z are used). It runs on its own, not with scroll: always lit,
- * sparks flowing from the route's start while the band is in view (rendering pauses off screen).
+ * A trace engraved in the floor along `route` (only x and z are used): a shallow groove with hairline rules, and
+ * short green packets running from the route's start while the band is in view (rendering pauses off screen).
+ * At the closing beat the packets run home, back toward the hub.
  */
 export function Channel({
   route,
-  width = 0.32,
-  speed = 2.4,
+  width = 0.18,
+  speed = 0.34,
 }: {
   route: [number, number, number][];
   width?: number;
   speed?: number;
 }) {
+  const bandRef = useBand();
   const { geometry, material } = useMemo(() => {
     const strip = stripGeometry(route, width);
     return {
@@ -164,7 +152,8 @@ export function Channel({
   useFrame((_, delta) => {
     const m = mesh.current?.material as ShaderMaterial | undefined;
     if (!m) return;
-    m.uniforms.phase.value += Math.min(delta, 1 / 30) * speed;
+    const home = bandRef.current > BEATS.length - 1.5 ? -1 : 1;
+    m.uniforms.phase.value += Math.min(delta, 1 / 30) * speed * home;
   });
   return (
     <mesh ref={mesh} geometry={geometry} material={material} renderOrder={-1} />
@@ -173,7 +162,7 @@ export function Channel({
 
 /** A short run inside a station: a slimmer channel. */
 export function Fibre({ route }: { route: [number, number, number][] }) {
-  return <Channel route={route} width={0.2} speed={2.8} />;
+  return <Channel route={route} width={0.12} speed={0.4} />;
 }
 
 /** Height station-local routes are given (ignored by the channel, which always sits in the floor). */

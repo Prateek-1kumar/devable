@@ -71,7 +71,7 @@ export default function ServicesBand() {
     <section
       ref={section}
       aria-labelledby="services-band-title"
-      className="relative h-[1300svh] bg-[#f4f3ee]"
+      className="relative h-[1185svh] bg-[#f4f3ee]"
     >
       {/* The whole story for assistive tech; the stage below is visual. */}
       <ol className="sr-only">

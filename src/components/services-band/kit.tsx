@@ -22,7 +22,6 @@ import {
   Quaternion,
   Shape,
   SRGBColorSpace,
-  Vector2,
   Vector3,
   type BufferGeometry,
   type ColorRepresentation,
@@ -34,9 +33,9 @@ import { paintMark } from "../growth-engine/marks";
 import { mix, palette } from "../growth-engine/palette";
 import { MARKS, MARK_COLOR } from "../how-we-work/marks";
 
-// The band's drawing kit. The look is a technical illustration: white solids rounded in plan, flat-lit, with
-// thin soft-ink rims and silhouettes and soft contact shadows, on a faint floor grid. Mint carries "yours",
-// brand green is kept for small accents (lines, dots, strips), orange for votes and sparks.
+// The band's drawing kit. The look is a machined technical illustration: white solids with tight radii, flat-lit,
+// edged with hairline rims and soft contact shadows, on a faint floor grid. One accent: brand green marks "yours"
+// and state (small strips, dots, packets); everything else is ink.
 
 // ── The camera: orthographic, 30° above the floor, turned 30° off the front so screens read almost square. ──
 const AZIMUTH = (30 * Math.PI) / 180;
@@ -58,8 +57,10 @@ export const colors = () => {
   const p = palette();
   return {
     ...p,
-    /** Outlines and rims: ink, softened. */
+    /** Hairlines drawn inside prints: ink, softened. */
     line: mix(p.ink, "#ffffff", 0.38),
+    /** The hairline rim round every solid: lighter than print lines, so shapes read machined, not outlined. */
+    rim: mix(p.ink, "#ffffff", 0.58),
     /** Off-white panels inside screens (the site's #f4f2eb). */
     shade: "#f4f2eb",
     /** Faint ink for placeholder text bars. */
@@ -79,15 +80,6 @@ export const useBand = () => useContext(BandContext);
 export const easeOut = (t: number) => 1 - (1 - t) ** 3;
 export const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-/** Overshoots a touch and settles: for things that pop into place. */
-export const easeBack = (t: number) => {
-  const c = 1.5;
-  return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
-};
-/** A size that pops from nothing to 1 (never exactly 0, which three dislikes). */
-export const pop = (t: number) =>
-  Math.max(0.0001, t <= 0 ? 0 : t >= 1 ? 1 : easeBack(t));
-
 // ── Geometry: rounded rectangles extruded, cached by size. Normals are smoothed round the rounded corners
 // (no facet banding) and kept sharp at the rims. ──
 function roundedRect(w: number, h: number, r: number) {
@@ -144,29 +136,7 @@ export const cylinder = (r: number, h: number) =>
     new CylinderGeometry(r, r, h, 56).translate(0, h / 2, 0),
   );
 
-/** Reddit's upvote arrow, extruded a little, centred on its middle. */
-export const upvote = () =>
-  cached("upvote", () => {
-    const pts = [
-      [0, 0.28],
-      [0.25, 0.03],
-      [0.1, 0.03],
-      [0.1, -0.22],
-      [-0.1, -0.22],
-      [-0.1, 0.03],
-      [-0.25, 0.03],
-    ];
-    const g = new ExtrudeGeometry(
-      new Shape(pts.map(([x, y]) => new Vector2(x, y))),
-      { depth: 0.08, bevelEnabled: false },
-    );
-    return g.translate(0, 0, -0.04);
-  });
-
-/**
- * A solid in the illustration style: flat-lit fill, soft-ink rims where faces meet at an angle, and a
- * silhouette a little over a pixel wide.
- */
+/** A solid in the illustration style: flat-lit fill, with one-pixel hairline rims at its creases and silhouette. */
 export function Solid({
   geometry,
   color = "#fbfaf7",
@@ -178,7 +148,7 @@ export function Solid({
   ref?: Ref<Group>;
 } & Omit<ThreeElements["group"], "ref">) {
   const dpr = useThree((s) => s.viewport.dpr);
-  const line = colors().line;
+  const line = colors().rim;
   return (
     <group ref={ref} {...props}>
       <mesh geometry={geometry}>
@@ -189,7 +159,7 @@ export function Solid({
           polygonOffsetUnits={1}
         />
         <Edges threshold={35} color={line} lineWidth={1} />
-        <Outlines thickness={1.2 * dpr} color={line} />
+        <Outlines thickness={dpr} color={line} />
       </mesh>
     </group>
   );
@@ -342,7 +312,8 @@ export type BadgeMark =
   | "x"
   | "linkedin"
   | "code"
-  | "perplexity";
+  | "perplexity"
+  | "claude";
 
 /** A brand mark centred at (cx, cy), `size` across. */
 export function drawMark(
@@ -392,48 +363,6 @@ export function drawMark(
     ctx.fill(new Path2D(MARKS[mark]));
   }
   ctx.restore();
-}
-
-/** A round brand badge that always faces the camera: white disc, soft hairline, the mark in its colours. */
-export function Badge({
-  mark,
-  r = 0.28,
-  ref,
-  ...props
-}: { mark: BadgeMark; r?: number; ref?: Ref<Group> } & Omit<
-  ThreeElements["group"],
-  "ref"
->) {
-  const draw = useCallback(
-    (ctx: Ctx, w: number) => {
-      const c = colors();
-      ctx.beginPath();
-      ctx.arc(w / 2, w / 2, w / 2 - 4, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = c.line;
-      ctx.stroke();
-      drawMark(ctx, mark, w / 2, w / 2, w * 0.44);
-    },
-    [mark],
-  );
-  const { texture } = useCanvas(256, 256, draw);
-  return (
-    <group ref={ref} {...props}>
-      <group quaternion={FACE}>
-        <mesh renderOrder={6}>
-          <circleGeometry args={[r, 48]} />
-          <meshBasicMaterial
-            map={texture}
-            transparent
-            toneMapped={false}
-            {...PREMULTIPLIED}
-          />
-        </mesh>
-      </group>
-    </group>
-  );
 }
 
 /** A picture on a face: a plane carrying a canvas texture, a hair in front of the surface it sits on. */
@@ -512,7 +441,8 @@ export function useCanvas(width: number, height: number, draw: Draw) {
 
 /**
  * A canvas texture `w` × `h` world units (at `scale` × the usual density) that redraws only when its live
- * value changes. `render` must be stable. Returns the texture and a setter to call every frame.
+ * value changes. `render` must be stable. Returns the texture, a setter to call every frame, and a forced repaint
+ * (for when a photo it draws arrives).
  */
 export function useLive(w: number, h: number, render: Render, scale = 1) {
   const value = useRef(0);
@@ -533,11 +463,88 @@ export function useLive(w: number, h: number, render: Render, scale = 1) {
     },
     [paint],
   );
-  return [texture, set] as const;
+  return [texture, set, paint] as const;
 }
 
 /** A canvas texture `w` × `h` world units (at `scale` × the usual density), drawn once. */
 export function useStatic(w: number, h: number, draw: Draw, scale = 1) {
   return useCanvas(Math.round(w * PX * scale), Math.round(h * PX * scale), draw)
     .texture;
+}
+
+/**
+ * A standing sheet: a thin machined panel seated in a low slotted foot, its face printed with `map`. `w` × `h`
+ * is the panel; the print covers it less a hairline margin. Stands on y = 0, facing +z.
+ */
+export function Sheet({
+  w,
+  h,
+  map,
+  t = 0.05,
+  color = "#fbfaf7",
+  ...props
+}: {
+  w: number;
+  h: number;
+  map: Texture;
+  t?: number;
+  color?: ColorRepresentation;
+} & Omit<ThreeElements["group"], "ref">) {
+  const foot = 0.07;
+  return (
+    <group {...props}>
+      <Shadow w={w + 0.7} d={1.0} opacity={0.08} position-y={0.002} />
+      <Solid geometry={block(w + 0.08, 0.3, foot, 0.03)} color="#f1efe9" />
+      <Solid
+        geometry={panel(w, h, t, 0.04)}
+        color={color}
+        position-y={foot - 0.03}
+      />
+      <Print
+        w={w - 0.05}
+        h={h - 0.05}
+        map={map}
+        position={[0, foot - 0.03 + h / 2, t / 2 + 0.003]}
+      />
+    </group>
+  );
+}
+
+/** A tick in a disc: filled green when done, a faint ring while pending. Centred at (cx, cy). */
+export function tick(ctx: Ctx, cx: number, cy: number, r: number, done: boolean) {
+  const c = colors();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  if (done) {
+    ctx.fillStyle = c.primary;
+    ctx.fill();
+    ctx.strokeStyle = c.ink;
+    ctx.lineWidth = r * 0.22;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.42, cy + r * 0.02);
+    ctx.lineTo(cx - r * 0.1, cy + r * 0.34);
+    ctx.lineTo(cx + r * 0.46, cy - r * 0.3);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = "rgba(23,44,33,0.18)";
+    ctx.lineWidth = Math.max(1.5, r * 0.12);
+    ctx.stroke();
+  }
+}
+
+/** Mono small caps, letter-spaced: the eyebrow on every print. */
+export function eyebrow(ctx: Ctx, text: string, x: number, y: number, size: number, color?: string) {
+  setFont(ctx, size, 500, true);
+  ctx.letterSpacing = `${size * 0.12}px`;
+  ctx.fillStyle = color ?? colors().muted;
+  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.letterSpacing = "0px";
+}
+
+/** A hairline rule across a print. */
+export function rule(ctx: Ctx, x: number, y: number, w: number, lw = 2) {
+  ctx.fillStyle = "rgba(23,44,33,0.08)";
+  ctx.fillRect(x, y, w, lw);
 }

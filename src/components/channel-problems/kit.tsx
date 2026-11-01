@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useRef, type ReactNode, type Ref, type RefObject } from "react";
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode, type Ref, type RefObject } from "react";
 import { extend, useFrame, useThree, type ThreeElement } from "@react-three/fiber";
 import { Html, shaderMaterial } from "@react-three/drei";
 import { Color, Group, Quaternion, ShaderMaterial, Vector3, type ColorRepresentation } from "three";
@@ -161,8 +161,14 @@ type TagProps = {
 };
 
 export function Tag({ children, position, tone = "dim", anchor = "center", bare, plain, className = "", width, ref }: TagProps) {
+  // Pinned to the canvas's own parent. Left to itself, Html moves to the event source once the canvas connects its
+  // events, which happens inside the canvas's first (synchronous) commit: it then tears down the React root it just
+  // made while React is still committing ("Attempted to synchronously unmount a root while React was already
+  // rendering"). Both divs share one box, so the tag lands in the same place.
+  const parent = useThree((s) => s.gl.domElement.parentNode as HTMLElement);
+  const portal = useMemo(() => ({ current: parent }), [parent]);
   return (
-    <Html position={position} zIndexRange={[1, 0]} style={{ pointerEvents: "none" }}>
+    <Html portal={portal} position={position} zIndexRange={[1, 0]} style={{ pointerEvents: "none" }}>
       <span
         ref={ref}
         style={{ transform: `translate(${ANCHOR[anchor]})`, width }}

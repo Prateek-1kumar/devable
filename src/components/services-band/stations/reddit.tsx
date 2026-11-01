@@ -1,538 +1,443 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
-import { Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
-import type { Line2 } from "three-stdlib";
 import { span, storyOf } from "../content";
+import { Fibre, LOCAL } from "../fibre";
 import {
-  FACE,
-  PREMULTIPLIED,
-  PX,
   Print,
-  RIGHT,
   Shadow,
+  Sheet,
   Solid,
   block,
   colors,
-  cylinder,
   drawMark,
-  easeInOut,
   easeOut,
-  panel,
+  eyebrow,
   paragraph,
-  pop,
   rrect,
+  rule,
   setFont,
-  shadowTexture,
-  upvote,
   useBand,
-  useCanvas,
+  useLive,
+  useStatic,
   wrap,
 } from "../kit";
 import { AT } from "../layout";
 import { face, usePhotos } from "../photos";
 
-// Beat 3, Reddit, as a community roundtable. ① A developer asks the subreddit: their question stands at the
-// centre of the table and the members around it arrive. ② Replies rise above the members who answer, and one
-// genuinely recommends your product. ③ The others send upvotes flying into that reply; its count climbs and it
-// lifts to the top as the top comment.
+// Beat 3, Reddit, told as the service's own three steps on one stepped dais, each step a level higher, its name
+// engraved on the riser and a trace running up from one sheet to the next.
+// ① Find the conversations that matter: a research board scans the category's threads and scores them; the one
+//    worth entering is picked out. ② Contribute with technical context: in that thread, a useful answer (the
+//    product second, never first) earns its votes and becomes the top comment. ③ Strengthen search and AI
+//    visibility: the same thread now ranks in Google and is cited as a source in an AI answer.
 
 type Ctx = CanvasRenderingContext2D;
 
-const TABLE = { r: 1.5, h: 0.62, top: 0.06 };
-const SEAT_R = 2.12;
-const HEAD_Y = 1.12;
-/** Six members round the table, at θ around the y axis (0 = +z); the camera looks from θ ≈ 30°. */
-const MEMBERS = [
-  { theta: 0, user: "u/sam_k", photo: "/services/creators/c5.jpg" },
-  { theta: 60, user: "u/nora_w", photo: "/services/creators/c8.jpg" },
-  { theta: 120, user: "u/kpatel", photo: "/services/creators/c3.jpg" },
-  { theta: 180, user: "u/data_eng", photo: "/services/creators/c7.jpg" },
-  { theta: 240, user: "u/leo_p", photo: "/services/creators/c1.jpg" },
-  { theta: 300, user: "u/ml_ops_jane", photo: "/services/creators/c4.jpg" },
-].map((m) => {
-  const a = (m.theta * Math.PI) / 180;
-  return { ...m, a, x: Math.sin(a) * SEAT_R, z: Math.cos(a) * SEAT_R };
-});
-const ALL_PHOTOS = MEMBERS.map((m) => m.photo);
-
-/** The three replies, each above the member who wrote it: left, middle (yours) and right on screen. */
-const CARD = { w: 2.35, h: 0.94, t: 0.07, y: 2.3 };
-const REPLIES = [
-  {
-    member: 5,
-    u: -2.6,
-    y: 1.68,
-    body: ["Tables were always the pain for us."],
-    votes: 31,
-    you: false,
-  },
-  {
-    member: 3,
-    u: 0,
-    y: 2.36,
-    body: [
-      "Switched to ",
-      "Your Product",
-      " last month. Best on messy layouts by far.",
-    ],
-    votes: 142,
-    you: true,
-  },
-  {
-    member: 2,
-    u: 2.6,
-    y: 1.68,
-    body: ["+1, we need self-hosted too."],
-    votes: 9,
-    you: false,
-  },
+/**
+ * The dais: three steps climbing toward the back-right, overlapping where they meet so they read as one piece.
+ * Each carries one sheet; `label` is engraved on the step's riser, centred at `labelX` (clear of the step below).
+ */
+const STEPS = [
+  { x: -2.2, z: 1.25, w: 2.9, d: 1.4, h: 0.24, n: "01", label: "Find", labelX: -2.35 },
+  { x: 0.15, z: 0, w: 3.2, d: 1.5, h: 0.46, n: "02", label: "Contribute", labelX: 0.3 },
+  { x: 2.3, z: -1.3, w: 2.8, d: 1.4, h: 0.68, n: "03", label: "Surface", labelX: 1.95 },
 ];
-const cardAt = (u: number, y = CARD.y) =>
-  RIGHT.clone().multiplyScalar(u).setY(y);
-const VOTERS = [0, 1, 2, 4, 5];
+/** The three sheets, one per step. */
+const BOARD = { x: -2.25, z: 1.3, w: 2.3, h: 1.62, step: 0 };
+const THREAD = { x: 0.1, z: 0.0, w: 2.8, h: 2.02, step: 1 };
+const FOUND = { x: 2.3, z: -1.35, w: 2.3, h: 1.68, step: 2 };
+const R = LOCAL.r;
+/**
+ * Board → thread → where it surfaces: each link runs across a step's top from one sheet's foot into the riser of
+ * the step above, then out across that step's top into the next sheet's foot. `step` is the step it lies on.
+ */
+const LINKS: { step: number; route: [number, number, number][] }[] = [
+  { step: 0, route: [[-1.3, R, 1.3], [-0.95, R, 1.3], [-0.95, R, 0.74]] },
+  { step: 1, route: [[-0.95, R, 0.76], [-0.95, R, 0.05]] },
+  { step: 1, route: [[1.3, R, 0], [1.6, R, 0], [1.6, R, -0.61]] },
+  { step: 2, route: [[1.6, R, -0.59], [1.6, R, -1.3]] },
+];
+
+// SAMPLE: the threads the research turns up, best first. The product is the band's document parser.
+const SCANNED = 1284;
+const WORTH = 37;
+const THREADS = [
+  { sub: "r/MachineLearning", title: "Handling multi-document PDFs in production?", intent: "High", score: 92 },
+  { sub: "r/LocalLLaMA", title: "Best open-source PDF parser for RAG?", intent: "High", score: 78 },
+  { sub: "r/dataengineering", title: "Scanned invoices with tables, any luck?", intent: "Medium", score: 54 },
+  { sub: "r/devops", title: "Where do you store parsed documents?", intent: "Low", score: 18 },
+];
+const QUESTION = "How are people handling multi-document PDFs in production?";
+const ANSWER = [
+  "We split the bundle first, classify each doc, then extract. ",
+  "Your Product",
+  " handled tables and checkboxes better than our old OCR pipeline.",
+];
+const ANSWER_LEN = ANSWER.join("").length;
+const AUTHOR = { user: "u/doc_nerd", photo: "/services/creators/c7.jpg" };
+const PHOTOS = [AUTHOR.photo];
+const AI = ["Teams split bundled PDFs first, then extract. ", "Your Product", " comes up most for tables."];
+const AI_LEN = AI.join("").length;
 
 // The story, 0..1 while the camera holds.
-const question = (s: number) => span(s, 0.0, 0.14);
-const arrive = (s: number, i: number) =>
-  span(s, 0.06 + 0.035 * i, 0.16 + 0.035 * i);
-const reply = (s: number, j: number) =>
-  span(s, 0.26 + 0.09 * j, 0.36 + 0.09 * j);
-const vote = (s: number, k: number) =>
-  span(s, 0.56 + 0.05 * k, 0.72 + 0.05 * k);
-const crowned = (s: number) => span(s, 0.78, 0.92);
-const yourVotes = (s: number) => 12 + 130 * easeOut(span(s, 0.58, 0.84));
+const scan = (s: number) => easeOut(span(s, 0.02, 0.2));
+const rowIn = (s: number, i: number) => span(s, 0.05 + 0.04 * i, 0.1 + 0.04 * i);
+const picked = (s: number) => s >= 0.24;
+const opened = (s: number) => span(s, 0.3, 0.36);
+const answered = (s: number) => span(s, 0.36, 0.5);
+const votes = (s: number) => Math.round(12 + 202 * easeOut(span(s, 0.46, 0.6)));
+const topComment = (s: number) => s >= 0.6;
+const ranked = (s: number) => span(s, 0.64, 0.72);
+const cited = (s: number) => span(s, 0.74, 0.86);
+const sourced = (s: number) => s >= 0.88;
 
-// ── Prints ──
+/** Cuts a highlighted sentence (alternating plain / product parts) to its first `n` characters. */
+const cut = (parts: string[], n: number) =>
+  parts.map((p) => {
+    const part = p.slice(0, Math.max(0, n));
+    n -= p.length;
+    return part;
+  });
 
-function drawTableTop(ctx: Ctx, w: number) {
-  const c = colors();
-  const r = w / 2;
-  ctx.save();
-  ctx.translate(r, r);
-  // Inlaid rings with the subreddit engraved round them, and a soft centre medallion.
-  ctx.strokeStyle = "rgba(23,44,33,0.12)";
-  ctx.lineWidth = r * 0.006;
-  for (const k of [0.96, 0.8]) {
-    ctx.beginPath();
-    ctx.arc(0, 0, r * k, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  const text = "R/MACHINELEARNING  ·  2.4M DEVELOPERS  ·  ".repeat(2);
-  setFont(ctx, r * 0.075, 500, true);
-  ctx.fillStyle = c.muted;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  const step = (Math.PI * 2) / text.length;
-  for (let i = 0; i < text.length; i++) {
-    ctx.save();
-    ctx.rotate(i * step);
-    ctx.translate(0, -r * 0.88);
-    ctx.fillText(text[i], 0, 0);
-    ctx.restore();
-  }
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2);
-  ctx.fillStyle = "#fbe9df";
-  ctx.fill();
-  ctx.globalAlpha = 0.85;
-  drawMark(ctx, "reddit", 0, 0, r * 0.3);
-  ctx.globalAlpha = 1;
-  ctx.restore();
+/** `text` cut to `maxW` (in the current font), with an ellipsis if it had to be cut. */
+function fit(ctx: Ctx, text: string, maxW: number) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxW) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
 }
 
-function drawQuestion(ctx: Ctx, w: number, h: number) {
+/** A placeholder line, for a sheet whose turn hasn't come. */
+const bar = (ctx: Ctx, x: number, y: number, w: number, h = 18) => rrect(ctx, x, y, w, h, h / 2, "#efede7");
+
+// ── Prints (each on an 800-wide grid) ──
+
+function drawBoard(ctx: Ctx, W: number, H: number, s: number) {
   const c = colors();
-  const k = w / 600;
-  ctx.save();
-  ctx.scale(k, k);
-  const H = h / k;
-  rrect(ctx, 0, 0, 600, H, 26, "#ffffff");
-  drawMark(ctx, "reddit", 50, 52, 46);
-  setFont(ctx, 24, 650);
+  const pad = 40;
+  drawMark(ctx, "reddit", pad + 18, 52, 36);
+  setFont(ctx, 30, 600);
+  ctx.letterSpacing = "-0.5px";
   ctx.fillStyle = c.ink;
-  ctx.fillText("r/MachineLearning", 88, 46);
-  setFont(ctx, 19, 450);
-  ctx.fillStyle = c.muted;
-  ctx.fillText("Posted by u/pdf_wrangler · 3h", 88, 72);
-  setFont(ctx, 40, 650);
-  ctx.letterSpacing = "-0.8px";
-  ctx.fillStyle = c.ink;
-  wrap(ctx, "Best tools for processing PDFs at scale?", 540).forEach(
-    (line, i) => ctx.fillText(line, 30, 146 + i * 48),
-  );
+  ctx.fillText("Conversation research", pad + 50, 63);
   ctx.letterSpacing = "0px";
-  rrect(ctx, 30, H - 62, 120, 38, 19, "#f4f2eb");
-  rrect(ctx, 162, H - 62, 170, 38, 19, "#f4f2eb");
-  setFont(ctx, 19, 600);
-  ctx.fillStyle = c.ink;
-  ctx.fillText("▲ 86  ▼", 48, H - 37);
-  ctx.fillText("37 comments", 186, H - 37);
-  ctx.restore();
-}
-
-function drawReply(ctx: Ctx, w: number, h: number, j: number, s: number) {
-  const c = colors();
-  const r = REPLIES[j];
-  const m = MEMBERS[r.member];
-  const top = r.you && crowned(s) > 0.3;
-  const k = w / 640;
-  ctx.save();
-  ctx.scale(k, k);
-  const H = h / k;
-  rrect(
-    ctx,
-    0,
-    0,
-    640,
-    H,
-    26,
-    r.you ? "#f3fcf6" : "#ffffff",
-    r.you ? "rgba(25,231,110,0.45)" : undefined,
-    3,
-  );
-  if (r.you) rrect(ctx, 0, 22, 8, H - 44, 4, c.primary);
-  face(ctx, m.photo, 52, 50, 22);
-  setFont(ctx, 22, 650);
-  ctx.fillStyle = c.ink;
-  ctx.fillText(m.user, 86, 46);
-  setFont(ctx, 17, 450);
+  // The scan counter.
+  setFont(ctx, 22, 500, true);
   ctx.fillStyle = c.muted;
-  ctx.fillText(r.you ? "2h · Contributor" : "2h", 86, 70);
-  if (top) {
-    setFont(ctx, 17, 650);
-    const label = "Top comment";
-    const tw = ctx.measureText(label).width + 44;
-    rrect(ctx, 640 - tw - 24, 28, tw, 36, 18, c.primary);
+  ctx.textAlign = "right";
+  ctx.fillText(`${Math.round(SCANNED * scan(s)).toLocaleString("en-US")} scanned`, W - pad, 60);
+  ctx.textAlign = "left";
+  rule(ctx, pad, 92, W - pad * 2);
+  eyebrow(ctx, "Thread", pad, 128, 18);
+  eyebrow(ctx, "Intent", 498, 128, 18);
+  eyebrow(ctx, "Score", 612, 128, 18);
+  THREADS.forEach((t, i) => {
+    const y = 154 + i * 86;
+    const k = rowIn(s, i);
+    if (k <= 0) {
+      bar(ctx, pad, y + 14, 200, 14);
+      bar(ctx, pad, y + 42, 360, 18);
+      return;
+    }
+    const pick = i === 0 && picked(s);
+    ctx.globalAlpha = k;
+    if (pick) {
+      rrect(ctx, pad - 16, y, W - pad * 2 + 32, 78, 12, "#eef8f2");
+      rrect(ctx, pad - 16, y + 12, 5, 54, 2.5, c.primary);
+    }
+    setFont(ctx, 18, 500, true);
+    ctx.fillStyle = c.muted;
+    ctx.fillText(t.sub, pad, y + 28);
+    setFont(ctx, 24, pick ? 600 : 480);
     ctx.fillStyle = c.ink;
+    ctx.fillText(fit(ctx, t.title, 430), pad, y + 60);
+    // Intent: a dot and the word.
+    const hot = t.intent === "High";
     ctx.beginPath();
-    ctx.arc(640 - tw - 4, 46, 5, 0, Math.PI * 2);
+    ctx.arc(504, y + 52, 6, 0, Math.PI * 2);
+    ctx.fillStyle = hot ? c.primary : t.intent === "Medium" ? "#c9c6bd" : "#e4e2db";
     ctx.fill();
-    ctx.fillText(label, 640 - tw + 6, 52);
+    setFont(ctx, 21, 500);
+    ctx.fillStyle = hot ? c.ink : c.muted;
+    ctx.fillText(t.intent, 518, y + 59);
+    // Score: a bar and its number.
+    rrect(ctx, 612, y + 46, 96, 10, 5, "#efede7");
+    rrect(ctx, 612, y + 46, 96 * (t.score / 100) * easeOut(k), 10, 5, pick ? c.primary : c.ink);
+    setFont(ctx, 21, 600, true);
+    ctx.fillStyle = c.ink;
+    ctx.textAlign = "right";
+    ctx.fillText(String(t.score), W - pad, y + 58);
+    ctx.textAlign = "left";
+    ctx.globalAlpha = 1;
+  });
+  // The verdict.
+  const y = H - 36;
+  if (picked(s)) {
+    ctx.beginPath();
+    ctx.arc(pad + 7, y - 8, 7, 0, Math.PI * 2);
+    ctx.fillStyle = c.primary;
+    ctx.fill();
+    setFont(ctx, 23, 560);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(`${WORTH} worth entering`, pad + 24, y);
+    setFont(ctx, 21, 600, true);
+    ctx.fillStyle = c.deep;
+    ctx.textAlign = "right";
+    ctx.fillText("Entering #1 →", W - pad, y);
+    ctx.textAlign = "left";
+  } else bar(ctx, pad, y - 18, 220);
+}
+
+function drawThread(ctx: Ctx, W: number, H: number, s: number) {
+  const c = colors();
+  const pad = 40;
+  const o = opened(s);
+  // Until the board picks it, the thread is a skeleton.
+  if (o <= 0) {
+    bar(ctx, pad, 40, 260);
+    bar(ctx, pad, 100, W - pad * 2, 30);
+    bar(ctx, pad, 146, 420, 30);
+    bar(ctx, pad, 232, W - pad * 2);
+    bar(ctx, pad, 268, W - pad * 2 - 120);
+    bar(ctx, pad, 304, 380);
+    return;
   }
-  paragraph(ctx, r.body, 32, 128, 576, 27, 36);
-  // Votes.
-  const votes = r.you ? yourVotes(s) : r.votes;
-  const hot = r.you && votes > 12.5;
-  setFont(ctx, 20, 650);
-  const label = `▲ ${Math.round(votes)}  ▼`;
-  const vw = ctx.measureText(label).width + 32;
-  rrect(ctx, 28, H - 58, vw, 38, 19, hot ? "#fbe6de" : "#f4f2eb");
-  ctx.fillStyle = hot ? c.secondary : c.muted;
-  ctx.fillText(label, 44, H - 33);
-  setFont(ctx, 18, 500);
+  ctx.globalAlpha = o;
+  drawMark(ctx, "reddit", pad + 16, 50, 32);
+  setFont(ctx, 25, 600);
+  ctx.fillStyle = c.ink;
+  ctx.fillText("r/MachineLearning", pad + 44, 59);
+  const sw = ctx.measureText("r/MachineLearning").width;
+  setFont(ctx, 21, 450);
   ctx.fillStyle = c.muted;
-  ctx.fillText("Reply     Share", 28 + vw + 22, H - 33);
-  ctx.restore();
+  ctx.fillText("· u/pdf_pipeline · 6h", pad + 52 + sw, 59);
+  setFont(ctx, 35, 620);
+  ctx.letterSpacing = "-0.7px";
+  ctx.fillStyle = c.ink;
+  wrap(ctx, QUESTION, W - pad * 2).forEach((line, i) => ctx.fillText(line, pad, 118 + i * 44));
+  ctx.letterSpacing = "0px";
+  setFont(ctx, 20, 500);
+  ctx.fillStyle = c.muted;
+  ctx.fillText("▲ 1.2k     96 comments", pad, 202);
+  rule(ctx, pad, 224, W - pad * 2);
+
+  // The answer.
+  const a = answered(s);
+  if (a > 0) {
+    const top = 252;
+    face(ctx, AUTHOR.photo, pad + 20, top + 20, 20);
+    setFont(ctx, 23, 600);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(AUTHOR.user, pad + 52, top + 28);
+    const uw = ctx.measureText(AUTHOR.user).width;
+    setFont(ctx, 20, 450);
+    ctx.fillStyle = c.muted;
+    ctx.fillText("· 1d", pad + 60 + uw, top + 28);
+    if (topComment(s)) {
+      // The badge sits with the author, so it never crowds the answer.
+      const bx = pad + 60 + uw + ctx.measureText("· 1d").width + 16;
+      setFont(ctx, 19, 600);
+      const label = "Top comment";
+      const tw = ctx.measureText(label).width + 40;
+      rrect(ctx, bx, top + 2, tw, 36, 18, c.primary);
+      ctx.beginPath();
+      ctx.arc(bx + 17, top + 20, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = c.ink;
+      ctx.fill();
+      ctx.fillText(label, bx + 28, top + 27);
+    }
+    const end = paragraph(ctx, cut(ANSWER, Math.round(a * ANSWER_LEN)), pad, top + 96, W - pad * 2, 27, 39);
+    // Votes: the count climbs as the community agrees.
+    const n = votes(s);
+    const hot = n > 12;
+    setFont(ctx, 20, 650);
+    const label = `▲ ${n}`;
+    const vw = ctx.measureText(label).width + 30;
+    const vy = Math.max(end, top + 174) + 58;
+    rrect(ctx, pad, vy - 26, vw, 36, 18, hot ? "#fdeee8" : "#f4f2eb");
+    ctx.fillStyle = hot ? "#e0481d" : c.muted;
+    ctx.fillText(label, pad + 15, vy - 1);
+    setFont(ctx, 19, 500);
+    ctx.fillStyle = c.muted;
+    ctx.fillText("Reply     Share", pad + vw + 22, vy - 1);
+    // A quieter reply beneath, so the climb has company.
+    const ry = vy + 60;
+    if (ry < H - 10) {
+      rrect(ctx, pad + 8, ry - 22, 3, 30, 1.5, "#e4e2db");
+      setFont(ctx, 19, 500);
+      ctx.fillStyle = c.muted;
+      ctx.fillText("u/ocr_veteran  ▲ 9   Tables were always the pain for us.", pad + 26, ry);
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
-function drawAvatar(ctx: Ctx, w: number, src: string) {
-  const r = w / 2;
-  ctx.beginPath();
-  ctx.arc(r, r, r - 2, 0, Math.PI * 2);
-  ctx.fillStyle = "#ffffff";
-  ctx.fill();
-  face(ctx, src, r, r, r * 0.84);
-}
-
-function drawSilhouette(ctx: Ctx, w: number) {
-  const r = w / 2;
-  ctx.beginPath();
-  ctx.arc(r, r, r - 2, 0, Math.PI * 2);
-  ctx.fillStyle = "#e8e6df";
-  ctx.fill();
-  ctx.fillStyle = "#d4d1c8";
-  ctx.beginPath();
-  ctx.arc(r, r * 0.8, r * 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(r, r * 1.62, r * 0.55, r * 0.42, 0, Math.PI, 0);
-  ctx.fill();
+function drawFound(ctx: Ctx, W: number, H: number, s: number) {
+  const c = colors();
+  const pad = 40;
+  // Google: the thread ranks for the category's query.
+  drawMark(ctx, "google", pad + 16, 52, 32);
+  rrect(ctx, pad + 48, 26, W - pad * 2 - 48, 52, 26, "#ffffff", "#dadce0", 2);
+  setFont(ctx, 22, 450);
+  ctx.fillStyle = c.ink;
+  ctx.fillText("multi-document pdf parsing", pad + 72, 60);
+  const g = ranked(s);
+  const gy = 108;
+  if (g <= 0) {
+    bar(ctx, pad, gy + 18, 260, 14);
+    bar(ctx, pad, gy + 50, W - pad * 2 - 80, 22);
+    bar(ctx, pad, gy + 88, 300, 14);
+  } else {
+    ctx.globalAlpha = g;
+    rrect(ctx, pad - 14, gy, W - pad * 2 + 28, 132, 14, "#f6fbf8");
+    drawMark(ctx, "reddit", pad + 12, gy + 32, 24);
+    setFont(ctx, 19, 450);
+    ctx.fillStyle = "#4d5156";
+    ctx.fillText("reddit.com › r/MachineLearning", pad + 34, gy + 39);
+    setFont(ctx, 26, 500);
+    ctx.fillStyle = "#1a0dab";
+    ctx.fillText("How are people handling multi-document…", pad, gy + 80);
+    setFont(ctx, 19, 450);
+    ctx.fillStyle = c.muted;
+    ctx.fillText("96 comments · Top answer ▲ 214", pad, gy + 114);
+    // Its place on the page.
+    rrect(ctx, W - pad - 64, gy + 14, 64, 36, 18, c.ink);
+    setFont(ctx, 19, 650, true);
+    ctx.fillStyle = c.primary;
+    ctx.textAlign = "center";
+    ctx.fillText("#2", W - pad - 32, gy + 39);
+    ctx.textAlign = "left";
+    ctx.globalAlpha = 1;
+  }
+  rule(ctx, pad, 270, W - pad * 2);
+  // An AI answer: the thread is one of its sources.
+  const ay = 300;
+  drawMark(ctx, "chatgpt", pad + 14, ay + 18, 28);
+  setFont(ctx, 23, 600);
+  ctx.fillStyle = c.ink;
+  ctx.fillText("ChatGPT", pad + 40, ay + 27);
+  const k = cited(s);
+  if (k <= 0) {
+    bar(ctx, pad, ay + 62, W - pad * 2, 20);
+    bar(ctx, pad, ay + 98, W - pad * 2 - 140, 20);
+    bar(ctx, pad, H - 76, 260, 40);
+    return;
+  }
+  paragraph(ctx, cut(AI, Math.round(k * AI_LEN)), pad, ay + 80, W - pad * 2, 26, 37);
+  // Sources: the thread first, picked out once cited.
+  const sy = H - 78;
+  const on = sourced(s);
+  setFont(ctx, 20, 560);
+  const t1 = "r/MachineLearning";
+  const w1 = ctx.measureText(t1).width + 80;
+  rrect(ctx, pad, sy, w1, 44, 22, on ? c.lightGreenSoft : "#f4f2eb");
+  rrect(ctx, pad + 10, sy + 9, 26, 26, 13, on ? c.primary : "#e4e2db");
+  setFont(ctx, 15, 700, true);
+  ctx.fillStyle = c.ink;
+  ctx.textAlign = "center";
+  ctx.fillText("1", pad + 23, sy + 28);
+  ctx.textAlign = "left";
+  setFont(ctx, 20, 560);
+  ctx.fillText(t1, pad + 46, sy + 29);
+  const t2 = "yourproduct.dev";
+  rrect(ctx, pad + w1 + 12, sy, ctx.measureText(t2).width + 36, 44, 22, undefined, "rgba(23,44,33,0.14)", 2);
+  ctx.fillStyle = c.muted;
+  ctx.fillText(t2, pad + w1 + 30, sy + 29);
 }
 
 // ── Pieces ──
 
-/** A member at the table: chair, and their face at head height (a silhouette until they arrive). */
-function Member({ i }: { i: number }) {
-  const bandRef = useBand();
-  const m = MEMBERS[i];
-  const photoTex = useCanvas(
-    256,
-    256,
-    useCallback(
-      (ctx: Ctx, w: number) => drawAvatar(ctx, w, m.photo),
-      [m.photo],
-    ),
-  );
-  usePhotos(ALL_PHOTOS, photoTex.paint);
-  const ghost = useCanvas(
-    256,
-    256,
-    useCallback((ctx: Ctx, w: number) => drawSilhouette(ctx, w), []),
-  );
-  const lit = useRef<MeshBasicMaterial>(null);
-  const head = useRef<Group>(null);
-  useFrame((state) => {
-    const k = arrive(storyOf(bandRef.current, 3), i);
-    if (lit.current) lit.current.opacity = k;
-    if (head.current)
-      head.current.position.y =
-        HEAD_Y +
-        Math.sin(state.clock.elapsedTime * 1.1 + i * 1.3) * 0.015 -
-        (1 - easeOut(k)) * 0.06;
-  });
-  return (
-    <group position={[m.x, 0, m.z]}>
-      <group rotation-y={m.a}>
-        <Shadow w={0.8} d={0.8} opacity={0.08} />
-        <Solid geometry={cylinder(0.2, 0.02)} />
-        <Solid geometry={cylinder(0.035, 0.4)} color="#e3e1da" />
-        <Solid geometry={block(0.52, 0.5, 0.07, 0.1)} position-y={0.4} />
-        <Solid
-          geometry={panel(0.5, 0.48, 0.05, 0.1)}
-          position={[0, 0.47, 0.25]}
-          rotation-y={Math.PI}
-        />
-      </group>
-      <group ref={head} position-y={HEAD_Y}>
-        <group quaternion={FACE}>
-          <mesh renderOrder={5}>
-            <circleGeometry args={[0.24, 48]} />
-            <meshBasicMaterial
-              map={ghost.texture}
-              transparent
-              toneMapped={false}
-              {...PREMULTIPLIED}
-            />
-          </mesh>
-          <mesh renderOrder={6} position-z={0.002}>
-            <circleGeometry args={[0.24, 48]} />
-            <meshBasicMaterial
-              ref={lit}
-              map={photoTex.texture}
-              transparent
-              opacity={0}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-      </group>
-    </group>
-  );
+type Draw = (ctx: Ctx, W: number, H: number, s: number) => void;
+
+/** A step's riser: its number and name, engraved. */
+function drawRiser(ctx: Ctx, w: number, h: number, i: number) {
+  const c = colors();
+  const st = STEPS[i];
+  ctx.textBaseline = "middle";
+  setFont(ctx, h * 0.5, 500, true);
+  ctx.letterSpacing = `${h * 0.06}px`;
+  const nw = ctx.measureText(st.n).width;
+  ctx.letterSpacing = "0px";
+  setFont(ctx, h * 0.56, 600);
+  const tw = ctx.measureText(st.label).width;
+  const x = (st.labelX - (st.x - st.w / 2)) * (w / st.w) - (nw + h * 0.4 + tw) / 2;
+  setFont(ctx, h * 0.5, 500, true);
+  ctx.letterSpacing = `${h * 0.06}px`;
+  ctx.fillStyle = c.muted;
+  ctx.fillText(st.n, x, h / 2 + 1);
+  ctx.letterSpacing = "0px";
+  setFont(ctx, h * 0.56, 600);
+  ctx.fillStyle = c.ink;
+  ctx.fillText(st.label, x + nw + h * 0.4, h / 2 + 1);
 }
 
-/** A reply card, risen above its author, with a hairline down to them. */
-function Reply({ j }: { j: number }) {
-  const bandRef = useBand();
-  const c = colors();
-  const r = REPLIES[j];
-  const m = MEMBERS[r.member];
-  const value = useRef(-1);
-  const draw = useCallback(
-    (ctx: Ctx, w: number, h: number) =>
-      drawReply(ctx, w, h, j, Math.max(0, value.current)),
-    [j],
+/** One step of the dais, with its riser engraved. */
+function Step({ i }: { i: number }) {
+  const st = STEPS[i];
+  const face = Math.min(0.16, st.h * 0.66);
+  const map = useStatic(
+    st.w,
+    face,
+    useCallback((ctx: Ctx, w: number, h: number) => drawRiser(ctx, w, h, i), [i]),
+    1.8,
   );
-  const tex = useCanvas(
-    Math.round((CARD.w - 0.06) * PX * 1.4),
-    Math.round((CARD.h - 0.06) * PX * 1.4),
-    draw,
-  );
-  usePhotos(ALL_PHOTOS, tex.paint);
-  const card = useRef<Group>(null);
-  const glow = useRef<MeshBasicMaterial>(null);
-  const line = useRef<Line2>(null);
-  const home = useMemo(() => cardAt(r.u, r.y), [r.u, r.y]);
-  const points = useMemo(
-    () => [new Vector3(m.x, HEAD_Y + 0.26, m.z), home.clone().setY(r.y - 0.02)],
-    [m, home, r.y],
-  );
-  useFrame(() => {
-    const s = storyOf(bandRef.current, 3);
-    const k = reply(s, j);
-    const g = card.current;
-    if (g) {
-      g.visible = k > 0;
-      const crown = r.you ? easeInOut(crowned(s)) : 0;
-      g.position.copy(home).setY(r.y - (1 - easeOut(k)) * 0.5 + 0.32 * crown);
-      g.scale.setScalar(pop(k) * (1 + 0.06 * crown));
-    }
-    if (line.current) {
-      line.current.visible = k > 0;
-      line.current.material.opacity = 0.45 * k;
-    }
-    if (glow.current) glow.current.opacity = 0.55 * crowned(s);
-    const q = Math.round(s * 120) / 120;
-    if (q === value.current) return;
-    value.current = q;
-    tex.paint();
-  });
   return (
-    <group>
-      <Line
-        ref={line}
-        points={points}
-        color={c.line}
-        lineWidth={1}
-        transparent
-        visible={false}
+    <group position={[st.x, 0, st.z]}>
+      <Solid geometry={block(st.w, st.d, st.h, 0.06)} color={i === 1 ? "#f6f5f1" : "#f1efe9"} />
+      <Print
+        w={st.w}
+        h={face}
+        map={map}
+        position={[0, st.h - face / 2 - Math.min(0.03, (st.h - face) / 2), st.d / 2 + 0.003]}
       />
-      <group ref={card} visible={false}>
-        <group rotation-y={Math.PI / 6}>
-          {r.you && (
-            <mesh
-              position={[0, CARD.h / 2, -0.05]}
-              scale={[CARD.w * 1.9, CARD.h * 2.6, 1]}
-              renderOrder={-1}
-            >
-              <planeGeometry args={[1, 1]} />
-              <meshBasicMaterial
-                ref={glow}
-                color={c.primary}
-                alphaMap={shadowTexture()}
-                transparent
-                opacity={0}
-                depthWrite={false}
-                toneMapped={false}
-              />
-            </mesh>
-          )}
-          <Solid
-            geometry={panel(CARD.w, CARD.h, CARD.t, 0.12)}
-            color={r.you ? "#f3fcf6" : "#fbfaf7"}
-          />
-          <Print
-            w={CARD.w - 0.06}
-            h={CARD.h - 0.06}
-            map={tex.texture}
-            position={[0, CARD.h / 2, CARD.t / 2 + 0.003]}
-          />
-        </group>
-      </group>
     </group>
   );
 }
 
-/** An upvote flying from a member into your reply. */
-function Vote({ k }: { k: number }) {
+/** A sheet whose print follows the beat's story (redrawn in steps), on an 800-wide grid, standing on its step. */
+function StorySheet({
+  at,
+  draw,
+  photos,
+}: {
+  at: { x: number; z: number; w: number; h: number; step: number };
+  draw: Draw;
+  photos?: string[];
+}) {
   const bandRef = useBand();
-  const c = colors();
-  const g = useRef<Group>(null);
-  const from = useMemo(
-    () => new Vector3(MEMBERS[VOTERS[k]].x, HEAD_Y + 0.3, MEMBERS[VOTERS[k]].z),
-    [k],
+  const render = useCallback(
+    (ctx: Ctx, w: number, h: number, v: number) => {
+      const k = w / 800;
+      ctx.save();
+      ctx.scale(k, k);
+      rrect(ctx, 0, 0, 800, h / k, 18, "#ffffff");
+      draw(ctx, 800, h / k, Math.max(0, v));
+      ctx.restore();
+    },
+    [draw],
   );
-  const to = useMemo(() => cardAt(0, REPLIES[1].y + 0.1), []);
-  useFrame(() => {
-    const f = vote(storyOf(bandRef.current, 3), k);
-    const o = g.current;
-    if (!o) return;
-    o.visible = f > 0 && f < 1;
-    const e = easeInOut(f);
-    o.position.lerpVectors(from, to, e);
-    o.position.y += Math.sin(Math.PI * e) * 0.9;
-    o.scale.setScalar(0.7 * Math.sin(Math.PI * Math.min(1, f * 1.15)) + 0.001);
-  });
-  return (
-    <group ref={g} visible={false} rotation-y={Math.PI / 6}>
-      <Solid geometry={upvote()} color={c.secondary} />
-    </group>
-  );
+  const [map, set, paint] = useLive(at.w - 0.05, at.h - 0.05, render, 1.4);
+  usePhotos(photos ?? NONE, paint);
+  useFrame(() => set(Math.round(storyOf(bandRef.current, 3) * 120) / 120));
+  return <Sheet w={at.w} h={at.h} map={map} position={[at.x, STEPS[at.step].h, at.z]} />;
 }
+const NONE: string[] = [];
 
 export function RedditStation() {
-  const bandRef = useBand();
-  const top = useCanvas(
-    1024,
-    1024,
-    useCallback((ctx: Ctx, w: number) => drawTableTop(ctx, w), []),
-  );
-  const q = useCanvas(
-    Math.round(2.0 * PX * 1.4),
-    Math.round(1.24 * PX * 1.4),
-    useCallback(
-      (ctx: Ctx, w: number, h: number) => drawQuestion(ctx, w, h),
-      [],
-    ),
-  );
-  const stand = useRef<Group>(null);
-  const halo = useRef<Mesh>(null);
-
-  useFrame(() => {
-    const k = question(storyOf(bandRef.current, 3));
-    if (stand.current) {
-      stand.current.visible = k > 0;
-      stand.current.scale.setScalar(pop(k));
-    }
-    if (halo.current)
-      (halo.current.material as MeshBasicMaterial).opacity = 0.25 * k;
-  });
-
   return (
     <group position={AT.reddit}>
-      {/* A round rug and the table: base, pedestal and an engraved top. */}
-      <Shadow w={6.6} d={6.6} opacity={0.06} />
-      <Solid geometry={cylinder(2.95, 0.03)} color="#f0eee8" />
-      <Shadow w={3.6} d={3.6} opacity={0.1} position-y={0.032} />
-      <Solid geometry={cylinder(0.62, 0.05)} position-y={0.03} />
-      <Solid
-        geometry={cylinder(0.16, TABLE.h - 0.05)}
-        color="#e3e1da"
-        position-y={0.08}
-      />
-      <Solid geometry={cylinder(TABLE.r, TABLE.top)} position-y={TABLE.h} />
-      <mesh rotation-x={-Math.PI / 2} position-y={TABLE.h + TABLE.top + 0.002}>
-        <circleGeometry args={[TABLE.r - 0.04, 96]} />
-        <meshBasicMaterial
-          map={top.texture}
-          transparent
-          toneMapped={false}
-          {...PREMULTIPLIED}
-          polygonOffset
-          polygonOffsetFactor={-1}
-        />
-      </mesh>
-
-      {/* The question, standing at the centre of the table, a warm glow beneath it. */}
-      <mesh
-        ref={halo}
-        rotation-x={-Math.PI / 2}
-        position-y={TABLE.h + TABLE.top + 0.004}
-        scale={[2.2, 1.4, 1]}
-      >
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial
-          color="#ff4500"
-          alphaMap={shadowTexture()}
-          transparent
-          opacity={0}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-      <group ref={stand} position-y={TABLE.h + TABLE.top} visible={false}>
-        <group rotation-y={Math.PI / 6}>
-          <Solid geometry={block(0.8, 0.32, 0.03, 0.12)} />
-          <Solid geometry={panel(0.1, 0.24, 0.05, 0.03)} position-z={-0.05} />
-          <Solid geometry={panel(2.06, 1.3, 0.07, 0.12)} position-y={0.14} />
-          <Print
-            w={2.0}
-            h={1.24}
-            map={q.texture}
-            position={[0, 0.14 + 0.65, 0.038]}
-          />
+      <Shadow w={9.4} d={5.2} opacity={0.07} position={[0.05, 0.001, -0.05]} />
+      {STEPS.map((_, i) => (
+        <Step key={i} i={i} />
+      ))}
+      {LINKS.map((link, i) => (
+        <group key={i} position-y={STEPS[link.step].h}>
+          <Fibre route={link.route} />
         </group>
-      </group>
-
-      {MEMBERS.map((m, i) => (
-        <Member key={m.user} i={i} />
       ))}
-      {REPLIES.map((r, j) => (
-        <Reply key={r.member} j={j} />
-      ))}
-      {VOTERS.map((_, k) => (
-        <Vote key={k} k={k} />
-      ))}
+      <StorySheet at={BOARD} draw={drawBoard} />
+      <StorySheet at={THREAD} draw={drawThread} photos={PHOTOS} />
+      <StorySheet at={FOUND} draw={drawFound} />
     </group>
   );
 }

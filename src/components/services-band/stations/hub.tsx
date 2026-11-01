@@ -1,855 +1,528 @@
 import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import {
-  CanvasTexture,
-  DoubleSide,
-  ExtrudeGeometry,
-  RepeatWrapping,
-  SRGBColorSpace,
-  Shape,
-  ShapeGeometry,
-  type Group,
-  type Mesh,
-  type MeshBasicMaterial,
-} from "three";
-import { toCreasedNormals } from "three-stdlib";
-import { mix } from "../../growth-engine/palette";
-import { span, storyOf } from "../content";
+import { DoubleSide, type Group, type MeshBasicMaterial } from "three";
+import { BEATS, span, storyOf } from "../content";
 import type { LabelSpec } from "../label-store";
 import {
   Print,
   Shadow,
+  Sheet,
   Solid,
   block,
   colors,
-  cylinder,
-  easeOut,
+  easeInOut,
+  eyebrow,
   panel,
-  pop,
   rrect,
+  rule,
   setFont,
+  tick,
   useBand,
+  useLive,
   useStatic,
 } from "../kit";
-import { AT, DIRS, LANE_NAMES, PLATFORM, PORT_MODULE, ROUTES } from "../layout";
+import { AT, DIRS, PLATFORM, PORT_MODULE, ROUTES } from "../layout";
 import { Channel } from "../fibre";
 
-// Beat 0, the hub: the Devable engine. Your product (a small white display showing its app) is lowered onto
-// the engine's tray; a scanning gantry slides over it, casting a light curtain (we learn it inside out); then
-// the four port modules light one by one, each printed with its channel, and light starts down their pipes.
-// The pipes: glass tubes with a green fibre inside, carrying pulses of light out to each station.
-// Beat 5 also lives here: the light reverses, flowing back from every station to the hub, and the outcome
-// columns rise from the deck's free corners.
+// Beat 0, the hub: Devable's growth system as a precision instrument. Your product stands on the plinth; a slim
+// gantry sweeps a scan plane over it, and as it passes, a product brief fills beside it: what you build, who
+// it's for, and where those people already look. Each of those places is one of the four channels, so as its
+// row confirms, its port at the plinth's edge lights and the trace runs out to that channel's station.
+// Beat 5 also lives here: the traces run home, and the brief turns into the results the channels returned.
 
 type Ctx = CanvasRenderingContext2D;
 
-const TOP = PLATFORM.h; // deck surface
-/** The brand green's deep variant, for the machine's structural parts. */
-const FOREST = "#1d5c3a";
-const TRAY = { size: 2.5, h: 0.02 };
-/** The product: a display on a small stand, centred on the tray. */
-const DEVICE = { w: 1.62, h: 1.1, t: 0.14, lift: 0.24 };
+const TOP = PLATFORM.h;
+const SKIRT = 0.03;
+const BODY = 0.14;
+/** Your product: a slim display on a stand, back-left on the plinth. */
+const PRODUCT = { x: -1.15, z: -0.3, w: 1.4, h: 0.92, lift: 0.2 };
 /**
- * The scanner: a deep-green ring arch (like a CT scanner) on carriages that run in rails either side of the
- * tray. Its mint inner lip glows and it casts a light curtain; it glides to and fro on its own (not with
- * scroll) while the band is in view.
+ * The scan gantry: two posts riding rails either side of the product, joined by a bar the scan plane hangs from.
+ * It rests behind the product, framing it, and sweeps forward over it to scan.
  */
-const RING = {
-  r: 1.84,
-  band: 0.26,
-  depth: 0.36,
-  lift: 0.14,
-  travel: 1.0,
-  period: 11.5,
-};
-const RAIL = { x: RING.r - RING.band / 2, len: 2.7, w: 0.22, h: 0.04 };
+const GANTRY = { half: 0.75, h: 1.26, back: -1.2, front: 0.65 };
+/** The brief, standing front-right, clear of the product and of every port on screen. */
+const BRIEF = { x: 1.15, z: 0.95, w: 1.6, h: 1.78 };
 
-/** Half an annulus in the x–y plane (outer radius `r`, `band` thick), extruded `depth` along z (centred). */
-function archGeometry(r: number, band: number, depth: number, bevel = 0.03) {
-  const shape = new Shape();
-  shape.absarc(0, 0, r, 0, Math.PI, false);
-  shape.lineTo(-(r - band), 0);
-  shape.absarc(0, 0, r - band, Math.PI, 0, true);
-  shape.lineTo(r, 0);
-  const g = new ExtrudeGeometry(shape, {
-    depth: depth - bevel * 2,
-    bevelEnabled: bevel > 0,
-    bevelSize: bevel,
-    bevelThickness: bevel,
-    bevelSegments: 4,
-    curveSegments: 72,
-  });
-  g.translate(0, 0, -(depth - bevel * 2) / 2);
-  return toCreasedNormals(g, Math.PI / 5);
-}
-const ARCH = archGeometry(RING.r, RING.band, RING.depth);
-const LIP = archGeometry(RING.r - RING.band + 0.025, 0.03, 0.1, 0);
+/** The story (0..1 while the camera holds on the hub). */
+const sweep = (s: number) => span(s, 0.1, 0.52);
+/** Brief fields confirm as the scan passes; the four places, and their ports, after it. */
+const FIELD = [0.24, 0.4];
+const placeAt = (i: number) => 0.6 + i * 0.075;
 
-/** The outcome columns in the deck's free corners: reach, demand and (tallest, mint) pipeline. */
-const BARS = [
-  { at: [-1.6, 1.6], h: 0.9, name: "Reach" },
-  { at: [1.65, -1.65], h: 1.5, name: "Demand" },
-  { at: [-1.65, -1.65], h: 2.55, name: "Pipeline", you: true },
-] as const;
-const DROP = 0.42;
-const drop = (s: number) => easeOut(span(s, 0, 0.3));
-/** Ports light in visiting order as the hub's story ends. */
-const portLit = (s: number, i: number) =>
-  span(s, 0.62 + i * 0.07, 0.72 + i * 0.07);
-
-const GLYPHS = ["</>", "search", "r/", "play"] as const;
+// What the scan reads off the product. "Where they look" is one place per channel, in port order.
+const BUILD = "Document parsing API";
+const AUDIENCE = "ML and platform engineers";
+const PLACES = [
+  "Docs and tutorials",
+  "Google and AI answers",
+  "Reddit threads",
+  "Creators they follow",
+];
+/** Short channel names for the port faces. */
+const PORTS = ["Content", "Search & AI", "Reddit", "Creators"];
+/** Beat 5's readout: what each channel returned (share of pipeline), in port order. */
+const RETURNS = [
+  { name: "Technical Content", share: 0.27 },
+  { name: "Search & AI", share: 0.34 },
+  { name: "Reddit", share: 0.16 },
+  { name: "Creators", share: 0.23 },
+];
 
 // ── Prints ──
 
-function drawApp(ctx: Ctx, w: number, h: number) {
+/** Your product's screen: a dense app view. As the scan passes, detection brackets frame what it reads. */
+function drawApp(ctx: Ctx, w: number, h: number, v: number) {
   const c = colors();
   const k = w / 600;
   ctx.save();
   ctx.scale(k, k);
   const W = 600;
   const H = h / k;
-  rrect(ctx, 0, 0, W, H, 26, "#ffffff");
-  // Window bar.
-  ctx.save();
   ctx.beginPath();
-  ctx.roundRect(0, 0, W, H, 26);
+  ctx.roundRect(0, 0, W, H, 14);
   ctx.clip();
-  ctx.fillStyle = c.shade;
-  ctx.fillRect(0, 0, W, 50);
-  ctx.restore();
-  [28, 48, 68].forEach((x) => {
-    ctx.beginPath();
-    ctx.arc(x, 25, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#dcd8cd";
-    ctx.fill();
-  });
-  // Brand: a green diamond mark, the name.
-  const mx = 44;
-  const my = 106;
-  rrect(ctx, mx - 24, my - 24, 48, 48, 13, c.ink);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+  // Sidebar.
+  ctx.fillStyle = "#f7f6f2";
+  ctx.fillRect(0, 0, 150, H);
+  ctx.fillStyle = "rgba(23,44,33,0.07)";
+  ctx.fillRect(150, 0, 2, H);
+  rrect(ctx, 18, 20, 34, 34, 9, c.ink);
   ctx.save();
-  ctx.translate(mx, my);
+  ctx.translate(35, 37);
   ctx.rotate(Math.PI / 4);
-  rrect(ctx, -10, -10, 20, 20, 4, c.primary);
+  rrect(ctx, -7, -7, 14, 14, 3, c.primary);
   ctx.restore();
-  setFont(ctx, 40, 620);
-  ctx.letterSpacing = "-1.2px";
-  ctx.fillStyle = c.ink;
-  ctx.fillText("Your product", 84, my + 14);
-  ctx.letterSpacing = "0px";
-  // UI: a sidebar of rows, a chart card.
-  ctx.fillStyle = c.soft;
-  [0.6, 0.45, 0.52, 0.38].forEach((f, i) =>
-    rrect(
-      ctx,
-      22,
-      160 + i * 34,
-      150 * f,
-      12,
-      6,
-      i === 0 ? c.lightGreenSoft : c.soft,
-    ),
-  );
-  rrect(ctx, 200, 152, W - 222, H - 174, 16, undefined, c.line, 2);
-  const bars = [0.35, 0.5, 0.42, 0.66, 0.58, 0.8, 0.95];
-  const bw = (W - 262) / bars.length;
-  bars.forEach((f, i) => {
-    const bh = (H - 220) * f;
-    rrect(
-      ctx,
-      220 + i * bw,
-      H - 42 - bh,
-      bw - 10,
-      bh,
-      5,
-      i === bars.length - 1 ? c.primary : c.lightGreenSoft,
-    );
+  ["Parse", "Extract", "Classify", "Usage"].forEach((label, i) => {
+    if (i === 0) rrect(ctx, 12, 80, 126, 34, 8, "#ebe9e3");
+    setFont(ctx, 17, i === 0 ? 600 : 450);
+    ctx.fillStyle = i === 0 ? c.ink : c.muted;
+    ctx.fillText(label, 26, 103 + i * 42);
   });
-  ctx.restore();
-}
-
-function drawPlate(ctx: Ctx, w: number, h: number, i: number) {
-  const c = colors();
-  const k = h / 140;
-  ctx.save();
-  ctx.scale(k, k);
-  const W = w / k;
-  // A light engraved label: an inset panel, a mint icon tile, the port number and the channel, large.
-  rrect(ctx, 3, 4, W - 6, 132, 20, "#f4f3ee", "rgba(23,44,33,0.12)", 2);
-  rrect(ctx, 16, 32, 76, 76, 18, c.lightGreenSoft);
-  ctx.fillStyle = c.deep;
-  ctx.strokeStyle = c.deep;
-  ctx.lineWidth = 6;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  const g = GLYPHS[i];
-  if (g === "search") {
-    ctx.beginPath();
-    ctx.arc(50, 66, 14, 0, Math.PI * 2);
-    ctx.moveTo(60, 76);
-    ctx.lineTo(71, 87);
-    ctx.stroke();
-  } else if (g === "play") {
-    ctx.beginPath();
-    ctx.moveTo(44, 50);
-    ctx.lineTo(68, 70);
-    ctx.lineTo(44, 90);
-    ctx.closePath();
-    ctx.fill();
-  } else {
-    setFont(ctx, 30, 650, true);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(g, 54, 72);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-  }
-  setFont(ctx, 16, 500, true);
-  ctx.letterSpacing = "2.5px";
+  // Header.
+  setFont(ctx, 15, 500, true);
   ctx.fillStyle = c.muted;
-  ctx.fillText(`PORT 0${i + 1}`, 108, 34);
+  ctx.fillText("yourproduct.dev", 176, 38);
+  setFont(ctx, 38, 620);
   ctx.letterSpacing = "-0.8px";
   ctx.fillStyle = c.ink;
-  setFont(ctx, 36, 620);
-  const words = LANE_NAMES[i].split(" ");
-  const lines =
-    words.length > 1
-      ? [words.slice(0, -1).join(" "), words[words.length - 1]]
-      : words;
-  lines.forEach((line, n) =>
-    ctx.fillText(line, 108, lines.length > 1 ? 76 + n * 40 : 92),
-  );
+  ctx.fillText("Your Product", 176, 80);
+  ctx.letterSpacing = "0px";
+  setFont(ctx, 18, 450);
+  ctx.fillStyle = c.muted;
+  ctx.fillText("Parse any document into JSON", 176, 106);
+  // Stats.
+  const stats = [
+    ["Pages parsed", "1.2M"],
+    ["Accuracy", "99.1%"],
+    ["p95 latency", "0.4s"],
+  ];
+  stats.forEach(([label, value], i) => {
+    const x = 176 + i * 138;
+    setFont(ctx, 14, 500, true);
+    ctx.fillStyle = c.muted;
+    ctx.fillText(label.toUpperCase(), x, 144);
+    setFont(ctx, 26, 600);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(value, x, 176);
+  });
+  // A request log, the last rows of the product in use.
+  const rows = [
+    ["invoice_0423.pdf", "200", "38 ms"],
+    ["kyc_bundle.pdf", "200", "412 ms"],
+    ["contract_v2.docx", "200", "96 ms"],
+  ];
+  ctx.fillStyle = "rgba(23,44,33,0.07)";
+  ctx.fillRect(176, 198, W - 200, 2);
+  rows.forEach(([file, code, ms], i) => {
+    const y = 232 + i * 38;
+    setFont(ctx, 16, 450, true);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(file, 176, y);
+    ctx.fillStyle = c.deep;
+    ctx.fillText(code, 400, y);
+    ctx.fillStyle = c.muted;
+    ctx.textAlign = "right";
+    ctx.fillText(ms, W - 24, y);
+    ctx.textAlign = "left";
+  });
+  // Detection brackets: what it is (the header), then who uses it (the usage), as the scan reaches them.
+  const box = (x: number, y: number, bw: number, bh: number, a: number) => {
+    if (a <= 0) return;
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = c.deep;
+    ctx.lineWidth = 2.5;
+    const l = 14;
+    for (const [px, py, dx, dy] of [
+      [x, y, 1, 1],
+      [x + bw, y, -1, 1],
+      [x, y + bh, 1, -1],
+      [x + bw, y + bh, -1, -1],
+    ]) {
+      ctx.beginPath();
+      ctx.moveTo(px + dx * l, py);
+      ctx.lineTo(px, py);
+      ctx.lineTo(px, py + dy * l);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  };
+  box(166, 14, 360, 100, span(v, FIELD[0] - 0.08, FIELD[0]));
+  box(166, 124, W - 182, H - 136, span(v, FIELD[1] - 0.08, FIELD[1]));
   ctx.restore();
 }
 
-/** The tray's top: registration marks at the corners and a faint dot grid, like a machine bed. */
-function drawTray(ctx: Ctx, w: number, h: number) {
+/** Text revealed up to fraction `k` of its length. */
+const typed = (text: string, k: number) =>
+  text.slice(0, Math.round(text.length * Math.min(1, Math.max(0, k))));
+
+/** The product brief, filling as the scan reads the product (beat 0). */
+function drawBrief(ctx: Ctx, W: number, s: number) {
   const c = colors();
-  ctx.fillStyle = c.line;
-  ctx.globalAlpha = 0.35;
-  const step = w / 14;
-  for (let x = step; x < w - step / 2; x += step)
-    for (let y = step; y < h - step / 2; y += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, w * 0.003, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  ctx.globalAlpha = 0.8;
-  ctx.strokeStyle = c.muted;
-  ctx.lineWidth = w * 0.004;
-  const m = w * 0.05;
-  const l = w * 0.08;
-  for (const [x, y, dx, dy] of [
-    [m, m, 1, 1],
-    [w - m, m, -1, 1],
-    [m, h - m, 1, -1],
-    [w - m, h - m, -1, -1],
-  ]) {
-    ctx.beginPath();
-    ctx.moveTo(x + dx * l, y);
-    ctx.lineTo(x, y);
-    ctx.lineTo(x, y + dy * l);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
+  const pad = 44;
+  const done = s >= placeAt(3);
+  eyebrow(ctx, "Product brief", pad, 62, 26);
+  // Status, right-aligned: reading while the scan runs, routed once every place has its channel.
+  const status = done ? "Routed" : sweep(s) > 0 ? "Reading" : "Ready";
+  setFont(ctx, 27, 560);
+  const sw = ctx.measureText(status).width;
+  ctx.beginPath();
+  ctx.arc(W - pad - sw - 20, 53, 7, 0, Math.PI * 2);
+  ctx.fillStyle = done ? c.primary : "#b9b6ad";
+  ctx.fill();
+  ctx.fillStyle = c.ink;
+  ctx.fillText(status, W - pad - sw, 62);
+  rule(ctx, pad, 92, W - pad * 2);
+
+  // The two read fields.
+  [
+    ["What you build", BUILD],
+    ["Who it's for", AUDIENCE],
+  ].forEach(([label, value], i) => {
+    const y = 150 + i * 128;
+    const k = span(s, FIELD[i] - 0.1, FIELD[i]);
+    eyebrow(ctx, label, pad, y, 22);
+    setFont(ctx, 42, 580);
+    ctx.letterSpacing = "-0.8px";
+    ctx.fillStyle = k > 0 ? c.ink : "rgba(23,44,33,0.16)";
+    ctx.fillText(k > 0 ? typed(value, k) : "—", pad, y + 52);
+    ctx.letterSpacing = "0px";
+    tick(ctx, W - pad - 18, y + 36, 18, k >= 1);
+  });
+
+  // Where they look: one row per place, each routed to its port.
+  const top = 432;
+  eyebrow(ctx, "Where they look", pad, top, 22);
+  PLACES.forEach((place, i) => {
+    const y = top + 70 + i * 82;
+    const k = span(s, placeAt(i) - 0.05, placeAt(i));
+    const on = k >= 1;
+    rrect(ctx, pad - 14, y - 46, W - pad * 2 + 28, 70, 14, on ? "#eef8f2" : "#f6f5f1");
+    setFont(ctx, 36, on ? 580 : 500);
+    ctx.fillStyle = k > 0 ? c.ink : "rgba(23,44,33,0.34)";
+    ctx.fillText(place, pad + 4, y);
+    // The port it routes to: a mono chip, filled once routed.
+    const label = `0${i + 1}`;
+    setFont(ctx, 26, 600, true);
+    const cw = ctx.measureText(label).width + 30;
+    rrect(ctx, W - pad - cw, y - 33, cw, 44, 10, on ? c.primary : "#e9e7e0");
+    ctx.fillStyle = on ? c.ink : c.muted;
+    ctx.fillText(label, W - pad - cw + 15, y);
+  });
 }
 
-function drawBaseFront(ctx: Ctx, w: number, h: number) {
+/** Beat 5: the same sheet as a readout of what came back, each channel's share of pipeline filling in. */
+function drawReturns(ctx: Ctx, W: number, s: number) {
   const c = colors();
-  // An inset nameplate on the left, a status light, panel seams either side of the port, and vents.
-  const pw = h * 9.5;
-  rrect(
-    ctx,
-    h * 0.1,
-    h * 0.12,
-    pw,
-    h * 0.76,
-    h * 0.2,
-    "#efeee8",
-    "rgba(23,44,33,0.14)",
-    Math.max(1.5, h * 0.02),
-  );
+  const pad = 40;
+  eyebrow(ctx, "Results · 90 days", pad, 62, 26);
+  rule(ctx, pad, 92, W - pad * 2);
+  const total = 186 * span(s, 0.3, 0.8);
+  setFont(ctx, 96, 620);
+  ctx.letterSpacing = "-3px";
+  ctx.fillStyle = c.ink;
+  ctx.fillText(`$${Math.round(total)}K`, pad, 196);
+  ctx.letterSpacing = "0px";
+  setFont(ctx, 26, 480);
+  ctx.fillStyle = c.muted;
+  ctx.fillText("pipeline influenced", pad, 238);
+  RETURNS.forEach((r, i) => {
+    const y = 330 + i * 92;
+    const k = easeInOut(span(s, 0.3 + i * 0.08, 0.62 + i * 0.08));
+    setFont(ctx, 26, 520);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(r.name, pad, y);
+    setFont(ctx, 22, 600, true);
+    ctx.textAlign = "right";
+    ctx.fillText(`${Math.round(r.share * 100 * k)}%`, W - pad, y);
+    ctx.textAlign = "left";
+    rrect(ctx, pad, y + 18, W - pad * 2, 12, 6, "#efede7");
+    if (k > 0.01)
+      rrect(ctx, pad, y + 18, (W - pad * 2) * r.share * 2.4 * k, 12, 6, i === 1 ? c.primary : c.ink);
+  });
+}
+
+/** A port connector's camera-facing side: its number and channel, engraved. */
+function drawPort(ctx: Ctx, w: number, h: number, i: number) {
+  const c = colors();
+  const u = h / 100;
+  // The name sits on the upper line, clear of the plinth that hides the lower part of the back ports.
+  rrect(ctx, 2, 2, w - 4, h - 4, 10 * u, "#f6f5f1", "rgba(23,44,33,0.1)", 2);
+  setFont(ctx, 36 * u, 600);
+  ctx.letterSpacing = `${-0.6 * u}px`;
+  ctx.fillStyle = c.ink;
+  ctx.fillText(PORTS[i], 14 * u, 46 * u);
+  ctx.letterSpacing = "0px";
+  eyebrow(ctx, `Port 0${i + 1}`, 14 * u, 80 * u, 17 * u);
+}
+
+/** The plinth's top plate: an engraved border with ticks, and the gantry's rail grooves. */
+function drawTop(ctx: Ctx, w: number) {
+  const unit = w / (PLATFORM.size - 0.16);
+  const m = w * 0.03;
+  ctx.strokeStyle = "rgba(23,44,33,0.11)";
+  ctx.lineWidth = Math.max(1.5, w * 0.0018);
   ctx.beginPath();
-  ctx.arc(h * 0.5, h / 2, h * 0.12, 0, Math.PI * 2);
+  ctx.roundRect(m, m, w - m * 2, w - m * 2, w * 0.02);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(23,44,33,0.16)";
+  for (let i = 1; i < 16; i++) {
+    const x = (w * i) / 16;
+    const l = m * (i % 4 === 0 ? 0.8 : 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x, m * 0.2);
+    ctx.lineTo(x, l);
+    ctx.moveTo(m * 0.2, x);
+    ctx.lineTo(l, x);
+    ctx.stroke();
+  }
+  // Rail grooves, either side of the product, along the gantry's travel.
+  const toX = (x: number) => (x + (PLATFORM.size - 0.16) / 2) * unit;
+  const z0 = toX(GANTRY.back - 0.25);
+  const z1 = toX(GANTRY.front + 0.25);
+  for (const side of [-1, 1]) {
+    const x = toX(PRODUCT.x + side * GANTRY.half);
+    rrect(ctx, x - unit * 0.05, z0, unit * 0.1, z1 - z0, unit * 0.05, "rgba(23,44,33,0.05)", "rgba(23,44,33,0.14)", Math.max(1.5, w * 0.0016));
+  }
+}
+
+/** The plinth's front: an engraved nameplate and a row of vent slots. */
+function drawFront(ctx: Ctx, w: number, h: number) {
+  const c = colors();
+  ctx.textBaseline = "middle";
+  ctx.beginPath();
+  ctx.arc(h * 0.45, h / 2, h * 0.11, 0, Math.PI * 2);
   ctx.fillStyle = c.primary;
   ctx.fill();
-  ctx.textBaseline = "middle";
-  setFont(ctx, h * 0.38, 650);
-  ctx.letterSpacing = `${h * 0.02}px`;
+  setFont(ctx, h * 0.36, 620);
   ctx.fillStyle = c.ink;
-  ctx.fillText("Devable", h * 0.8, h / 2 + 1);
+  ctx.fillText("Devable", h * 0.75, h / 2 + 1);
   const dw = ctx.measureText("Devable").width;
-  setFont(ctx, h * 0.26, 500, true);
+  setFont(ctx, h * 0.24, 500, true);
   ctx.letterSpacing = `${h * 0.08}px`;
   ctx.fillStyle = c.muted;
-  ctx.fillText("GROWTH SYSTEM · GS-01", h * 1.1 + dw, h / 2 + 1);
+  ctx.fillText("GROWTH SYSTEM · GS-01", h * 1.05 + dw, h / 2 + 1);
   ctx.letterSpacing = "0px";
-  seams(ctx, w, h, [0.38, 0.62]);
-  vents(ctx, w - h * 0.5, h, 14);
-}
-
-/** Vertical panel seams at the given fractions of the width: a dark hairline with a light one beside it. */
-function seams(ctx: Ctx, w: number, h: number, at: number[]) {
-  for (const f of at) {
-    ctx.fillStyle = "rgba(23,44,33,0.16)";
-    ctx.fillRect(w * f, 0, Math.max(1.5, h * 0.02), h);
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillRect(
-      w * f + Math.max(1.5, h * 0.02),
-      0,
-      Math.max(1.5, h * 0.02),
-      h,
-    );
-  }
-}
-
-/** `n` machined vent slots ending at x = `right`. */
-function vents(ctx: Ctx, right: number, h: number, n: number) {
-  const c = colors();
-  ctx.globalAlpha = 0.55;
-  for (let i = 0; i < n; i++)
-    rrect(
-      ctx,
-      right - (i + 1) * h * 0.32,
-      h * 0.26,
-      h * 0.12,
-      h * 0.48,
-      h * 0.06,
-      c.line,
-    );
+  ctx.globalAlpha = 0.5;
+  for (let i = 0; i < 12; i++)
+    rrect(ctx, w - h * 0.5 - (i + 1) * h * 0.3, h * 0.28, h * 0.1, h * 0.44, h * 0.05, c.line);
   ctx.globalAlpha = 1;
 }
 
-/** The base's right side: seams either side of the port, vents, a serial plate and two screws. */
-function drawBaseSide(ctx: Ctx, w: number, h: number) {
+// ── Pieces ──
+
+function Port({ i }: { i: number }) {
+  const bandRef = useBand();
   const c = colors();
-  seams(ctx, w, h, [0.36, 0.64]);
-  vents(ctx, w * 0.3, h, 8);
-  rrect(
-    ctx,
-    w * 0.7,
-    h * 0.18,
-    h * 4.2,
-    h * 0.64,
-    h * 0.16,
-    "#efeee8",
-    "rgba(23,44,33,0.14)",
-    Math.max(1.5, h * 0.02),
-  );
-  setFont(ctx, h * 0.24, 500, true);
-  ctx.letterSpacing = `${h * 0.06}px`;
-  ctx.fillStyle = c.muted;
-  ctx.textBaseline = "middle";
-  ctx.fillText("SN 0042 · REV B", w * 0.7 + h * 0.3, h / 2 + 1);
-  ctx.letterSpacing = "0px";
-  for (const x of [w * 0.96, w * 0.04]) {
-    ctx.beginPath();
-    ctx.arc(x, h / 2, h * 0.11, 0, Math.PI * 2);
-    ctx.fillStyle = "#e4e2db";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(23,44,33,0.25)";
-    ctx.lineWidth = Math.max(1, h * 0.02);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x - h * 0.06, h / 2);
-    ctx.lineTo(x + h * 0.06, h / 2);
-    ctx.stroke();
-  }
-}
-
-/** The deck's top: an engraved hairline border inset from its edge, with registration ticks. */
-function drawDeckTop(ctx: Ctx, w: number) {
-  const m = w * 0.035;
-  ctx.strokeStyle = "rgba(23,44,33,0.12)";
-  ctx.lineWidth = Math.max(1.5, w * 0.0025);
-  ctx.beginPath();
-  ctx.roundRect(m, m, w - m * 2, w - m * 2, w * 0.08);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(23,44,33,0.18)";
-  for (let i = 1; i < 12; i++) {
-    const x = (w * i) / 12;
-    ctx.beginPath();
-    ctx.moveTo(x, m * 0.25);
-    ctx.lineTo(x, m * (i % 3 === 0 ? 0.85 : 0.6));
-    ctx.moveTo(m * 0.25, x);
-    ctx.lineTo(m * (i % 3 === 0 ? 0.85 : 0.6), x);
-    ctx.stroke();
-  }
-}
-
-/** A rounded-rectangle outline as a flat ring: `size` across, `r` corner radius, `width` thick. */
-function outline(size: number, r: number, width: number) {
-  const rect = (w: number, rr: number) => {
-    const sh = new Shape();
-    const x = -w / 2;
-    sh.moveTo(x + rr, x);
-    sh.lineTo(-x - rr, x);
-    sh.absarc(-x - rr, x + rr, rr, -Math.PI / 2, 0, false);
-    sh.lineTo(-x, -x - rr);
-    sh.absarc(-x - rr, -x - rr, rr, 0, Math.PI / 2, false);
-    sh.lineTo(x + rr, -x);
-    sh.absarc(x + rr, -x - rr, rr, Math.PI / 2, Math.PI, false);
-    sh.lineTo(x, x + rr);
-    sh.absarc(x + rr, x + rr, rr, Math.PI, Math.PI * 1.5, false);
-    return sh;
-  };
-  const outer = rect(size, r);
-  outer.holes.push(rect(size - width * 2, r - width));
-  return new ShapeGeometry(outer, 24);
-}
-const SKIRT = { h: 0.05, inset: 0.07 };
-const GLOW_LINE = outline(PLATFORM.size - 0.24, 0.43, 0.012);
-
-/**
- * The ring's front face: "PRODUCT SCAN" set along the arch's curve (centred on its crown), with a green
- * status dot leading it. Drawn on a canvas covering the arch's half-disc; the centre is the bottom middle.
- */
-function drawBeam(ctx: Ctx, w: number, h: number) {
-  const c = colors();
-  const unit = w / (RING.r * 2);
-  const cx = w / 2;
-  const cy = h;
-  const radius = (RING.r - RING.band / 2) * unit;
-  const size = RING.band * 0.4 * unit;
-  const text = "PRODUCT SCAN";
-  setFont(ctx, size, 600, true);
-  const track = size * 0.32;
-  const widths = [...text].map((ch) => ctx.measureText(ch).width + track);
-  const total = widths.reduce((a, b) => a + b, 0) - track;
-  const dot = size * 0.9;
-  // Angles run clockwise from the left; the run (dot + text) is centred on the crown.
-  let angle = -Math.PI / 2 - (total + dot) / radius / 2;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.save();
-  ctx.rotate(angle + Math.PI / 2 + (size * 0.2) / radius);
-  ctx.beginPath();
-  ctx.arc(0, -radius, size * 0.26, 0, Math.PI * 2);
-  ctx.fillStyle = c.primary;
-  ctx.fill();
-  ctx.restore();
-  angle += dot / radius;
-  ctx.fillStyle = c.ink;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  [...text].forEach((ch, i) => {
-    const a = angle + widths[i] / 2 / radius;
-    ctx.save();
-    ctx.rotate(a + Math.PI / 2);
-    ctx.fillText(ch, 0, -radius);
-    ctx.restore();
-    angle += widths[i] / radius;
-  });
-  ctx.restore();
-}
-
-/** The scanner's light: mint from the beam, fading toward the tray, with fine scan lines. */
-let curtainMap: CanvasTexture | null = null;
-function curtainTexture() {
-  if (curtainMap) return curtainMap;
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 256;
-  const ctx = canvas.getContext("2d")!;
-  const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, "rgba(25,231,110,0.55)");
-  g.addColorStop(0.5, "rgba(25,231,110,0.18)");
-  g.addColorStop(1, "rgba(25,231,110,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 256);
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  for (let y = 0; y < 256; y += 8) ctx.fillRect(0, y, 64, 2);
-  curtainMap = new CanvasTexture(canvas);
-  curtainMap.colorSpace = SRGBColorSpace;
-  curtainMap.wrapT = RepeatWrapping;
-  return curtainMap;
-}
-
-// ── Labels ──
-
-const portModuleAt = (i: number) =>
-  DIRS[i].clone().multiplyScalar((PORT_MODULE.from + PORT_MODULE.reach) / 2);
-/** The part of a port module that stands clear of the base, where its label goes (module-local). */
-const PLATE = {
-  len: PORT_MODULE.reach - PLATFORM.size / 2 - 0.12,
-  at:
-    (PORT_MODULE.reach + PLATFORM.size / 2) / 2 -
-    (PORT_MODULE.from + PORT_MODULE.reach) / 2,
-};
-
-function PortPlate({
-  index,
-  along,
-}: {
-  index: number;
-  along: boolean;
-  len?: number;
-}) {
-  const len = PLATE.len + 0.1;
-  const d = DIRS[index];
-  const map = useStatic(
-    len - 0.1,
+  const dir = DIRS[i];
+  const along = dir.x !== 0;
+  const len = PORT_MODULE.reach - PORT_MODULE.from;
+  const centre = dir.clone().multiplyScalar((PORT_MODULE.from + PORT_MODULE.reach) / 2);
+  const face = useStatic(
+    len - 0.12,
     PORT_MODULE.h - 0.1,
-    useCallback(
-      (ctx: Ctx, w: number, h: number) => drawPlate(ctx, w, h, index),
-      [index],
-    ),
+    useCallback((ctx: Ctx, w: number, h: number) => drawPort(ctx, w, h, i), [i]),
+    1.6,
   );
+  const led = useRef<MeshBasicMaterial>(null);
+  useFrame(() => {
+    const x = bandRef.current;
+    const lit = x > 4.5 || storyOf(x, 0) >= placeAt(i);
+    led.current?.color.set(lit ? c.primary : c.line);
+  });
+  // The printed side faces the camera: +z for connectors along x, +x for those along z.
   return (
-    <Print
-      w={len - 0.1}
-      h={PORT_MODULE.h - 0.1}
-      map={map}
-      position={
-        along
-          ? [d.x * PLATE.at, PORT_MODULE.h / 2, PORT_MODULE.w / 2 + 0.003]
-          : [PORT_MODULE.w / 2 + 0.003, PORT_MODULE.h / 2, d.z * PLATE.at]
-      }
-      rotation-y={along ? 0 : Math.PI / 2}
-    />
+    <group position={centre}>
+      <Shadow w={along ? len + 0.5 : 0.9} d={along ? 0.9 : len + 0.5} opacity={0.07} position-y={0.002} />
+      <Solid
+        geometry={block(along ? len : PORT_MODULE.w, along ? PORT_MODULE.w : len, PORT_MODULE.h, 0.04)}
+        color="#f6f5f1"
+      />
+      <Print
+        w={len - 0.12}
+        h={PORT_MODULE.h - 0.1}
+        map={face}
+        position={
+          along
+            ? [0, PORT_MODULE.h / 2, PORT_MODULE.w / 2 + 0.003]
+            : [PORT_MODULE.w / 2 + 0.003, PORT_MODULE.h / 2, 0]
+        }
+        rotation-y={along ? 0 : Math.PI / 2}
+      />
+      {/* A flush status strip on top, toward the outer end: grey until its channel is routed. */}
+      <mesh
+        position={[dir.x * (len / 2 - 0.2), PORT_MODULE.h + 0.002, dir.z * (len / 2 - 0.2)]}
+        rotation-x={-Math.PI / 2}
+        rotation-z={along ? 0 : Math.PI / 2}
+      >
+        <planeGeometry args={[0.16, 0.04]} />
+        <meshBasicMaterial ref={led} color={c.line} toneMapped={false} />
+      </mesh>
+    </group>
   );
 }
 
 export function Hub() {
   const bandRef = useBand();
   const c = colors();
-  const product = useRef<Group>(null);
-  const shadow = useRef<Mesh>(null);
   const gantry = useRef<Group>(null);
-  const curtain = useRef<MeshBasicMaterial>(null);
-  const lamps = useRef<(Group | null)[]>([]);
-  const bars = useRef<(Group | null)[]>([]);
-  const app = useStatic(
-    DEVICE.w - 0.12,
-    DEVICE.h - 0.12,
-    useCallback((ctx: Ctx, w: number, h: number) => drawApp(ctx, w, h), []),
+  const plane = useRef<MeshBasicMaterial>(null);
+  const line = useRef<MeshBasicMaterial>(null);
+  const renderApp = useCallback(
+    (ctx: Ctx, w: number, h: number, v: number) => drawApp(ctx, w, h, v),
+    [],
   );
-  const front = useStatic(
-    PLATFORM.size - 0.9,
-    (PLATFORM.base - SKIRT.h) * 0.8,
-    useCallback(
-      (ctx: Ctx, w: number, h: number) => drawBaseFront(ctx, w, h),
-      [],
-    ),
-  );
-  const side = useStatic(
-    PLATFORM.size - 0.9,
-    (PLATFORM.base - SKIRT.h) * 0.8,
-    useCallback(
-      (ctx: Ctx, w: number, h: number) => drawBaseSide(ctx, w, h),
-      [],
-    ),
-  );
-  const deckTop = useStatic(
-    PLATFORM.deck - 0.1,
-    PLATFORM.deck - 0.1,
-    useCallback((ctx: Ctx, w: number) => drawDeckTop(ctx, w), []),
+  const [app, setApp] = useLive(PRODUCT.w - 0.08, PRODUCT.h - 0.08, renderApp, 1.4);
+  // The brief's value: its story (0..1), plus 2 once it shows beat 5's returns.
+  const renderBrief = useCallback((ctx: Ctx, w: number, h: number, v: number) => {
+    const k = w / 720;
+    ctx.save();
+    ctx.scale(k, k);
+    rrect(ctx, 0, 0, 720, h / k, 18, "#ffffff");
+    if (v >= 2) drawReturns(ctx, 720, v - 2);
+    else drawBrief(ctx, 720, v);
+    ctx.restore();
+  }, []);
+  const [brief, setBrief] = useLive(BRIEF.w - 0.05, BRIEF.h - 0.05, renderBrief, 1.3);
+  const top = useStatic(
+    PLATFORM.size - 0.16,
+    PLATFORM.size - 0.16,
+    useCallback((ctx: Ctx, w: number) => drawTop(ctx, w), []),
     0.8,
   );
-  const tray = useStatic(
-    TRAY.size - 0.1,
-    TRAY.size - 0.1,
-    useCallback((ctx: Ctx, w: number, h: number) => drawTray(ctx, w, h), []),
-  );
-  const beam = useStatic(
-    RING.r * 2,
-    RING.r,
-    useCallback((ctx: Ctx, w: number, h: number) => drawBeam(ctx, w, h), []),
+  const front = useStatic(
+    PLATFORM.size - 0.8,
+    BODY * 0.72,
+    useCallback((ctx: Ctx, w: number, h: number) => drawFront(ctx, w, h), []),
+    1.4,
   );
 
-  useFrame((state) => {
+  useFrame(() => {
     const x = bandRef.current;
     const s = storyOf(x, 0);
-    const t = state.clock.elapsedTime;
-    // The product is lowered onto the tray, swaying slightly while it hangs.
-    const d = drop(s);
-    if (product.current) {
-      product.current.position.y = (1 - d) * DROP;
-      product.current.rotation.y = (1 - d) * Math.sin(t * 1.3) * 0.06;
-    }
-    if (shadow.current) {
-      shadow.current.scale.set(2.2 - d * 0.5, 1.4 - d * 0.4, 1);
-      (shadow.current.material as MeshBasicMaterial).opacity = 0.06 + d * 0.12;
-    }
-    // The scanner glides to and fro on its own; the curtain shimmers and its scan lines drift.
-    const gz = Math.sin((t / RING.period) * Math.PI * 2) * RING.travel;
-    if (gantry.current) gantry.current.position.z = gz;
-    if (curtain.current) {
-      curtain.current.opacity = 0.62 + 0.12 * Math.sin(t * 2.3);
-      if (curtain.current.map) curtain.current.map.offset.y = -t * 0.12;
-    }
-    lamps.current.forEach((g, i) => {
-      if (!g) return;
-      const k = portLit(s, i);
-      g.visible = k > 0;
-      g.scale.setScalar(pop(k));
-    });
-    // The outcome columns rise at the last beat, shortest first.
-    const out = storyOf(x, 5);
-    BARS.forEach((bar, i) => {
-      const g = bars.current[i];
-      if (!g) return;
-      const k = easeOut(span(out, 0.05 + i * 0.12, 0.5 + i * 0.12));
-      g.visible = k > 0.001;
-      g.scale.y = Math.max(0.001, k * bar.h);
-    });
+    const q = Math.round(s * 90) / 90;
+    setApp(q);
+    setBrief(x > 4.5 ? 2 + Math.round(storyOf(x, BEATS.length - 1) * 90) / 90 : q);
+    // The gantry sweeps back to front over the product, then returns to rest at the back.
+    const out = easeInOut(sweep(s));
+    const home = easeInOut(span(s, 0.54, 0.66));
+    const z = GANTRY.back + (GANTRY.front - GANTRY.back) * out * (1 - home);
+    if (gantry.current) gantry.current.position.z = z;
+    const scanning = span(s, 0.08, 0.12) * (1 - span(s, 0.5, 0.54));
+    if (plane.current) plane.current.opacity = 0.09 * scanning;
+    if (line.current) line.current.opacity = scanning;
   });
 
   return (
     <group>
-      <Shadow
-        w={PLATFORM.size + 1.8}
-        d={PLATFORM.size + 1.8}
-        opacity={0.09}
-        position-y={0.001}
-      />
-      {/* Two-tier plinth. The base stands on a recessed skirt (a shadow gap at the floor), with seamed and
-          vented sides, a nameplate, and a soft light line round its top; a gasket line separates it from the
-          deck, whose top carries an engraved border. */}
+      <Shadow w={PLATFORM.size + 1.6} d={PLATFORM.size + 1.6} opacity={0.08} position-y={0.001} />
+      {/* Plinth: a shadow-gap skirt, the body with its engraved front, and a top plate. */}
+      <Solid geometry={block(PLATFORM.size - 0.1, PLATFORM.size - 0.1, SKIRT, 0.1)} color="#dcd9d0" />
       <Solid
-        geometry={block(
-          PLATFORM.size - SKIRT.inset * 2,
-          PLATFORM.size - SKIRT.inset * 2,
-          SKIRT.h,
-          0.5,
-        )}
-        color="#d9d6cd"
-      />
-      <Solid
-        geometry={block(
-          PLATFORM.size,
-          PLATFORM.size,
-          PLATFORM.base - SKIRT.h,
-          0.55,
-        )}
+        geometry={block(PLATFORM.size, PLATFORM.size, BODY, 0.12)}
         color="#f1efe9"
-        position-y={SKIRT.h}
+        position-y={SKIRT}
       />
       <Print
-        w={PLATFORM.size - 0.9}
-        h={(PLATFORM.base - SKIRT.h) * 0.8}
+        w={PLATFORM.size - 0.8}
+        h={BODY * 0.72}
         map={front}
-        position={[0, (PLATFORM.base + SKIRT.h) / 2, PLATFORM.size / 2 + 0.003]}
-      />
-      <Print
-        w={PLATFORM.size - 0.9}
-        h={(PLATFORM.base - SKIRT.h) * 0.8}
-        map={side}
-        position={[PLATFORM.size / 2 + 0.003, (PLATFORM.base + SKIRT.h) / 2, 0]}
-        rotation-y={Math.PI / 2}
-      />
-      <mesh
-        geometry={GLOW_LINE}
-        rotation-x={-Math.PI / 2}
-        position-y={PLATFORM.base + 0.002}
-      >
-        <meshBasicMaterial
-          color={mix(c.primary, "#ffffff", 0.35)}
-          toneMapped={false}
-        />
-      </mesh>
-      <Solid
-        geometry={block(
-          PLATFORM.deck + 0.05,
-          PLATFORM.deck + 0.05,
-          0.022,
-          0.47,
-        )}
-        color="#d9d6cd"
-        position-y={PLATFORM.base}
+        position={[0, SKIRT + BODY / 2, PLATFORM.size / 2 + 0.003]}
       />
       <Solid
-        geometry={block(
-          PLATFORM.deck,
-          PLATFORM.deck,
-          PLATFORM.h - PLATFORM.base - 0.022,
-          0.45,
-        )}
-        position-y={PLATFORM.base + 0.022}
+        geometry={block(PLATFORM.size - 0.16, PLATFORM.size - 0.16, TOP - SKIRT - BODY, 0.1)}
+        color="#fbfaf7"
+        position-y={SKIRT + BODY}
       />
       <Print
-        w={PLATFORM.deck - 0.1}
-        h={PLATFORM.deck - 0.1}
-        map={deckTop}
+        w={PLATFORM.size - 0.16}
+        h={PLATFORM.size - 0.16}
+        map={top}
         position={[0, TOP + 0.002, 0]}
         rotation-x={-Math.PI / 2}
       />
-      <Solid
-        geometry={block(TRAY.size, TRAY.size, TRAY.h, 0.32)}
-        color={mix(c.primary, "#ffffff", 0.9)}
-        position-y={TOP}
-      />
-      <Print
-        w={TRAY.size - 0.1}
-        h={TRAY.size - 0.1}
-        map={tray}
-        position={[0, TOP + TRAY.h + 0.002, 0]}
-        rotation-x={-Math.PI / 2}
-      />
-      {[-1, 1].flatMap((a) =>
-        [-1, 1].map((b) => (
-          <Solid
-            key={`${a}${b}`}
-            geometry={cylinder(0.055, 0.025)}
-            color="#eeeeea"
-            position={[a * 1.78, TOP, b * 1.78]}
-          />
-        )),
-      )}
 
-      {/* Port modules: docked on each edge, printed with their channel, a lamp, and a coupling for the pipe. */}
-      {DIRS.map((dir, i) => {
-        const along = dir.x !== 0;
-        const len = PORT_MODULE.reach - PORT_MODULE.from;
-        const centre = portModuleAt(i);
-        // The printed side faces the camera: +z for modules running along x, +x for those along z.
-        return (
-          <group key={i} position={centre}>
-            <Solid
-              geometry={block(
-                along ? len : PORT_MODULE.w,
-                along ? PORT_MODULE.w : len,
-                PORT_MODULE.h,
-                0.1,
-              )}
-            />
-            <PortPlate index={i} along={along} len={len} />
-            <group
-              position={[
-                dir.x * (len / 2 - 0.2),
-                PORT_MODULE.h,
-                dir.z * (len / 2 - 0.2),
-              ]}
-            >
-              <Solid geometry={cylinder(0.12, 0.03)} color="#eeeeea" />
-              <group
-                ref={(g) => void (lamps.current[i] = g)}
-                visible={false}
-                position-y={0.03}
-              >
-                <Solid geometry={cylinder(0.085, 0.045)} color={c.primary} />
-              </group>
-            </group>
-          </group>
-        );
-      })}
-
-      {/* Your product, lowered onto the tray. */}
-      <group ref={product}>
-        <Shadow ref={shadow} w={1} d={1} position-y={TOP + TRAY.h + 0.002} />
-        <group position-y={TOP + TRAY.h}>
-          <Solid geometry={block(0.9, 0.46, 0.06, 0.2)} />
-          <Solid
-            geometry={panel(0.18, DEVICE.lift + 0.2, 0.08, 0.06)}
-            position-z={-0.07}
-          />
-          <Solid
-            geometry={panel(DEVICE.w, DEVICE.h, DEVICE.t, 0.14)}
-            position-y={DEVICE.lift}
-          />
-          <Print
-            w={DEVICE.w - 0.12}
-            h={DEVICE.h - 0.12}
-            map={app}
-            position={[0, DEVICE.lift + DEVICE.h / 2, DEVICE.t / 2 + 0.003]}
-          />
-        </group>
-      </group>
-
-      {/* The scanner's rails, either side of the tray, with a mint inlay. */}
-      {[-1, 1].map((a) => (
-        <group key={a} position={[a * RAIL.x, TOP, 0]}>
-          <Solid
-            geometry={block(RAIL.w, RAIL.len, RAIL.h, 0.08)}
-            color="#e6e4dd"
-          />
-          <mesh position-y={RAIL.h + 0.002} rotation-x={-Math.PI / 2}>
-            <planeGeometry args={[0.035, RAIL.len - 0.24]} />
-            <meshBasicMaterial color={c.primary} toneMapped={false} />
-          </mesh>
-        </group>
+      {DIRS.map((_, i) => (
+        <Port key={i} i={i} />
       ))}
 
-      {/* The scanner ring: deep-green carriages, the arch with its glowing lip, crown plate and indicator
-          button, and the light curtain it casts. */}
-      <group ref={gantry}>
-        {[-1, 1].map((a) => (
-          <Solid
-            key={a}
-            geometry={block(0.42, RING.depth + 0.2, RING.lift, 0.08)}
-            color={FOREST}
-            position={[a * RAIL.x, TOP, 0]}
-          />
+      {/* Your product. */}
+      <group position={[PRODUCT.x, TOP, PRODUCT.z]}>
+        <Shadow w={1.5} d={0.8} opacity={0.1} position-y={0.002} />
+        <Solid geometry={block(0.62, 0.3, 0.025, 0.06)} />
+        <Solid geometry={panel(0.07, PRODUCT.lift + 0.15, 0.05, 0.02)} position-z={-0.05} />
+        <Solid geometry={panel(PRODUCT.w, PRODUCT.h, 0.06, 0.05)} position-y={PRODUCT.lift} />
+        <Print
+          w={PRODUCT.w - 0.08}
+          h={PRODUCT.h - 0.08}
+          map={app}
+          position={[0, PRODUCT.lift + PRODUCT.h / 2, 0.033]}
+        />
+      </group>
+
+      {/* The gantry: two posts on rails, a bar, and the scan plane hanging from it with a crisp line where it meets
+          the plate. */}
+      <group ref={gantry} position={[PRODUCT.x, TOP, GANTRY.back]}>
+        {[-1, 1].map((side) => (
+          <group key={side} position-x={side * GANTRY.half}>
+            <Solid geometry={block(0.14, 0.2, 0.03, 0.02)} color="#e9e7e0" />
+            <Solid geometry={block(0.07, 0.1, GANTRY.h, 0.015)} position-y={0.03} />
+          </group>
         ))}
-        <group position-y={TOP + RING.lift}>
-          <Solid geometry={ARCH} color="#f3f2ed" />
-          <mesh geometry={LIP}>
-            <meshBasicMaterial color={c.primary} toneMapped={false} />
-          </mesh>
-          <Print
-            w={RING.r * 2}
-            h={RING.r}
-            map={beam}
-            position={[0, RING.r / 2, RING.depth / 2 + 0.004]}
+        <Solid
+          geometry={block(GANTRY.half * 2 + 0.16, 0.12, 0.08, 0.02)}
+          position-y={GANTRY.h + 0.02}
+        />
+        <mesh position-y={(GANTRY.h + 0.02) / 2} renderOrder={3}>
+          <planeGeometry args={[GANTRY.half * 2 - 0.1, GANTRY.h - 0.02]} />
+          <meshBasicMaterial
+            ref={plane}
+            color={c.primary}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            side={DoubleSide}
+            toneMapped={false}
           />
-          {/* Indicator button, flush on the ring's front face: a bezel and a domed orange cap. */}
-          <group
-            position={[
-              Math.cos(Math.PI / 3.2) * (RING.r - RING.band / 2),
-              Math.sin(Math.PI / 3.2) * (RING.r - RING.band / 2),
-              RING.depth / 2,
-            ]}
-            rotation-x={Math.PI / 2}
-          >
-            <Solid geometry={cylinder(0.09, 0.025)} color="#e6e4dd" />
-            <Solid
-              geometry={cylinder(0.065, 0.05)}
-              color={c.secondary}
-              position-y={0.012}
-            />
-          </group>
-          <mesh renderOrder={3}>
-            <circleGeometry
-              args={[RING.r - RING.band - 0.01, 72, 0, Math.PI]}
-            />
-            <meshBasicMaterial
-              ref={curtain}
-              map={curtainTexture()}
-              transparent
-              opacity={0.6}
-              depthWrite={false}
-              side={DoubleSide}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
+        </mesh>
+        <mesh position-y={0.004} rotation-x={-Math.PI / 2} renderOrder={3}>
+          <planeGeometry args={[GANTRY.half * 2 - 0.1, 0.014]} />
+          <meshBasicMaterial ref={line} color={c.deep} transparent opacity={0} toneMapped={false} />
+        </mesh>
       </group>
 
-      {/* Beat 5: the outcome columns. */}
-      {BARS.map((bar, i) => (
-        <group
-          key={bar.name}
-          ref={(g) => void (bars.current[i] = g)}
-          position={[bar.at[0], TOP, bar.at[1]]}
-          visible={false}
-        >
-          <Solid
-            geometry={block(0.56, 0.56, 1, 0.14)}
-            color={"you" in bar ? c.mint : "#ffffff"}
-          />
-        </group>
-      ))}
+      {/* The brief. */}
+      <Sheet w={BRIEF.w} h={BRIEF.h} map={brief} position={[BRIEF.x, TOP, BRIEF.z]} />
     </group>
   );
 }
 
-// ─────────────────────────────── Pipes ───────────────────────────────
+// ─────────────────────────────── Traces ───────────────────────────────
 
-/**
- * Pipes from the hub's ports into the back of each station. Each one's fibre lights from the hub outward
- * as the camera first travels to its station; pulses keep flowing out, and reverse home at the last beat.
- */
-/** The four channels from the hub to the stations: always lit, light flowing outward while in view. */
+/** The four traces from the hub's ports into each station. */
 export function Pipes() {
   return (
     <group>
@@ -862,17 +535,13 @@ export function Pipes() {
 
 // ─────────────────────────────── Beat 5: every station named ───────────────────────────────
 
-/** Each station's name, pinned just above its tallest piece. */
 /** Each station's name for the overview, pinned to a point with clear sky above it (the pill sits above). */
 const STATION_LABELS: [string, string, [number, number, number]][] = [
-  ["01", "Technical Content", [AT.content.x - 0.2, 2.5, AT.content.z - 1.7]],
+  // Below its station: above it, the tag would run into the headline.
+  ["01", "Technical Content", [AT.content.x + 0.6, 0, AT.content.z + 1.45]],
   ["02", "Search & AI Visibility", [AT.search.x, 3.35, AT.search.z]],
-  ["03", "Reddit", [AT.reddit.x, 3.45, AT.reddit.z]],
-  [
-    "04",
-    "Creator Distribution",
-    [AT.creators.x - 1.8, 1.9, AT.creators.z + 0.8],
-  ],
+  ["03", "Reddit", [AT.reddit.x + 0.1, 2.75, AT.reddit.z]],
+  ["04", "Creator Distribution", [AT.creators.x - 1.8, 1.9, AT.creators.z + 0.8]],
 ];
 export const OVERVIEW_LABELS: LabelSpec[] = STATION_LABELS.map(
   ([n, name, p], i): LabelSpec => ({
@@ -880,6 +549,7 @@ export const OVERVIEW_LABELS: LabelSpec[] = STATION_LABELS.map(
     at: p,
     n,
     text: name,
+    side: i === 0 ? "down" : "up",
     beat: 5,
     from: 0.1 + i * 0.08,
   }),

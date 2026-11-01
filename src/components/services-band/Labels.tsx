@@ -34,10 +34,15 @@ export default function Labels() {
   );
 }
 
-/** A station's name: a white pill with a numbered disc, on a short hairline leader down to a dot on the station. */
+/**
+ * A station's name: a white pill with a numbered disc, on a short hairline leader to a dot on the station (the
+ * pill above the dot, or below it for tags that hang down).
+ */
 function Tag({ spec }: { spec: LabelSpec }) {
   return (
-    <span className="flex flex-col items-center max-sm:hidden">
+    <span
+      className={`flex items-center max-sm:hidden ${spec.side === "down" ? "flex-col-reverse" : "flex-col"}`}
+    >
       <span className="flex items-center gap-2 rounded-full border border-line bg-white py-[0.3rem] pr-4 pl-[0.3rem] shadow-[0_10px_28px_-14px_rgb(23_44_33/0.45)]">
         {spec.n && (
           <span className="grid size-[1.6rem] place-items-center rounded-full bg-ink font-mono text-[0.68rem] text-primary">

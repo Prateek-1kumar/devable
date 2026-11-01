@@ -1,20 +1,20 @@
 import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, MeshBasicMaterial } from "three";
+import type { Group } from "three";
 import { span, storyOf } from "../content";
 import { Fibre, LOCAL } from "../fibre";
 import {
   Print,
   Shadow,
+  Sheet,
   Solid,
   block,
   colors,
-  easeBack,
-  panel,
-  paragraph,
+  drawMark,
+  eyebrow,
   rrect,
   setFont,
-  shadowTexture,
+  tick,
   useBand,
   useLive,
   useStatic,
@@ -22,9 +22,9 @@ import {
 import { AT } from "../layout";
 
 // Beat 2, Search & AI Visibility, told as a short sequence. ① A developer types a query; the results are dealt
-// into the stack one by one, yours last at #4. ② A beat later yours lifts out, glides up past the others (which
-// part and ease down a place as it passes) and settles at #1 with a soft glow pulse, its live badge counting
-// down. ③ A fibre carries the citation to an AI Overview, which springs up on its stand citing you.
+// into the rack one by one, yours last at #4. ② Yours slides out and glides up past the others (each eases down a
+// place as it passes) and settles at #1, its live badge counting down. ③ A trace carries it to the AI engines,
+// where it goes from mentioned, to cited, to recommended, engine by engine.
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -38,7 +38,7 @@ const YOURS = {
   title: "Your Product: parse any doc",
   url: "yourproduct.dev",
 };
-const CARD = { w: 3.8, d: 0.92, h: 0.46, step: 0.62, base: 0.2, r: 0.22 };
+const CARD = { w: 3.8, d: 0.92, h: 0.46, step: 0.62, base: 0.2, r: 0.05 };
 const rankY = (r: number) => CARD.base + (3 - r) * CARD.step;
 const FACE = { w: CARD.w - 0.14, h: CARD.h - 0.06, x: 0 };
 const SHARP = 2.2;
@@ -53,7 +53,16 @@ const BAR = {
 };
 const POST_H = BAR.y - BASE.h;
 const slotY = (r: number) => rankY(r) + CARD.h / 2;
-const AI = { x: -3.5, z: 2.0, w: 2.7, h: 1.72, lift: 0.34 };
+const AI = { x: -3.55, z: 2.0, w: 3.0, h: 1.9 };
+/** The engines that answer, and when each confirms a step (mentioned, cited, recommended). */
+const ENGINES = [
+  { mark: "chatgpt", name: "ChatGPT" },
+  { mark: "perplexity", name: "Perplexity" },
+  { mark: "claude", name: "Claude" },
+  { mark: "google", name: "Google AI" },
+] as const;
+const STEPS = ["Mentioned", "Cited", "Recommended"];
+const confirmed = (s: number, e: number, k: number) => s >= 0.68 + e * 0.055 + k * 0.03;
 
 const smoother = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 /** Your result's rank as a continuous number: 3 (fourth) to 0 (first). */
@@ -62,7 +71,7 @@ const climb = (s: number) => smoother(span(s, 0.42, 0.78));
 const dealt = (s: number, i: number) =>
   smoother(span(s, 0.12 + 0.07 * i, 0.26 + 0.07 * i));
 const rankOf = (s: number) => 3 - 3 * climb(s);
-const unfold = (s: number) => span(s, 0.84, 1);
+
 
 /**
  * A drawer's front, as one clean results row on an inset panel: favicon (or your live rank badge), a light
@@ -246,72 +255,59 @@ function drawQuery(ctx: Ctx, w: number, h: number, typed: number) {
   ctx.stroke();
 }
 
-function drawOverview(ctx: Ctx, w: number, h: number) {
+/** The AI engines' answers for the same query: per engine, whether it mentions, cites and recommends you. */
+function drawAnswers(ctx: Ctx, w: number, h: number, s: number) {
   const c = colors();
   const k = w / 900;
   ctx.save();
   ctx.scale(k, k);
   const W = 900;
   const H = h / k;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, W, H, 30);
-  ctx.clip();
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, W, H);
-  // A soft mint wash across the top, like an AI surface.
-  const g = ctx.createLinearGradient(0, 0, W, 0);
-  g.addColorStop(0, "rgba(25,231,110,0.16)");
-  g.addColorStop(0.6, "rgba(25,231,110,0.05)");
-  g.addColorStop(1, "rgba(217,101,67,0.08)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, 112);
-  // Sparkle and label.
-  ctx.fillStyle = c.secondary;
-  const sx = 60;
-  const sy = 58;
-  ctx.beginPath();
-  ctx.moveTo(sx, sy - 22);
-  ctx.quadraticCurveTo(sx, sy, sx + 22, sy);
-  ctx.quadraticCurveTo(sx, sy, sx, sy + 22);
-  ctx.quadraticCurveTo(sx, sy, sx - 22, sy);
-  ctx.quadraticCurveTo(sx, sy, sx, sy - 22);
-  ctx.fill();
-  setFont(ctx, 34, 620);
+  rrect(ctx, 0, 0, W, H, 18, "#ffffff");
+  const pad = 40;
+  setFont(ctx, 32, 620);
+  ctx.letterSpacing = "-0.6px";
   ctx.fillStyle = c.ink;
-  ctx.fillText("AI Overview", 98, 70);
-  const end = paragraph(
-    ctx,
-    [
-      "For complex PDFs, developers most often recommend ",
-      "Your Product",
-      ".¹",
-    ],
-    48,
-    182,
-    W - 96,
-    46,
-    62,
-  );
-  // Sources.
-  const y = end + 56;
-  setFont(ctx, 18, 500, true);
-  ctx.letterSpacing = "2px";
-  ctx.fillStyle = c.muted;
-  ctx.fillText("SOURCES", 48, y);
+  ctx.fillText("AI answers", pad, 62);
   ctx.letterSpacing = "0px";
-  rrect(ctx, 48, y + 22, 300, 58, 29, c.lightGreenSoft);
-  rrect(ctx, 62, y + 35, 32, 32, 16, c.primary);
-  setFont(ctx, 18, 700, true);
-  ctx.fillStyle = c.ink;
-  ctx.textAlign = "center";
-  ctx.fillText("1", 78, y + 58);
-  ctx.textAlign = "left";
-  setFont(ctx, 25, 560);
-  ctx.fillText("yourproduct.dev", 106, y + 60);
-  rrect(ctx, 364, y + 22, 210, 58, 29, undefined, c.line, 2);
-  setFont(ctx, 25, 500);
+  setFont(ctx, 20, 500, true);
   ctx.fillStyle = c.muted;
-  ctx.fillText("listicle.io", 392, y + 60);
+  ctx.textAlign = "right";
+  ctx.fillText(`“${QUERY}”`, W - pad, 60);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(23,44,33,0.08)";
+  ctx.fillRect(pad, 90, W - pad * 2, 2);
+  const cols = [470, 618, 778];
+  STEPS.forEach((step, j) => {
+    setFont(ctx, 17, 500, true);
+    ctx.letterSpacing = "2px";
+    ctx.fillStyle = c.muted;
+    ctx.textAlign = "center";
+    ctx.fillText(step.toUpperCase(), cols[j], 128);
+    ctx.textAlign = "left";
+    ctx.letterSpacing = "0px";
+  });
+  ENGINES.forEach((e, i) => {
+    const y = 190 + i * 84;
+    const all = STEPS.every((_, j) => confirmed(s, i, j));
+    if (all) rrect(ctx, pad - 14, y - 38, W - pad * 2 + 28, 74, 14, "#f2f9f5");
+    drawMark(ctx, e.mark, pad + 20, y, 38);
+    setFont(ctx, 29, 560);
+    ctx.fillStyle = c.ink;
+    ctx.fillText(e.name, pad + 58, y + 10);
+    STEPS.forEach((_, j) => tick(ctx, cols[j], y, 17, confirmed(s, i, j)));
+  });
+  // Where the answers point: your page, once every engine cites it.
+  const done = confirmed(s, ENGINES.length - 1, 1);
+  const fy = H - 46;
+  setFont(ctx, 22, 560);
+  const src = "yourproduct.dev/blog";
+  const cw = ctx.measureText(src).width + 92;
+  rrect(ctx, pad, fy - 30, cw, 46, 23, done ? c.lightGreenSoft : "#f4f2eb");
+  eyebrow(ctx, "Source", pad + 18, fy, 15, done ? c.deep : c.muted);
+  ctx.fillStyle = done ? c.ink : c.muted;
+  setFont(ctx, 22, 560);
+  ctx.fillText(src, pad + 92, fy);
   ctx.restore();
 }
 
@@ -335,11 +331,11 @@ function ResultFace({ r }: { r: { title: string; url: string } }) {
 }
 
 const R = LOCAL.r;
-/** From the plinth's left side, across the floor, into the back of the AI Overview's stand. */
+/** From the rack's left side, across the floor, into the foot of the AI answers sheet. */
 const CITE: [number, number, number][] = [
   [-CARD.w / 2 - 0.1, R, -0.15],
   [AI.x, R, -0.15],
-  [AI.x, R, AI.z - 0.3],
+  [AI.x, R, AI.z],
 ];
 
 export function SearchStation() {
@@ -370,18 +366,17 @@ export function SearchStation() {
     ),
   );
   const led = useRef<Group>(null);
-  const overview = useStatic(
-    AI.w - 0.14,
-    AI.h - 0.14,
+  const [answers, setAnswers] = useLive(
+    AI.w - 0.05,
+    AI.h - 0.05,
     useCallback(
-      (ctx: Ctx, w: number, h: number) => drawOverview(ctx, w, h),
+      (ctx: Ctx, w: number, h: number, v: number) => drawAnswers(ctx, w, h, v),
       [],
     ),
+    1.3,
   );
   const cards = useRef<(Group | null)[]>([]);
   const yours = useRef<Group>(null);
-  const glow = useRef<MeshBasicMaterial>(null);
-  const fold = useRef<Group>(null);
 
   useFrame((state) => {
     const s = storyOf(bandRef.current, 2);
@@ -402,25 +397,12 @@ export function SearchStation() {
       led.current.visible = mine > 0;
       led.current.position.y = slotY(p);
     }
+    // Yours slides out of the rack a little to pass the others, then back in at its new place.
     if (yours.current) {
-      const arc = Math.sin(Math.PI * k);
+      const out = Math.sin(Math.PI * k);
       yours.current.visible = mine > 0;
-      yours.current.position.set(
-        0.1 * arc,
-        rankY(p) + 0.05 * arc,
-        0.85 * arc + (1 - mine) * 1.8,
-      );
-      yours.current.rotation.x = -0.05 * arc;
+      yours.current.position.set(0, rankY(p), 0.5 * out + (1 - mine) * 1.8);
     }
-    // The glow breathes while it climbs and pulses once as it lands.
-    const landed = Math.sin(Math.PI * span(s, 0.74, 0.9));
-    if (glow.current)
-      glow.current.opacity =
-        mine *
-        (0.16 +
-          0.22 * Math.sin(Math.PI * k) +
-          0.32 * landed +
-          0.05 * Math.sin(t * 2));
     RESULTS.forEach((_, i) => {
       const g = cards.current[i];
       if (!g) return;
@@ -432,11 +414,7 @@ export function SearchStation() {
         (1 - d) * 1.8,
       );
     });
-    // The overview springs upright on its stand once the citation arrives.
-    const u = unfold(s);
-    if (fold.current)
-      fold.current.rotation.x =
-        (-Math.PI / 2) * (1 - (u <= 0 ? 0 : easeBack(u)));
+    setAnswers(Math.round(s * 120) / 120);
   });
 
   return (
@@ -445,7 +423,7 @@ export function SearchStation() {
       {/* The rack: an engraved base, two uprights (ranks on the left, status lights on the right), the search
           bar as its lid. */}
       <Solid
-        geometry={block(CARD.w + 0.9, CARD.d + 0.5, BASE.h, 0.3)}
+        geometry={block(CARD.w + 0.9, CARD.d + 0.5, BASE.h, 0.08)}
         color="#f6f5f1"
       />
       <Print
@@ -457,7 +435,7 @@ export function SearchStation() {
       {[-1, 1].map((side) => (
         <Solid
           key={side}
-          geometry={block(POST.w, POST.d, POST_H, 0.07)}
+          geometry={block(POST.w, POST.d, POST_H, 0.03)}
           position={[side * POST.x, BASE.h, 0]}
         />
       ))}
@@ -484,7 +462,7 @@ export function SearchStation() {
         </mesh>
       </group>
       <group position-y={BAR.y}>
-        <Solid geometry={block(BAR.w, BAR.d, BAR.h, 0.45)} />
+        <Solid geometry={block(BAR.w, BAR.d, BAR.h, 0.08)} />
         <Print
           w={CARD.w + 0.1}
           h={0.38}
@@ -503,27 +481,7 @@ export function SearchStation() {
         </group>
       ))}
       <group ref={yours} position-y={rankY(3)}>
-        <mesh
-          rotation-x={-Math.PI / 2}
-          position-y={-0.01}
-          scale={[CARD.w + 1.0, CARD.d + 0.9, 1]}
-          renderOrder={-1}
-        >
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial
-            ref={glow}
-            color={c.primary}
-            alphaMap={shadowTexture()}
-            transparent
-            opacity={0.25}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-        <Solid
-          geometry={block(CARD.w, CARD.d, CARD.h, CARD.r)}
-          color={c.mint}
-        />
+        <Solid geometry={block(CARD.w, CARD.d, CARD.h, CARD.r)} />
         <mesh
           position={[0, CARD.h + 0.002, CARD.d / 2 - 0.08]}
           rotation-x={-Math.PI / 2}
@@ -539,25 +497,9 @@ export function SearchStation() {
         />
       </group>
 
-      {/* The citation travels by fibre to the AI Overview, which springs up on its stand. */}
+      {/* A trace carries your page to the AI engines' answers. */}
       <Fibre route={CITE} />
-      <group position={[AI.x, 0, AI.z]}>
-        <Shadow w={3.4} d={1.3} />
-        <Solid geometry={block(1.3, 0.55, 0.06, 0.24)} />
-        <Solid
-          geometry={panel(0.16, AI.lift + 0.2, 0.08, 0.05)}
-          position-z={-0.08}
-        />
-        <group ref={fold} position={[0, AI.lift, 0]} rotation-x={-Math.PI / 2}>
-          <Solid geometry={panel(AI.w, AI.h, 0.09, 0.2)} />
-          <Print
-            w={AI.w - 0.14}
-            h={AI.h - 0.14}
-            map={overview}
-            position={[0, AI.h / 2, 0.048]}
-          />
-        </group>
-      </group>
+      <Sheet w={AI.w} h={AI.h} map={answers} position={[AI.x, 0, AI.z]} />
     </group>
   );
 }

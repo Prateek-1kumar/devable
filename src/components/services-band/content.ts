@@ -20,8 +20,8 @@ export const BEATS: Beat[] = [
     body: "We get inside what you build, who it's for and where those people already look, before we touch a channel.",
     steps: [
       { text: "Your product", from: -0.1 },
-      { text: "We learn it inside out", from: 0.3 },
-      { text: "Routed into four channels", from: 0.62 },
+      { text: "We learn what it is, who it's for and where they look", from: 0.12 },
+      { text: "Each place routes into its channel", from: 0.55 },
     ],
   },
   {
@@ -32,19 +32,20 @@ export const BEATS: Beat[] = [
     href: "/services/technical-content",
     steps: [
       { text: "Engineers write the tutorial", from: -0.1 },
-      { text: "Developers, Google and LLMs pick it up", from: 0.4 },
+      { text: "Tested and reviewed before it ships", from: 0.28 },
+      { text: "Developers, Google and LLMs pick it up", from: 0.48 },
     ],
   },
   {
     n: "02",
     eyebrow: "Search & AI Visibility",
     title: "Ranked, and cited in the answer",
-    body: "We help you win SEO and AI search: the results page and the AI overview above it.",
+    body: "We help you win SEO and AI search: the results page, and the answers AI engines give.",
     href: "/services/search-ai-visibility",
     steps: [
       { text: "A developer searches", from: -0.1 },
       { text: "You climb to #1", from: 0.42 },
-      { text: "Cited in the AI answer", from: 0.8 },
+      { text: "Mentioned, cited and recommended by AI", from: 0.66 },
     ],
   },
   {
@@ -54,9 +55,9 @@ export const BEATS: Beat[] = [
     body: "Show up in the threads where your category comes up, as the answer people upvote.",
     href: "/services/reddit",
     steps: [
-      { text: "A developer asks the community", from: -0.1 },
-      { text: "A member recommends your product", from: 0.3 },
-      { text: "The community upvotes it to the top", from: 0.56 },
+      { text: "We find the threads worth entering", from: -0.1 },
+      { text: "A useful answer, product second, earns the top spot", from: 0.3 },
+      { text: "The thread ranks in Google and AI cites it", from: 0.62 },
     ],
   },
   {
@@ -89,15 +90,18 @@ export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 export const span = (v: number, a: number, b: number) =>
   clamp01((v - a) / (b - a));
 
-/** Where the scroll starts, in beats: a short lead-in on the first beat before its story begins. */
-const START = -0.75;
 /**
- * Scroll position in beats: START when the stage pins, BEATS.length − 0.5 when it lets go, so each beat owns
- * one unit centred on its index. The camera holds on beat i over i ± 0.36 and travels briskly in between;
- * each story plays only while the camera holds, so nothing happens off-camera.
+ * Where the scroll starts and ends, in beats. The first story starts a hair after the stage pins and the last one
+ * has just settled when it lets go, so no stretch of scroll goes by with nothing happening.
  */
-export const beatAt = (progress: number) =>
-  START + progress * (BEATS.length - 0.5 - START);
+const START = -0.3;
+const END = BEATS.length - 0.66;
+/**
+ * Scroll position in beats: START when the stage pins, END when it lets go, so each beat owns about one unit
+ * centred on its index. The camera holds on beat i over i ± 0.36 and travels briskly in between; each story
+ * plays only while the camera holds, so nothing happens off-camera.
+ */
+export const beatAt = (progress: number) => START + progress * (END - START);
 /** How far beat i's story has played (0..1): it starts once the camera has settled, ends before it leaves. */
 export const storyOf = (x: number, i: number) => span(x, i - 0.26, i + 0.3);
 

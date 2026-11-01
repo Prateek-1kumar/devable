@@ -360,7 +360,7 @@ export function CreatorStation() {
       {/* A low studio floor under everything. */}
       <Shadow w={8.6} d={4.6} opacity={0.06} position={[0, 0.001, -0.1]} />
       <Solid
-        geometry={block(7.6, 3.6, 0.04, 0.4)}
+        geometry={block(7.6, 3.6, 0.04, 0.1)}
         color="#f0eee8"
         position-z={-0.05}
       />
@@ -451,11 +451,6 @@ export function CreatorStation() {
           position={[0.05, top, 0.25]}
           color="#f2f1ec"
         />
-        <Solid
-          geometry={cylinder(0.065, 0.13)}
-          color={c.ink}
-          position={[0.85, top, 0.22]}
-        />
         {/* Boom mic. */}
         <group position={[-0.86, top, 0.12]}>
           <Solid geometry={cylinder(0.08, 0.02)} color={c.ink} />
@@ -467,7 +462,7 @@ export function CreatorStation() {
             <Solid geometry={cylinder(0.058, 0.22)} color={c.ink} />
             <Solid
               geometry={cylinder(0.062, 0.025)}
-              color={c.primary}
+              color="#3a4a41"
               position-y={0.06}
             />
           </group>

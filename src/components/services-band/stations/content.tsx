@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Mesh } from "three";
-import { mix } from "../../growth-engine/palette";
+import type { MeshBasicMaterial } from "three";
 import { span, storyOf } from "../content";
 import { Fibre, LOCAL } from "../fibre";
 import {
@@ -12,13 +11,13 @@ import {
   Solid,
   block,
   colors,
-  cylinder,
   drawMark,
+  eyebrow,
   panel,
   paragraph,
-  pop,
   rrect,
   setFont,
+  tick,
   useBand,
   useLive,
   useStatic,
@@ -27,9 +26,10 @@ import {
 import { AT } from "../layout";
 
 // Beat 1, Technical Content. ① Engineers write a tutorial: it builds on the monitor and its code types out.
-// ② Light runs down three fibres into a dock of live screens, and each comes alive with the tutorial landing in
-// its world: an IDE where the code runs (developers), a results page where it ranks #1 (Google), and a chat
-// answer that cites it (ChatGPT and other LLMs).
+// ② It is tested and reviewed before it ships: the review rail beside it ticks through code, engineering,
+// editorial and search + AI checks, then marks it published. ③ Traces carry it into a dock of live screens, and
+// each comes alive with the tutorial landing in its world: an IDE where the code runs (developers), a results
+// page where it ranks #1 (Google), and a chat answer that cites it (ChatGPT and other LLMs).
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -39,86 +39,127 @@ const CODE = [
   'answer = rag(docs).ask("refunds?")',
 ];
 const CODE_CHARS = CODE.join("").length;
-const MONITOR = { x: -0.2, z: -1.7, w: 2.7, h: 1.72, lift: 0.6 };
-const SCREEN = { w: MONITOR.w - 0.18, h: MONITOR.h - 0.18 };
+const MONITOR = { x: -0.1, z: -1.55, w: 3.5, h: 1.95, lift: 0.36 };
+const SCREEN = { w: MONITOR.w - 0.1, h: MONITOR.h - 0.1 };
+/** The review the tutorial passes before it ships, in order. */
+const REVIEW = [
+  ["Code tested", "API v2 · 3 snippets"],
+  ["Engineering review", "SME sign-off"],
+  ["Editorial review", "Voice and claims"],
+  ["Search + AI ready", "Schema · answer-first"],
+];
+/** The story: typing, then each review check, then published. */
+const typing = (s: number) => span(s, 0.0, 0.28);
+const checked = (s: number, i: number) => s >= 0.31 + i * 0.04;
+const published = (s: number) => s >= 0.48;
 
-function drawArticle(ctx: Ctx, w: number, h: number, typed: number) {
+function drawArticle(ctx: Ctx, w: number, h: number, s: number, blink: boolean) {
   const c = colors();
-  const k = w / 852;
+  const k = w / 1000;
   ctx.save();
   ctx.scale(k, k);
-  const W = 852;
+  const W = 1000;
   const H = h / k;
   ctx.beginPath();
-  ctx.roundRect(0, 0, W, H, 16);
+  ctx.roundRect(0, 0, W, H, 14);
   ctx.clip();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
   // Browser bar.
   ctx.fillStyle = c.shade;
-  ctx.fillRect(0, 0, W, 54);
-  [28, 50, 72].forEach((x) => {
+  ctx.fillRect(0, 0, W, 50);
+  [26, 46, 66].forEach((x) => {
     ctx.beginPath();
-    ctx.arc(x, 27, 6.5, 0, Math.PI * 2);
+    ctx.arc(x, 25, 6, 0, Math.PI * 2);
     ctx.fillStyle = "#dcd8cd";
     ctx.fill();
   });
-  rrect(ctx, 104, 13, 400, 28, 14, "#ffffff");
-  setFont(ctx, 15, 450, true);
+  rrect(ctx, 96, 11, 420, 28, 14, "#ffffff");
+  setFont(ctx, 16, 450, true);
   ctx.fillStyle = c.muted;
-  ctx.fillText("yourproduct.dev/blog/rag-pipeline", 120, 32);
-  // Chip, meta and title.
-  setFont(ctx, 20, 500);
-  const chip = ctx.measureText("Tutorial").width + 46;
-  rrect(ctx, 40, 78, chip, 36, 18, c.shade);
+  ctx.fillText("yourproduct.dev/blog/rag-pipeline", 112, 30);
+  // The article, on the left.
+  const L = 36;
+  const R = 620;
+  setFont(ctx, 21, 520);
+  const chip = ctx.measureText("Tutorial").width + 44;
+  rrect(ctx, L, 76, chip, 36, 18, c.shade);
   ctx.beginPath();
-  ctx.arc(60, 96, 5.5, 0, Math.PI * 2);
+  ctx.arc(L + 19, 94, 5.5, 0, Math.PI * 2);
   ctx.fillStyle = c.primary;
   ctx.fill();
   ctx.fillStyle = c.ink;
-  ctx.fillText("Tutorial", 72, 103);
+  ctx.fillText("Tutorial", L + 31, 101);
   setFont(ctx, 17, 450, true);
   ctx.fillStyle = c.muted;
-  ctx.fillText("12 MIN READ  ·  BY AN ENGINEER", 40 + chip + 16, 102);
-  setFont(ctx, 50, 600);
-  ctx.letterSpacing = "-1.4px";
+  ctx.fillText("12 MIN · BY AN ENGINEER", L + chip + 16, 100);
+  setFont(ctx, 44, 620);
+  ctx.letterSpacing = "-1.2px";
   ctx.fillStyle = c.ink;
-  wrap(ctx, "Build a RAG pipeline with your own data", W - 90).forEach(
-    (line, i) => ctx.fillText(line, 40, 176 + i * 56),
+  wrap(ctx, "Build a RAG pipeline with your own data", R - L - 20).forEach((line, i) =>
+    ctx.fillText(line, L, 166 + i * 50),
   );
   ctx.letterSpacing = "0px";
   // Code block, typing in.
-  const top = 274;
-  rrect(ctx, 40, top, W - 80, H - top - 30, 14, "#1a1918");
-  setFont(ctx, 24, 450, true);
-  let left = typed;
-  let y = top + 52;
-  let caret = { x: 70, y };
+  const top = 238;
+  rrect(ctx, L, top, R - L - 10, H - top - 26, 12, "#1a1918");
+  setFont(ctx, 23, 450, true);
+  let left = Math.round(typing(s) * CODE_CHARS);
+  let y = top + 48;
+  let caret = { x: L + 26, y };
   for (const line of CODE) {
     if (left <= 0) break;
     const shown = line.slice(0, left);
     left -= line.length;
     const [first, ...rest] = shown.split(" ");
     ctx.fillStyle = c.primary;
-    ctx.fillText(first, 70, y);
+    ctx.fillText(first, L + 26, y);
     ctx.fillStyle = "rgba(255,255,255,0.82)";
-    if (rest.length)
-      ctx.fillText(" " + rest.join(" "), 70 + ctx.measureText(first).width, y);
-    caret = { x: 70 + ctx.measureText(shown).width + 4, y };
-    if (left > 0) y += 44;
+    if (rest.length) ctx.fillText(" " + rest.join(" "), L + 26 + ctx.measureText(first).width, y);
+    caret = { x: L + 26 + ctx.measureText(shown).width + 4, y };
+    if (left > 0) y += 42;
   }
-  if (typed < CODE_CHARS || Math.floor(performance.now() / 500) % 2 === 0) {
+  if (typing(s) < 1 || blink) {
     ctx.fillStyle = c.primary;
-    ctx.fillRect(caret.x, caret.y - 21, 12, 27);
+    ctx.fillRect(caret.x, caret.y - 20, 11, 26);
   }
+  // The review rail, on the right: each check ticks in turn, then the piece is published.
+  ctx.fillStyle = "#f7f6f2";
+  ctx.fillRect(R + 20, 50, W - R - 20, H - 50);
+  ctx.fillStyle = "rgba(23,44,33,0.08)";
+  ctx.fillRect(R + 20, 50, 2, H - 50);
+  const rx = R + 50;
+  eyebrow(ctx, "Review", rx, 98, 19);
+  REVIEW.forEach(([name, note], i) => {
+    const ry = 150 + i * 76;
+    const on = checked(s, i);
+    tick(ctx, rx + 16, ry + 4, 16, on);
+    setFont(ctx, 25, on ? 600 : 500);
+    ctx.fillStyle = on ? c.ink : "rgba(23,44,33,0.4)";
+    ctx.fillText(name, rx + 46, ry + 2);
+    setFont(ctx, 17, 450, true);
+    ctx.fillStyle = c.muted;
+    ctx.fillText(note, rx + 46, ry + 28);
+  });
+  const done = published(s);
+  const label = done ? "Published" : "In review";
+  setFont(ctx, 22, 600);
+  const pw = ctx.measureText(label).width + 50;
+  rrect(ctx, rx, H - 74, pw, 42, 21, done ? c.primary : "#ebe9e3");
+  ctx.beginPath();
+  ctx.arc(rx + 20, H - 53, 5, 0, Math.PI * 2);
+  ctx.fillStyle = done ? c.ink : "#b9b6ad";
+  ctx.fill();
+  ctx.fillStyle = c.ink;
+  ctx.fillText(label, rx + 33, H - 45);
   ctx.restore();
 }
 
 // ── The dock of live screens ──
 
-const DOCK = { w: 6.9, d: 1.15, h: 0.46, z: 0.75 };
-const SCR = { w: 2.0, h: 1.36, t: 0.1, lift: 0.3 };
-const SLOTS = [-2.25, 0, 2.25];
+const DOCK = { w: 6.6, d: 1.0, h: 0.26, z: 0.85 };
+const SCR = { w: 1.95, h: 1.3, t: 0.06, lift: 0.24 };
+const SLOTS = [-2.15, 0, 2.15];
 const R = LOCAL.r;
 /** Fibres from the monitor's foot into the dock's back, one per screen (station coordinates). */
 const FIBRES: [number, number, number][][] = [
@@ -139,9 +180,9 @@ const FIBRES: [number, number, number][][] = [
     [SLOTS[2], R, DOCK.z - DOCK.d / 2 + 0.04],
   ],
 ];
-/** Light reaches screen j, then the screen plays its little story (0..1). */
+/** Once published, the piece reaches screen j, which then plays its little story (0..1). */
 const screenOn = (s: number, j: number) =>
-  span(s, 0.46 + 0.12 * j, 0.72 + 0.12 * j);
+  span(s, 0.5 + 0.12 * j, 0.74 + 0.12 * j);
 
 // Each screen is drawn on a 640-wide grid and scaled to its texture.
 const GRID = 640;
@@ -377,78 +418,36 @@ const SCREENS = [
   { draw: drawChat, name: "ChatGPT & LLMs", glyph: "✦" },
 ] as const;
 
-// The dock's build: a recessed skirt at the floor, a seamed body, a gasket line and a top cap.
-const SKIRT_H = 0.05;
-const CAP_H = 0.035;
-const GASKET_H = 0.014;
-const BODY_H = DOCK.h - SKIRT_H - CAP_H - GASKET_H;
-const FOREST = "#1d5c3a";
+// The dock's build: a recessed skirt at the floor, the body, and a top plate.
+const SKIRT_H = 0.03;
+const CAP_H = 0.03;
+const BODY_H = DOCK.h - SKIRT_H - CAP_H;
 
-/** The body's front: one light engraved plate per bay, seams between the bays, vents at the ends. */
+/** The body's front: each bay's number and audience engraved under its screen, seams between the bays. */
 function drawDockFront(ctx: Ctx, w: number, h: number) {
   const c = colors();
   const unit = w / DOCK.w;
+  ctx.textBaseline = "middle";
   SCREENS.forEach((sc, j) => {
     const cx = (SLOTS[j] + DOCK.w / 2) * unit;
-    // The plate hugs its icon and name.
-    setFont(ctx, h * 0.3, 620);
-    const pw =
-      h * 0.13 + h * 0.5 + h * 0.18 + ctx.measureText(sc.name).width + h * 0.32;
-    const x = cx - pw / 2;
-    rrect(
-      ctx,
-      x,
-      h * 0.12,
-      pw,
-      h * 0.76,
-      h * 0.22,
-      "#f4f3ee",
-      "rgba(23,44,33,0.13)",
-      Math.max(1.5, h * 0.02),
-    );
-    const box = h * 0.5;
-    rrect(
-      ctx,
-      x + h * 0.13,
-      (h - box) / 2,
-      box,
-      box,
-      box * 0.28,
-      c.lightGreenSoft,
-    );
-    setFont(ctx, box * 0.46, 650, true);
-    ctx.fillStyle = c.deep;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(sc.glyph, x + h * 0.13 + box / 2, h / 2 + 1);
-    ctx.textAlign = "left";
-    const tx = x + h * 0.13 + box + h * 0.18;
-    setFont(ctx, h * 0.17, 500, true);
-    ctx.letterSpacing = `${h * 0.03}px`;
+    const num = `0${j + 1}`;
+    setFont(ctx, h * 0.34, 500, true);
+    const nw = ctx.measureText(num).width;
+    setFont(ctx, h * 0.42, 600);
+    const tw = ctx.measureText(sc.name).width;
+    const x = cx - (nw + h * 0.3 + tw) / 2;
+    setFont(ctx, h * 0.34, 500, true);
     ctx.fillStyle = c.muted;
-    ctx.fillText(`BAY 0${j + 1}`, tx, h * 0.34);
-    ctx.letterSpacing = "0px";
-    setFont(ctx, h * 0.3, 620);
+    ctx.fillText(num, x, h / 2 + 1);
+    setFont(ctx, h * 0.42, 600);
     ctx.fillStyle = c.ink;
-    ctx.fillText(sc.name, tx, h * 0.62);
-    // Seam after each bay.
+    ctx.fillText(sc.name, x + nw + h * 0.3, h / 2 + 1);
     if (j < SCREENS.length - 1) {
       const sx = ((SLOTS[j] + SLOTS[j + 1]) / 2 + DOCK.w / 2) * unit;
-      ctx.fillStyle = "rgba(23,44,33,0.16)";
-      ctx.fillRect(sx, 0, Math.max(1.5, h * 0.02), h);
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillRect(sx + Math.max(1.5, h * 0.02), 0, Math.max(1.5, h * 0.02), h);
+      ctx.fillStyle = "rgba(23,44,33,0.14)";
+      ctx.fillRect(sx, 0, Math.max(1.5, h * 0.03), h);
     }
   });
-  ctx.globalAlpha = 0.5;
-  for (const side of [0, 1])
-    for (let i = 0; i < 4; i++) {
-      const x = side
-        ? w - h * 0.45 - (i + 1) * h * 0.26
-        : h * 0.45 + i * h * 0.26;
-      rrect(ctx, x, h * 0.28, h * 0.1, h * 0.44, h * 0.05, c.line);
-    }
-  ctx.globalAlpha = 1;
 }
 
 /** The top cap: a recessed pad under each screen with corner ticks, and an engraved border. */
@@ -504,18 +503,15 @@ function LiveScreen({ index }: { index: number }) {
     [sc],
   );
   const tex = useCanvas(
-    Math.round((SCR.w - 0.1) * PX * TEX_SCALE),
-    Math.round((SCR.h - 0.1) * PX * TEX_SCALE),
+    Math.round((SCR.w - 0.06) * PX * TEX_SCALE),
+    Math.round((SCR.h - 0.06) * PX * TEX_SCALE),
     draw,
   );
-  const led = useRef<Group>(null);
+  const led = useRef<MeshBasicMaterial>(null);
   useFrame(() => {
     const v =
       Math.round(screenOn(storyOf(bandRef.current, 1), index) * 60) / 60;
-    if (led.current) {
-      led.current.visible = v > 0;
-      led.current.scale.setScalar(pop(span(v, 0, 0.2)));
-    }
+    led.current?.color.set(v > 0 ? colors().primary : colors().line);
     if (v === value.current) return;
     value.current = v;
     tex.paint();
@@ -523,41 +519,40 @@ function LiveScreen({ index }: { index: number }) {
   const x = SLOTS[index];
   return (
     <group position={[x, DOCK.h, DOCK.z]}>
-      <Shadow w={1.6} d={0.7} opacity={0.08} position-y={0.002} />
-      <Solid geometry={block(0.74, 0.38, 0.035, 0.15)} />
+      <Shadow w={1.5} d={0.6} opacity={0.08} position-y={0.002} />
+      <Solid geometry={block(0.62, 0.3, 0.025, 0.05)} />
       <Solid
-        geometry={panel(0.12, SCR.lift + 0.18, 0.06, 0.04)}
-        position-z={-0.06}
+        geometry={panel(0.08, SCR.lift + 0.12, 0.04, 0.02)}
+        position-z={-0.05}
       />
-      <Solid geometry={panel(SCR.w, SCR.h, SCR.t, 0.1)} position-y={SCR.lift} />
+      <Solid geometry={panel(SCR.w, SCR.h, SCR.t, 0.05)} position-y={SCR.lift} />
       <Print
-        w={SCR.w - 0.1}
-        h={SCR.h - 0.1}
+        w={SCR.w - 0.06}
+        h={SCR.h - 0.06}
         map={tex.texture}
         position={[0, SCR.lift + SCR.h / 2, SCR.t / 2 + 0.003]}
       />
-      {/* Status light on the dock, in front of the screen. */}
-      <group position={[0.5, 0, DOCK.d / 2 - 0.2]}>
-        <Solid geometry={cylinder(0.06, 0.02)} color="#eeeeea" />
-        <group ref={led} visible={false} position-y={0.02}>
-          <Solid geometry={cylinder(0.045, 0.03)} color={colors().primary} />
-        </group>
-      </group>
+      {/* A flush status strip on the dock in front of the screen: green once the piece has landed there. */}
+      <mesh position={[0, 0.003, DOCK.d / 2 - 0.12]} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[0.36, 0.035]} />
+        <meshBasicMaterial ref={led} color={colors().line} toneMapped={false} />
+      </mesh>
     </group>
   );
 }
 
 export function ContentStation() {
   const bandRef = useBand();
+  // The article's value: its story (0..1), plus 10 while the caret is in its "on" half-second.
   const render = useCallback(
     (ctx: Ctx, w: number, h: number, v: number) =>
-      drawArticle(ctx, w, h, Math.floor(v)),
+      drawArticle(ctx, w, h, v >= 10 ? v - 10 : v, v >= 10),
     [],
   );
-  const [screen, setTyped] = useLive(SCREEN.w, SCREEN.h, render);
+  const [screen, setArticle] = useLive(SCREEN.w, SCREEN.h, render, 1.2);
   const front = useStatic(
     DOCK.w,
-    BODY_H * 0.86,
+    BODY_H * 0.8,
     useCallback(
       (ctx: Ctx, w: number, h: number) => drawDockFront(ctx, w, h),
       [],
@@ -570,48 +565,42 @@ export function ContentStation() {
     useCallback((ctx: Ctx, w: number, h: number) => drawDockTop(ctx, w, h), []),
     0.8,
   );
-  const glow = useRef<Mesh>(null);
 
   useFrame((state) => {
-    const s = storyOf(bandRef.current, 1);
-    const t = state.clock.elapsedTime;
-    // The typed count, plus a half-second phase so the caret blinks once typing is done.
-    const typed = Math.round(span(s, 0.0, 0.38) * CODE_CHARS);
-    setTyped(typed + (typed >= CODE_CHARS ? (Math.floor(t * 2) % 2) * 0.5 : 0));
-    if (glow.current) glow.current.visible = s > 0.4;
+    const s = Math.round(storyOf(bandRef.current, 1) * 120) / 120;
+    const blink = Math.floor(state.clock.elapsedTime * 2) % 2 === 0;
+    setArticle(s + (blink ? 10 : 0));
   });
 
   return (
     <group position={AT.content}>
       {/* Monitor on its stand. */}
-      <Shadow w={2.6} d={1.5} position={[MONITOR.x, 0.001, MONITOR.z]} />
+      <Shadow w={3.2} d={1.4} position={[MONITOR.x, 0.001, MONITOR.z]} />
       <Solid
-        geometry={block(1.2, 0.62, 0.08, 0.24)}
+        geometry={block(1.0, 0.5, 0.04, 0.06)}
         position={[MONITOR.x, 0, MONITOR.z]}
       />
       <Solid
-        geometry={panel(0.3, MONITOR.lift + 0.2, 0.1, 0.05)}
-        position={[MONITOR.x, 0, MONITOR.z - 0.1]}
+        geometry={panel(0.14, MONITOR.lift + 0.2, 0.06, 0.03)}
+        position={[MONITOR.x, 0, MONITOR.z - 0.06]}
       />
       <Solid
-        geometry={panel(MONITOR.w, MONITOR.h, 0.14, 0.14)}
+        geometry={panel(MONITOR.w, MONITOR.h, 0.08, 0.06)}
         position={[MONITOR.x, MONITOR.lift, MONITOR.z]}
       />
       <Print
         w={SCREEN.w}
         h={SCREEN.h}
         map={screen}
-        position={[MONITOR.x, MONITOR.lift + MONITOR.h / 2, MONITOR.z + 0.073]}
+        position={[MONITOR.x, MONITOR.lift + MONITOR.h / 2, MONITOR.z + 0.043]}
       />
 
-      {/* Fibres out to the dock. */}
+      {/* Traces out to the dock, one per screen. */}
       {FIBRES.map((route, j) => (
         <Fibre key={j} route={route} />
       ))}
 
-      {/* The dock: a recessed skirt, a seamed body with an engraved plate per bay, a gasket line, and a top
-          cap with a pad under each screen. A soft light line runs along its front edge; the fibres plug into
-          deep-green couplings at its back. */}
+      {/* The dock: a shadow-gap skirt, the body with each bay engraved on its front, and a top plate. */}
       <Shadow
         w={DOCK.w + 1.2}
         d={DOCK.d + 1}
@@ -620,27 +609,22 @@ export function ContentStation() {
       />
       <group position-z={DOCK.z}>
         <Solid
-          geometry={block(DOCK.w - 0.12, DOCK.d - 0.12, SKIRT_H, 0.42)}
-          color="#d9d6cd"
+          geometry={block(DOCK.w - 0.08, DOCK.d - 0.08, SKIRT_H, 0.06)}
+          color="#dcd9d0"
         />
         <Solid
-          geometry={block(DOCK.w, DOCK.d, BODY_H, 0.45)}
+          geometry={block(DOCK.w, DOCK.d, BODY_H, 0.08)}
           color="#f1efe9"
           position-y={SKIRT_H}
         />
         <Print
           w={DOCK.w}
-          h={BODY_H * 0.86}
+          h={BODY_H * 0.8}
           map={front}
           position={[0, SKIRT_H + BODY_H / 2, DOCK.d / 2 + 0.003]}
         />
         <Solid
-          geometry={block(DOCK.w - 0.03, DOCK.d - 0.03, GASKET_H, 0.44)}
-          color="#d9d6cd"
-          position-y={SKIRT_H + BODY_H}
-        />
-        <Solid
-          geometry={block(DOCK.w - 0.02, DOCK.d - 0.02, CAP_H, 0.44)}
+          geometry={block(DOCK.w - 0.04, DOCK.d - 0.04, CAP_H, 0.07)}
           color="#fbfaf7"
           position-y={DOCK.h - CAP_H}
         />
@@ -651,31 +635,6 @@ export function ContentStation() {
           position={[0, DOCK.h + 0.002, 0]}
           rotation-x={-Math.PI / 2}
         />
-        <mesh
-          ref={glow}
-          position={[0, DOCK.h + 0.003, DOCK.d / 2 - 0.06]}
-          rotation-x={-Math.PI / 2}
-          visible={false}
-        >
-          <planeGeometry args={[DOCK.w - 0.9, 0.014]} />
-          <meshBasicMaterial
-            color={mix(colors().primary, "#ffffff", 0.3)}
-            toneMapped={false}
-          />
-        </mesh>
-        {SLOTS.map((x) => (
-          <group
-            key={x}
-            position={[x, R + 0.01, -DOCK.d / 2]}
-            rotation-x={Math.PI / 2}
-          >
-            <Solid
-              geometry={cylinder(R + 0.045, 0.1)}
-              color={FOREST}
-              position-y={-0.08}
-            />
-          </group>
-        ))}
       </group>
       {SCREENS.map((_, j) => (
         <LiveScreen key={j} index={j} />
