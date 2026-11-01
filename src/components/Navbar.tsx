@@ -7,7 +7,6 @@ import { hrefOf, type Resource } from "@/lib/resources";
 import logo from "../../public/brand/devable-logo.png";
 import ArcButton from "./ArcButton";
 import { Cover } from "./resources/parts";
-import { CREATORS } from "./services/influencer/content";
 import {
   MobileNav,
   MobileNavHeader,
@@ -43,16 +42,10 @@ const links = (feature: Resource | null): NavItem[] => [
     name: "Services",
     link: "/services/influencer-marketing",
     items: [
-      {
-        name: "Influencer Marketing",
-        link: "/services/influencer-marketing",
-        featured: true,
-        description: "Reach developers through the technical creators they already follow.",
-        faces: CREATORS.slice(0, 4).map((c) => c.photo),
-      },
       { name: "Technical Content", link: "/services/technical-content", description: "Docs, tutorials, and deep dives developers actually read." },
       { name: "Search & AI Visibility", link: "/services/search-ai-visibility", description: "Show up where developers search, and in AI answers." },
       { name: "Reddit", link: "/services/reddit", description: "Earn trust in the communities developers already use." },
+      { name: "Influencer Marketing", link: "/services/influencer-marketing", description: "Reach developers through the technical creators they already follow." },
     ],
   },
   { name: "Case Studies", link: "#case-studies" },
