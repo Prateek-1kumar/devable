@@ -357,6 +357,62 @@ export const MEASURE = {
     { name: "AI", items: ["Mentions", "Recommendations", "Citations", "Share of voice"] },
   ],
   outcome: { name: "Business", items: ["Signups", "Demo requests", "Pipeline contribution", "Revenue where measurable"] },
+  // SAMPLE: the same account on day 1 and day 90 of a plan, for the live measurement view. Each metric has the
+  // two values it moves between; `series` is its trend. The metrics follow the order of the lists above.
+  figures: {
+    window: "Last 90 days",
+    search: {
+      rank: {
+        query: "vector database for RAG",
+        from: 8,
+        to: 3,
+        series: [8, 8, 7, 6, 5, 4, 3],
+        // Two more tracked rankings, smaller.
+        more: [
+          { query: "category leader alternative", from: 14, to: 5 },
+          { query: "hybrid search api", from: 21, to: 6 },
+        ],
+      },
+      visibility: { from: 18, to: 31, series: [18, 19, 21, 20, 24, 27, 31] },
+      traffic: { from: 2140, to: 3860, bars: [2140, 2290, 2510, 2860, 3120, 3490, 3860] },
+      performance: { from: 2.1, to: 3.4, note: "Visit to signup", series: [2.1, 2.2, 2.2, 2.6, 2.9, 3.1, 3.4] },
+    },
+    ai: {
+      // Per brand: visibility (share of answers that mention it), average position in an answer, and the tone of how it's described.
+      brands: [
+        { name: "Your Product", visibility: [12, 31], position: [5.1, 1.8], tone: ["Neutral", "Positive"] },
+        { name: "Category Leader", visibility: [41, 36], position: [1.4, 1.6], tone: ["Positive", "Positive"] },
+        { name: "Competitor A", visibility: [22, 19], position: [3.0, 3.2], tone: ["Neutral", "Neutral"] },
+      ] as { name: string; visibility: number[]; position: number[]; tone: ("Positive" | "Neutral" | "Negative")[] }[],
+      mentions: {
+        from: 140,
+        to: 612,
+        models: [
+          { name: "ChatGPT", mark: "chatgpt", count: [62, 268] },
+          { name: "Perplexity", mark: "perplexity", count: [48, 201] },
+          { name: "Claude", mark: "claude", count: [30, 143] },
+        ] as { name: string; mark: Icon; count: number[] }[],
+      },
+      recommendations: { from: 4, to: 19, tone: [[50, 40, 10], [74, 21, 5]] }, // positive, neutral, negative, %
+      citations: {
+        from: 12,
+        to: 94,
+        sources: [
+          { name: "Your docs", mark: "docs", type: "Corporate", count: [5, 41] },
+          { name: "r/LocalLLaMA", mark: "reddit", type: "UGC", count: [4, 27] },
+          { name: "G2", mark: "g2", type: "Reviews", count: [3, 26] },
+        ] as { name: string; mark: Icon; type: string; count: number[] }[],
+      },
+    },
+    // Where the pipeline came from: Search and AI, as a share of it (%), on day 1 and day 90. AI's share grows.
+    pipelineSplit: { search: [88, 61], ai: [12, 39] },
+    business: [
+      { from: 128, to: 312 },
+      { from: 9, to: 22 },
+      { from: 48, to: 186, prefix: "$", suffix: "K" },
+      { from: 12, to: 41, prefix: "$", suffix: "K" },
+    ] as { from: number; to: number; prefix?: string; suffix?: string }[],
+  },
 };
 
 export type Case = { client: string; logo?: string; services: string[]; href: string };

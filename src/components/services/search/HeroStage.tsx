@@ -119,7 +119,7 @@ const poly = (vals: number[]) => vals.map((p, i) => at(i, p).join(",")).join(" "
 
 /** Each brand's mark on its colour: you in the ink, the rest in muted brand hues. Fictional, like the sample data. */
 const BRAND = ["#172c21", "#3a63c9", "#7a5fc7", "#d99a2b", "#2b9a88"];
-function Brand({ i, size = 18 }: { i: number; size?: number }) {
+export function Brand({ i, size = 18 }: { i: number; size?: number }) {
   const glyph = [
     <path key="y" d="M4.2 10.6 8 5.4l3.8 5.2" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />,
     <g key="n" fill="#fff">
