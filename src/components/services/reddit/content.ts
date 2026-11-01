@@ -143,20 +143,61 @@ export const STEPS = {
       note: "The goal is to build credible presence in the sources already shaping how products are discovered and recommended.",
     },
   ],
-  // SAMPLE: the one thread followed through all three steps.
+  // SAMPLE: what each step looks like. Three different surfaces for three different jobs: 01 research (which
+  // conversations are worth entering and why), 02 a real conversation (a useful answer, the product inside it),
+  // 03 the wider footprint (Reddit as one of the places a search or an AI answer draws on). Competitor marks
+  // are the page's neutral ones: 1 Category Leader, 2 Competitor A.
   journey: {
-    map: [
-      { sub: "r/LocalLLaMA", members: "612k", intent: "High", you: 2, rival: 9, picked: true },
-      { sub: "r/MachineLearning", members: "3.1M", intent: "Medium", you: 0, rival: 4 },
-      { sub: "r/devops", members: "418k", intent: "High", you: 1, rival: 3 },
-      { sub: "r/LangChain", members: "54k", intent: "High", you: 0, rival: 6 },
-    ],
-    thread: { sub: "r/LocalLLaMA", title: "How do you eval agents before shipping?", votes: 214 },
-    rules: ["Tool mentions allowed in answers", "Disclose affiliation", "No link-only replies"],
-    draft: "Simulated conversations. We run ~2k scenarios on every PR and fail the build on regressions:",
-    code: "scenarios run --suite agents --fail-on regression",
-    search: { query: "best way to eval llm agents", url: "reddit.com › r/LocalLLaMA" },
-    ai: "Teams on r/LocalLLaMA recommend running simulated scenarios in CI, e.g. with Your product.",
+    research: {
+      scanned: 1284,
+      opportunities: 37,
+      // In order of score. `rivals` are brand indexes; `you` is whether your product is already in the thread.
+      threads: [
+        { sub: "r/LocalLLaMA", title: "Anyone here using self-hosted vector databases in production? What are you actually happy with?", intent: "High", rivals: [1, 2], you: false, score: 92 },
+        { sub: "r/LangChain", title: "Which vector store are you using for agent memory?", intent: "High", rivals: [2], you: false, score: 78 },
+        { sub: "r/MachineLearning", title: "Best open-source options for hybrid search?", intent: "Medium", rivals: [1], you: true, score: 41 },
+        { sub: "r/devops", title: "How are you handling vector DB backups?", intent: "Low", rivals: [], you: false, score: 18 },
+      ],
+    },
+    conversation: {
+      sub: "r/MachineLearning",
+      post: { user: "u/prompt_drift", age: "5h", score: "842", comments: 64 },
+      question: "Has anyone figured out a reliable way to keep LLM outputs consistent across model upgrades?",
+      answer: {
+        user: "u/eval_notes",
+        age: "3h",
+        sentences: [
+          "We had the same issue.",
+          "What helped was keeping a fixed eval set and rerunning it before each model change instead of relying on spot checks.",
+          "We also started tracking regressions by prompt category, which made it much easier to see where quality was actually dropping.",
+        ],
+        product: "Your Product",
+        productRest: " helped us automate part of that workflow.",
+        votes: 142,
+      },
+      reply: { user: "u/prompt_ops", text: "Same here. A fixed eval set is the only thing that held up for us." },
+    },
+    discovery: {
+      query: "best LLM evaluation tools for production",
+      results: [
+        { site: "docs.yourproduct.com", title: "Evaluating LLMs in production: a practical guide", snippet: "Run a fixed eval set before every release and track regressions by prompt category.", mark: "docs" },
+        { site: "reddit.com › r/LocalLLaMA", title: "How do you eval agents before shipping?", snippet: "We run ~2k scenarios on every PR and fail the build on regressions.", mark: "reddit", reddit: true, meta: "214 upvotes · 96 comments" },
+        { site: "g2.com", title: "Best LLM Evaluation Tools in 2026 | G2", snippet: "Compare the top LLM evaluation and observability tools by reviews and features.", mark: "g2" },
+      ],
+      ai: {
+        // `cites` are 1-based indexes into `sources`.
+        sentences: [
+          { text: "For production, most teams pair a fixed evaluation set that runs before every release with tracing and prompt-level regression tracking.", cites: [1, 4] },
+          { text: "The tools that come up most often are Your Product, Category Leader and Competitor A.", cites: [2, 3] },
+        ],
+        sources: [
+          { label: "docs.yourproduct.com", mark: "docs" },
+          { label: "G2 comparison", mark: "g2" },
+          { label: "TechPress", mark: "news" },
+          { label: "r/LocalLLaMA", mark: "reddit", reddit: true },
+        ],
+      },
+    },
   },
 };
 

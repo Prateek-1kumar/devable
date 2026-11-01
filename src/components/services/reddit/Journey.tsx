@@ -1,30 +1,57 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
-import { Label, useInView } from "../kit";
-import { Beacon, CANVAS, FRAME, Mark, PILL, SHEET, SheetHead, StepChip, TAG, Tick, delay, rise } from "../parts";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Label } from "../kit";
+import { FRAME, Mark, PILL, StepChip } from "../parts";
 import { STEPS } from "./content";
+import Conversation from "./Conversation";
+import Discovery from "./Discovery";
+import Research from "./Research";
 
-const TURN = 4200; // ms between replays of a row's one action while it's on screen
-
-const REDUCED = "(prefers-reduced-motion: reduce)";
-const subscribe = (onChange: () => void) => {
-  const mq = window.matchMedia(REDUCED);
+const WIDE = "(min-width: 1024px)";
+const subscribeWide = (onChange: () => void) => {
+  const mq = window.matchMedia(WIDE);
   mq.addEventListener("change", onChange);
   return () => mq.removeEventListener("change", onChange);
 };
 
-const j = STEPS.journey;
-
-// The page's signature: one thread followed through the three steps. Each step is a full-width row with its
-// text beside its own visual (sides alternate), so the long copy reads at a comfortable width next to what the
-// work looks like. 01 Find: the conversation map where the thread turned up, r/LocalLLaMA picked. 02
-// Contribute: our reply in that thread, technical and inside the sub's rules. 03 Surface: the same thread
-// ranking in Google and cited by ChatGPT. A slim spine on the left joins the rows, and the thread itself (a
-// Reddit disc) rides it down as you scroll (sticky, no script). While a row is on screen its one focal item
-// acts on a slow loop (the picked row pulses, the command types, the citation lands). Reduced motion: still.
+// The page's signature: the three steps of the work, as three different jobs, each on its own screen, so nobody
+// mistakes them for one dashboard in three colours. The screens share one dark surface (the same dotted grid)
+// beside each step's words, so the section reads as one family:
+//   01 Find the conversations that matter     research: a console scans threads, ranks them, and opens the best
+//                                             to show why it's worth entering
+//   02 Contribute with technical context      a real Reddit conversation, in Reddit's dark theme: a useful answer,
+//                                             the product inside it
+//   03 Strengthen search and AI visibility    the wider footprint: Google results and an AI answer, with Reddit as
+//                                             one source among several
+// A slim rail runs down the left with the Reddit disc riding it (sticky). It is also the progress: each step has
+// a small node on it that lights when the disc reaches that step, and a hairline of green runs out from the node
+// and fades away before the next. Nothing is ever faded: each screen starts from its first beat once at least
+// half of it is on screen, stays on, in full colour, while it is, and plays again from the start when you scroll
+// back to it; the step the disc is on only gets a deeper shadow. Below lg there is no rail. Reduced motion:
+// every screen finished.
 export default function Journey() {
+  const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => false);
+  const [active, setActive] = useState(0); // the step the disc is on
+  const [reached, setReached] = useState(0); // the furthest step it has reached
+  const rows = useRef<(HTMLLIElement | null)[]>([]);
+
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const i = Number((e.target as HTMLElement).dataset.i);
+          setActive(i);
+          setReached((r) => Math.max(r, i));
+        }
+      },
+      { rootMargin: "-42% 0px -42% 0px" },
+    );
+    rows.current.forEach((el) => el && io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section aria-labelledby="journey-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
@@ -34,16 +61,26 @@ export default function Journey() {
         </h2>
 
         <div className="mt-14 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)]">
-          {/* The spine, and the thread riding down it. */}
+          {/* The rail, and the disc riding down it. */}
           <div aria-hidden="true" className="relative hidden lg:block">
-            <span className="absolute top-12 bottom-12 left-1/2 w-px -translate-x-1/2 bg-line" />
-            <span className="sticky top-[calc(50vh-1.25rem)] mx-auto mt-8 mb-8 grid size-10 place-items-center rounded-full border border-line bg-white shadow-[0_1px_1.6px_rgb(15_26_20/0.05),0_8px_20px_rgb(15_26_20/0.1)]">
+            <span className="absolute top-8 bottom-8 left-1/2 w-px -translate-x-1/2 bg-ink/[0.09] [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]" />
+            <span className="sticky top-[calc(50vh-1.25rem)] z-20 mx-auto mt-8 mb-8 grid size-10 place-items-center rounded-full border border-line bg-white shadow-[0_1px_1.6px_rgb(15_26_20/0.05),0_8px_20px_rgb(15_26_20/0.1)]">
               <Mark name="reddit" className="size-5" />
             </span>
           </div>
           <ol className="space-y-5 lg:space-y-6">
             {STEPS.steps.map((s, i) => (
-              <Row key={s.name} i={i} step={s} />
+              <li
+                key={s.name}
+                data-i={i}
+                ref={(el) => {
+                  rows.current[i] = el;
+                }}
+                className="relative"
+              >
+                {wide && <Rail i={i} last={STEPS.steps.length - 1} active={active} reached={reached} />}
+                <Row i={i} step={s} current={wide && active === i} />
+              </li>
             ))}
           </ol>
         </div>
@@ -54,24 +91,74 @@ export default function Journey() {
 
 type Step = (typeof STEPS.steps)[number];
 
-/** One step: text beside its visual. The visual builds once when seen, then its focal item acts on a loop. */
-function Row({ i, step: s }: { i: number; step: Step }) {
-  const [ref, seen] = useInView<HTMLLIElement>(0.3);
-  const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
-  const [turn, setTurn] = useState(0);
+/** This step's node on the rail. Once the disc reaches it, a hairline of green runs out from the node, brightest at the node and fading before the next, so the rail reads as stations, not a progress bar. */
+function Rail({ i, last, active, reached }: { i: number; last: number; active: number; reached: number }) {
+  const seg = "absolute -left-7 w-px -translate-x-1/2 origin-top transition-transform duration-[1400ms] ease-[cubic-bezier(0.65,0,0.35,1)] motion-reduce:transition-none";
+  const lit = reached >= i;
+  return (
+    <div aria-hidden="true">
+      {i > 0 && (
+        <span
+          style={{ backgroundImage: "linear-gradient(to bottom, color-mix(in srgb, var(--primary) 8%, transparent), color-mix(in srgb, var(--primary) 70%, transparent))" }}
+          className={`${seg} top-[-0.75rem] h-[calc(50%+0.75rem)] ${lit ? "scale-y-100" : "scale-y-0"}`}
+        />
+      )}
+      {i < last && (
+        <span
+          style={{ backgroundImage: "linear-gradient(to bottom, color-mix(in srgb, var(--primary) 70%, transparent), color-mix(in srgb, var(--primary) 8%, transparent))", transitionDelay: "250ms" }}
+          className={`${seg} top-1/2 h-[calc(50%+0.75rem)] ${lit ? "scale-y-100" : "scale-y-0"}`}
+        />
+      )}
+      <span
+        className={`absolute top-1/2 -left-7 z-10 grid size-3 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border bg-white transition-[border-color,box-shadow] duration-700 motion-reduce:transition-none ${
+          lit ? "border-primary/80 shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_14%,transparent)]" : "border-ink/20"
+        }`}
+      >
+        <span className={`size-1 rounded-full bg-primary transition-opacity duration-700 ${lit ? "opacity-100" : "opacity-0"}`} />
+        {active === i && <span className="absolute -inset-1.5 rounded-full border border-primary/40 motion-safe:animate-[ping_2.8s_cubic-bezier(0,0,0.2,1)_infinite]" />}
+      </span>
+    </div>
+  );
+}
 
+// The one screen all three visuals sit on: near-black with a faint dotted grid.
+const SCREEN = "bg-[#0a0c0b] bg-[radial-gradient(rgb(255_255_255/0.055)_1px,transparent_1px)] [background-size:18px_18px]";
+
+/**
+ * True once at least `at` of the element is on screen, so what's inside starts from its first beat only when
+ * you can actually see it; false again once it has fully left, so it plays from the beginning next time.
+ */
+function useShown<T extends Element>(at = 0.5) {
+  const ref = useRef<T>(null);
+  const [on, setOn] = useState(false);
   useEffect(() => {
-    if (!seen || still) return;
-    const id = setTimeout(() => setTurn((v) => v + 1), turn === 0 ? 1600 : TURN);
-    return () => clearTimeout(id);
-  }, [seen, still, turn]);
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.intersectionRatio >= at) setOn(true);
+        else if (!e.isIntersecting) setOn(false);
+      },
+      { threshold: [0, at] },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [at]);
+  return [ref, on] as const;
+}
 
-  const play = seen && !still && turn > 0;
-  const visual = [<Find key="f" on={seen} play={play} />, <Contribute key="c" on={seen} play={play} turn={turn} />, <Surface key="s" on={seen} play={play} turn={turn} />][i];
+/** One step: its words beside its visual. The visual starts from its first beat when it's properly on screen and stays on while it is; the step the disc is on gets a deeper shadow. */
+function Row({ i, step: s, current }: { i: number; step: Step; current: boolean }) {
+  const [ref, on] = useShown<HTMLDivElement>(0.5);
+  const scene: ReactNode = [<Research key="r" on={on} />, <Conversation key="c" on={on} />, <Discovery key="d" on={on} />][i];
 
   return (
-    <li ref={ref} className={`${FRAME} relative grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]`}>
-      <div className="flex flex-col justify-center p-7 sm:p-10 xl:p-12">
+    <div
+      className={`${FRAME} grid grid-cols-1 transition-shadow duration-700 motion-reduce:transition-none lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] ${
+        current ? "shadow-[0_30px_70px_-40px_rgb(15_26_20/0.3)]" : ""
+      }`}
+    >
+      <div className="flex min-w-0 flex-col justify-center p-7 sm:p-10 xl:p-12">
         <StepChip n={i + 1} />
         <h3 className="mt-5 text-[clamp(1.5rem,2.1vw,2.05rem)] leading-[1.12] font-normal tracking-[-0.03em] text-ink">{s.name}</h3>
         <p className="mt-4 text-[0.97rem] leading-relaxed text-ink/70">{s.body}</p>
@@ -87,162 +174,12 @@ function Row({ i, step: s }: { i: number; step: Step }) {
         {"note" in s && <p className="mt-6 border-t border-line pt-5 text-[0.92rem] leading-relaxed text-ink/60">{s.note}</p>}
       </div>
       <div
+        ref={ref}
         aria-hidden="true"
-        className={`${CANVAS} flex items-center justify-center border-t border-line px-4 py-8 sm:px-8 lg:min-h-[28rem] lg:border-t-0 ${
-          i % 2 ? "lg:order-first lg:border-r" : "lg:border-l"
-        }`}
+        className={`${SCREEN} flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 lg:min-h-[30rem] ${i % 2 ? "lg:order-first" : ""}`}
       >
-        {visual}
+        {scene}
       </div>
-    </li>
-  );
-}
-
-type VisualProps = { on: boolean; play: boolean };
-
-/** The soft green outline on the active stage's focal item. */
-const lit = (play: boolean) =>
-  `transition-[background-color,box-shadow] duration-700 ${
-    play ? "bg-[color-mix(in_srgb,var(--light-green-soft)_40%,white)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_40%,var(--line))]" : "shadow-[0_0_0_1px_transparent]"
-  }`;
-
-/** One step per character, replayed whenever `play` turns on (the caller re-keys the element). */
-const typed = (play: boolean, text: string): CSSProperties | undefined =>
-  play ? { animation: `type-in 1100ms steps(${text.length}, end) 200ms both` } : undefined;
-const arrive = (play: boolean, ms: number): CSSProperties | undefined =>
-  play ? { animation: `arrive 600ms cubic-bezier(0.22,1,0.36,1) ${ms}ms both` } : undefined;
-
-/** 01 · Where the category is being discussed, and where you and competitors show up. */
-function Find({ on, play }: VisualProps) {
-  return (
-    <div className="w-full max-w-[26rem]">
-      <div style={delay(100)} className={`${SHEET} ${rise(on)} overflow-hidden`}>
-        <SheetHead title="Conversation map">
-          <span className="flex items-center gap-3 text-[10.5px] text-ink/45">
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-[#1a7f47]" />
-              You
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-ink/30" />
-              Competitors
-            </span>
-          </span>
-        </SheetHead>
-        <ul className="divide-y divide-line">
-          {j.map.map((m, i) => (
-            <li key={m.sub} style={delay(250 + i * 120)} className={`${rise(on)} ${m.picked ? lit(play) : ""} flex items-center gap-2.5 px-3.5 py-2.5`}>
-              <span className="grid size-6 shrink-0 place-items-center rounded-md border border-line bg-white">
-                <Mark name="reddit" className="size-3.5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
-                  {m.sub}
-                  {m.picked && (play ? <Beacon /> : <span className="size-2 rounded-full bg-accent" />)}
-                </span>
-                <span className="block truncate text-[10.5px] text-ink/50">
-                  {m.members} members · {m.intent} intent
-                </span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
-                <span className="flex items-center gap-1 text-ink">
-                  <span className="size-1.5 rounded-full bg-[#1a7f47]" />
-                  {m.you}
-                </span>
-                <span className="flex items-center gap-1 text-ink/50">
-                  <span className="size-1.5 rounded-full bg-ink/30" />
-                  {m.rival}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      {/* The thread the picked community leads to. */}
-      <p style={delay(800)} className={`${rise(on)} mt-3 flex items-center gap-2 px-1 text-[11px] text-ink/50`}>
-        <ArrowRight className="size-3 shrink-0 rotate-90" strokeWidth={2} />
-        <span className={`${TAG} min-w-0 border border-line bg-white text-ink/80`}>
-          <Mark name="reddit" className="size-3" />
-          <span className="truncate">{j.thread.title}</span>
-        </span>
-      </p>
-    </div>
-  );
-}
-
-/** 02 · Our reply in that thread: technical (a real command) and inside the sub's rules. */
-function Contribute({ on, play, turn }: VisualProps & { turn: number }) {
-  return (
-    <div className="w-full max-w-[26rem] space-y-3">
-      <ThreadHead on={on} />
-      <div style={delay(350)} className={`${SHEET} ${rise(on)} overflow-hidden`}>
-        <SheetHead title="Your reply">
-          <span className="text-[10.5px] text-ink/45">Drafted with technical context</span>
-        </SheetHead>
-        <div className="space-y-2.5 p-3.5">
-          <p className="text-[12px] leading-snug text-ink/80">{j.draft}</p>
-          <p key={play ? turn : "rest"} className={`${lit(play)} flex gap-1.5 rounded-lg bg-paper px-2.5 py-2 font-mono text-[10.5px] text-ink`}>
-            <span className="text-ink/40">$</span>
-            <span className="min-w-0 [overflow-wrap:anywhere]" style={typed(play, j.code)}>
-              {j.code}
-            </span>
-          </p>
-          <ul className="flex flex-wrap gap-1.5 border-t border-line pt-2.5">
-            {j.rules.map((r) => (
-              <li key={r} className={`${TAG} border border-line bg-white text-ink/70`}>
-                <Tick className="size-3" />
-                {r}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 03 · The same thread, ranking in Google and cited in a ChatGPT answer. */
-function Surface({ on, play, turn }: VisualProps & { turn: number }) {
-  return (
-    <div className="w-full max-w-[26rem] space-y-3">
-      <Card on={on} at={100} icon={<Mark name="google" className="size-3.5" />} name="Google">
-        <p className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11px] text-ink/70">{j.search.query}</p>
-        <p className="mt-2.5 truncate text-[10.5px] text-ink/50">{j.search.url}</p>
-        <p className="text-[12.5px] leading-snug text-[#1a0dab]">{j.thread.title}</p>
-      </Card>
-      <Card on={on} at={400} icon={<Mark name="chatgpt" className="size-3.5" />} name="ChatGPT">
-        <p className="text-[12px] leading-snug text-ink/75">{j.ai}</p>
-        <span key={play ? turn : "rest"} style={arrive(play, 250)} className={`${TAG} ${lit(play)} mt-2.5 border border-line bg-white text-ink/70`}>
-          <Mark name="reddit" className="size-3" />
-          reddit.com · {j.thread.sub}
-        </span>
-      </Card>
-    </div>
-  );
-}
-
-/** The thread itself: community, votes, title. */
-function ThreadHead({ on }: { on: boolean }) {
-  return (
-    <div style={delay(100)} className={`${SHEET} ${rise(on)} p-3.5`}>
-      <p className="flex items-center gap-2 text-[11px] text-ink/50">
-        <Mark name="reddit" className="size-3.5" />
-        {j.thread.sub}
-        <span className="ml-auto tabular-nums">▲ {j.thread.votes}</span>
-      </p>
-      <p className="mt-1.5 text-[13px] leading-snug font-medium text-ink">{j.thread.title}</p>
-    </div>
-  );
-}
-
-function Card({ on, at, icon, name, children }: { on: boolean; at: number; icon: ReactNode; name: string; children: ReactNode }) {
-  return (
-    <div style={delay(at)} className={`${SHEET} ${rise(on)} p-3.5`}>
-      <p className="mb-2.5 flex items-center gap-2 text-[11.5px] font-medium text-ink">
-        {icon}
-        {name}
-      </p>
-      {children}
     </div>
   );
 }
