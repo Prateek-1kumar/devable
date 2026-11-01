@@ -6,6 +6,7 @@ import { CTA, HERO } from "@/components/services/search/content";
 import Expanded from "@/components/services/search/Expanded";
 import Hero from "@/components/services/search/Hero";
 import Measure from "@/components/services/search/Measure";
+import Mix from "@/components/services/search/Mix";
 import Technical from "@/components/services/search/Technical";
 import Workbench from "@/components/services/search/Workbench";
 
@@ -31,6 +32,7 @@ export default function SearchAiVisibility() {
       <Hero />
       <Expanded />
       <Workbench />
+      <Mix />
       <Technical />
       <Measure />
       <Cases />

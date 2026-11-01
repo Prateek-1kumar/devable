@@ -48,7 +48,7 @@ export const VIS = {
     { name: "Google AI", mark: "google" },
     { name: "Claude", mark: "claude" },
   ] as { name: string; mark: Icon }[],
-  products: ["Your product", "Northwind DB", "Lattice", "Meridian", "Orbit"],
+  products: ["Your Product", "Category Leader", "Competitor A", "Competitor B", "Competitor C"],
   axes: ["Awareness", "Features", "Pricing", "Integrations", "Docs", "Reputation"],
   sources: [
     { label: "Your docs", mark: "docs" },
@@ -69,7 +69,7 @@ export const VIS = {
     { engine: 3, source: 1, page: "r/devops · Scaling RAG in prod" },
     { engine: 1, source: 3, page: "TechPress · The vector DB shortlist" },
     { engine: 2, source: 0, page: "docs/integrations/langchain" },
-    { engine: 3, source: 2, page: "G2 · Northwind DB alternatives" },
+    { engine: 3, source: 2, page: "G2 · Category Leader alternatives" },
   ] as { engine: number; source: number; page: string }[],
   views: [
     {
@@ -184,7 +184,7 @@ export const EXPANDED = {
     // Position in Google before and after (rank 1 is first), and the page that ranks.
     queries: [
       { q: "vector database for RAG", kind: "Category", url: "/docs/vector-search-rag", from: 9, to: 4 },
-      { q: "northwind alternative", kind: "Comparison", url: "/compare/northwind", from: 14, to: 3 },
+      { q: "category leader alternative", kind: "Comparison", url: "/compare/category-leader", from: 14, to: 3 },
       { q: "hybrid search api", kind: "High-intent", url: "/api/hybrid-search", from: 21, to: 6 },
     ],
     pageOne: { label: "Queries on page one", from: 14, to: 31 },
@@ -212,27 +212,32 @@ export const EXPANDED = {
   },
 };
 
-export type Area = { name: string; summary: string; listLabel: string; items: string[] };
+export type Area = { name: string; tagline: string; summary: string; body?: string; listLabel: string; items: string[] };
 
 export const AREAS = {
   label: "How we improve search & AI visibility",
   title: "Start with the opportunity, not a checklist.",
   body: "We map the searches and AI questions that influence how your audience discovers, compares, and chooses products. Then we build the signals that make your product easier to find, understand, and recommend.",
+  // `tagline` is the step's place in the sequence: understand, build, strengthen, unblock.
   areas: [
     {
       name: "Search Intelligence",
-      summary: "Understand the search market before deciding what to change.",
+      tagline: "Understand the product and find the opportunity",
+      summary: "Understand the product and the search market before deciding what to prioritize.",
+      body: "We first get into the product, use cases, audience, integrations, and technical category. From there, we map high-intent searches, relevant AI prompts, current visibility, competitor coverage, citation sources, and commercial gaps to identify where the strongest opportunities are.",
       listLabel: "We map",
       items: ["High-intent search demand", "Relevant AI prompts", "Current visibility", "Competitor coverage", "Citation sources", "Commercial content gaps"],
     },
     {
       name: "Content & Pages",
+      tagline: "Build or improve what’s needed",
       summary: "Build and improve the pages needed to win the searches and questions that matter.",
       listLabel: "Includes",
       items: ["Technical content", "Product and use-case pages", "Integration pages", "Comparison and alternative pages", "Content refreshes", "On-page optimization"],
     },
     {
       name: "Third-Party Visibility",
+      tagline: "Strengthen external visibility",
       summary: "Strengthen the external sources already shaping search and AI recommendations in your category.",
       listLabel: "Includes",
       // ponytail: "Reddit and community visibility" links to /services/reddit once that page ships.
@@ -240,59 +245,98 @@ export const AREAS = {
     },
     {
       name: "Technical Foundation",
+      tagline: "Remove technical blockers",
       summary: "Fix the technical and structural issues limiting discovery.",
       listLabel: "Includes",
       items: ["Technical SEO", "Site architecture", "Crawlability and indexation", "Internal linking", "Page structure", "Search performance improvements"],
     },
   ] as Area[],
-  note: "The mix of work changes based on where the strongest opportunity is, whether that means technical fixes, new pages, content refreshes, third-party visibility, or stronger AI coverage.",
 };
 
-// SAMPLE: what each area's work looks like, one scene per area (see Workbench).
+// SAMPLE: what each area's work looks like. Each area has its own scene and its own shape of information (see
+// the scenes beside Workbench). Labels are neutral on purpose: Your Product, Competitor A, Category Leader.
 export const ARTIFACTS = {
+  // 01: Product understanding → Search & AI signals → Opportunity → Priority
   intelligence: {
-    metrics: [
-      { label: "High-intent queries", value: "214" },
-      { label: "AI prompts tracked", value: "60" },
+    stages: ["Product understanding", "Search & AI signals", "Opportunity", "Priority"],
+    product: [
+      { label: "Use cases", value: "RAG, agents, semantic search" },
+      { label: "Audience", value: "ML engineers, platform teams" },
+      { label: "Integrations", value: "LangChain, LlamaIndex, +6" },
+      { label: "Category", value: "Vector database" },
     ],
-    rows: [
-      { query: "vector database for RAG", mark: "google", you: "#9", leader: "Northwind #1", priority: true },
-      { query: "Best vector DB for AI agents?", mark: "chatgpt", you: "Not mentioned", leader: "Northwind" },
-      { query: "pgvector alternative", mark: "google", you: "#3", leader: "You" },
-      { query: "Hybrid search with filters?", mark: "perplexity", you: "1 of 5", leader: "Lattice" },
-    ] as { query: string; mark: Icon; you: string; leader: string; priority?: boolean }[],
+    signals: [
+      { label: "High-intent searches", value: 214 },
+      { label: "AI prompts", value: 60 },
+      { label: "Current visibility", value: 12, suffix: "%" },
+      { label: "Competitors covered", value: 5 },
+      { label: "Citation sources", value: 18 },
+      { label: "Commercial gaps", value: 7 },
+    ] as { label: string; value: number; suffix?: string }[],
+    opportunities: [
+      { label: "Comparison vs. Competitor A", score: 94 },
+      { label: "Integration pages", score: 81 },
+      { label: "“Category Leader alternative”", score: 76 },
+    ],
+    priority: [
+      { label: "Comparison page", when: "Now" },
+      { label: "Integration pages", when: "Next" },
+      { label: "Use-case refresh", when: "Then" },
+    ],
   },
+  // 02: Opportunity → Page → what happens to it
   content: {
-    pages: [
-      { path: "/compare/northwind", type: "Comparison", action: "New" },
-      { path: "/integrations/langchain", type: "Integration", action: "New" },
-      { path: "/use-cases/rag", type: "Use case", action: "Refresh" },
-      { path: "/docs/quickstart", type: "Technical", action: "Optimize" },
-    ],
-    // The first page in the plan, drafted.
-    draft: { title: "Your product vs. Northwind", target: "northwind alternative" },
+    head: ["Opportunity", "Page", "Action"],
+    plan: [
+      { signal: "Comparison opportunity", page: "Comparison page", path: "/compare/competitor-a", note: "Targets “competitor a alternative”", action: "New" },
+      { signal: "Integration demand", page: "Integration page", path: "/integrations/langchain", note: "Top framework in your category", action: "New" },
+      { signal: "Existing use-case page", page: "Use-case page", path: "/use-cases/rag", note: "Last updated 14 months ago", action: "Refresh" },
+      { signal: "Docs gap", page: "Technical docs", path: "/docs/quickstart", note: "", action: "Optimize" },
+    ] as { signal: string; page: string; path: string; note: string; action: "New" | "Refresh" | "Optimize" }[],
+    checks: ["Title", "Schema", "Internal links"],
   },
+  // 03: where the product is present, weak or missing among the external sources that shape search and AI
   thirdParty: {
+    hub: { name: "Your Product", label: "Coverage", value: 50 },
+    // `kind` picks the icon; `opportunity` marks where the work is worth pursuing.
     sources: [
-      { name: "Reddit threads", mark: "reddit", share: 34, present: false },
-      { name: "Comparison listicles", mark: "g2", share: 26, present: false },
-      { name: "Product docs", mark: "docs", share: 21, present: true },
-      { name: "Industry publications", mark: "news", share: 12, present: true },
-    ] as { name: string; mark: Icon; share: number; present: boolean }[],
-    thread: { sub: "r/LocalLLaMA", title: "What vector DB are you running RAG on in prod?", votes: 214 },
+      { name: "Reddit / communities", kind: "reddit", state: "missing", opportunity: true },
+      { name: "Review platforms", kind: "g2", state: "present" },
+      { name: "Partner / ecosystem pages", kind: "partner", state: "weak" },
+      { name: "Comparison pages", kind: "compare", state: "weak", opportunity: true },
+      { name: "Industry publications", kind: "news", state: "present" },
+      { name: "Creator / expert content", kind: "youtube", state: "missing" },
+    ] as { name: string; kind: string; state: "present" | "weak" | "missing"; opportunity?: boolean }[],
   },
+  // 04: Diagnose → Fix → Improve discovery
   technical: {
-    before: 61,
-    after: 96,
-    // Share of pages indexed, month by month.
-    series: [61, 63, 70, 82, 91, 96],
+    stages: ["Diagnose", "Fix", "Improve discovery"],
     issues: [
-      { issue: "Docs pages blocked from indexing", count: 214, fixed: true },
-      { issue: "Integration pages with no internal links", count: 18, fixed: true },
-      { issue: "Duplicate titles across versions", count: 42, fixed: true },
-      { issue: "Slow pages on mobile", count: 9, fixed: false },
+      { issue: "Pages not indexed", count: 214 },
+      { issue: "Weak internal linking", count: 38 },
+      { issue: "Duplicate pages", count: 42 },
+      { issue: "Crawl issues", count: 17 },
+      { issue: "Slow or inaccessible pages", count: 9 },
     ],
+    discovery: { label: "Discoverable pages", from: 61, to: 96 },
   },
+};
+
+// The sentence the client moved out of the "How we improve" section into a section of its own, word for word,
+// and the visual that makes it land: the five kinds of work it names, as a share of the whole.
+export const MIX = {
+  lead: "The mix of work changes based on where the strongest opportunity is,",
+  rest: "whether that means technical fixes, new pages, content refreshes, third-party visibility, or stronger AI coverage.",
+  tag: "Strongest opportunity",
+  parts: ["Technical fixes", "New pages", "Content refreshes", "Third-party visibility", "AI coverage"],
+  // SAMPLE: the share of the work (%) in each part, in `parts` order, when each in turn is where the strongest opportunity is.
+  mixes: [
+    [44, 18, 12, 14, 12],
+    [14, 42, 14, 14, 16],
+    [12, 18, 40, 14, 16],
+    [12, 16, 12, 44, 16],
+    [10, 16, 10, 22, 42],
+  ],
 };
 
 export const TECHNICAL = {

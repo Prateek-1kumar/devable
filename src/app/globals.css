@@ -170,6 +170,21 @@ body {
 @keyframes soft-in {
   from { opacity: 0; }
 }
+/* A packet running an elbow connector (a box with a left and a bottom edge): down the left edge, then along the bottom. */
+@keyframes elbow-run {
+  0% { top: 0; left: 0; opacity: 0; }
+  12% { opacity: 1; }
+  55% { top: 100%; left: 0; }
+  88% { opacity: 1; }
+  100% { top: 100%; left: 100%; opacity: 0; }
+}
+/* A packet running a straight line between two points of its box, set as percentages in --x0 --y0 --x1 --y1. */
+@keyframes line-run {
+  0% { left: var(--x0); top: var(--y0); opacity: 0; }
+  14% { opacity: 1; }
+  86% { opacity: 1; }
+  100% { left: var(--x1); top: var(--y1); opacity: 0; }
+}
 /* A band of light crossing a surface once (the What we measure bars, as they land). */
 @keyframes sheen {
   from { transform: translateX(-130%) skewX(-18deg); }
