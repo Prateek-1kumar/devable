@@ -140,8 +140,6 @@ const FIBRES: [number, number, number][][] = [
   ],
 ];
 /** Light reaches screen j, then the screen plays its little story (0..1). */
-const fibreLit = (s: number, j: number) =>
-  span(s, 0.4 + 0.12 * j, 0.48 + 0.12 * j);
 const screenOn = (s: number, j: number) =>
   span(s, 0.46 + 0.12 * j, 0.72 + 0.12 * j);
 
@@ -394,7 +392,8 @@ function drawDockFront(ctx: Ctx, w: number, h: number) {
     const cx = (SLOTS[j] + DOCK.w / 2) * unit;
     // The plate hugs its icon and name.
     setFont(ctx, h * 0.3, 620);
-    const pw = h * 0.13 + h * 0.5 + h * 0.18 + ctx.measureText(sc.name).width + h * 0.32;
+    const pw =
+      h * 0.13 + h * 0.5 + h * 0.18 + ctx.measureText(sc.name).width + h * 0.32;
     const x = cx - pw / 2;
     rrect(
       ctx,
@@ -607,7 +606,7 @@ export function ContentStation() {
 
       {/* Fibres out to the dock. */}
       {FIBRES.map((route, j) => (
-        <Fibre key={j} route={route} lit={(x) => fibreLit(storyOf(x, 1), j)} />
+        <Fibre key={j} route={route} />
       ))}
 
       {/* The dock: a recessed skirt, a seamed body with an engraved plate per bay, a gasket line, and a top

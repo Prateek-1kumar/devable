@@ -11,7 +11,7 @@ import {
   Vector3,
   type Mesh,
 } from "three";
-import { colors, useBand } from "./kit";
+import { colors } from "./kit";
 
 // Floor channels: the connections run in a shallow channel cut into the floor, covered by a frosted glass
 // strip flush with the surface and edged with brushed metal lips. Under the glass a soft green light glides
@@ -80,7 +80,7 @@ function channelMaterial(length: number) {
   const c = colors();
   return new ShaderMaterial({
     uniforms: {
-      lit: { value: 0 },
+      lit: { value: 1.02 },
       phase: { value: 0 },
       len: { value: length },
       metal: { value: new Color("#dcd9d0") },
@@ -141,23 +141,18 @@ function channelMaterial(length: number) {
 }
 
 /**
- * A floor channel along `route` (only x and z are used). `lit(x)` says how far along the light has reached
- * (0..1) at scroll position `x`; `flow(x)` (default 1) sets the sparks' direction (−1 runs home).
+ * A floor channel along `route` (only x and z are used). It runs on its own, not with scroll: always lit,
+ * sparks flowing from the route's start while the band is in view (rendering pauses off screen).
  */
 export function Channel({
   route,
-  lit,
-  flow,
   width = 0.32,
   speed = 2.4,
 }: {
   route: [number, number, number][];
-  lit: (x: number) => number;
-  flow?: (x: number) => number;
   width?: number;
   speed?: number;
 }) {
-  const bandRef = useBand();
   const { geometry, material } = useMemo(() => {
     const strip = stripGeometry(route, width);
     return {
@@ -169,22 +164,16 @@ export function Channel({
   useFrame((_, delta) => {
     const m = mesh.current?.material as ShaderMaterial | undefined;
     if (!m) return;
-    const x = bandRef.current;
-    m.uniforms.phase.value += Math.min(delta, 1 / 30) * speed * (flow ? flow(x) : 1);
-    m.uniforms.lit.value = lit(x);
+    m.uniforms.phase.value += Math.min(delta, 1 / 30) * speed;
   });
-  return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={-1} />;
+  return (
+    <mesh ref={mesh} geometry={geometry} material={material} renderOrder={-1} />
+  );
 }
 
 /** A short run inside a station: a slimmer channel. */
-export function Fibre({
-  route,
-  lit,
-}: {
-  route: [number, number, number][];
-  lit: (x: number) => number;
-}) {
-  return <Channel route={route} lit={lit} width={0.2} speed={2.8} />;
+export function Fibre({ route }: { route: [number, number, number][] }) {
+  return <Channel route={route} width={0.2} speed={2.8} />;
 }
 
 /** Height station-local routes are given (ignored by the channel, which always sits in the floor). */

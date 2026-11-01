@@ -4,7 +4,31 @@ import { Line } from "@react-three/drei";
 import { Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import type { Line2 } from "three-stdlib";
 import { span, storyOf } from "../content";
-import { FACE, PREMULTIPLIED, PX, Print, RIGHT, Shadow, Solid, block, colors, cylinder, drawMark, easeInOut, easeOut, panel, paragraph, pop, rrect, setFont, shadowTexture, upvote, useBand, useCanvas, wrap } from "../kit";
+import {
+  FACE,
+  PREMULTIPLIED,
+  PX,
+  Print,
+  RIGHT,
+  Shadow,
+  Solid,
+  block,
+  colors,
+  cylinder,
+  drawMark,
+  easeInOut,
+  easeOut,
+  panel,
+  paragraph,
+  pop,
+  rrect,
+  setFont,
+  shadowTexture,
+  upvote,
+  useBand,
+  useCanvas,
+  wrap,
+} from "../kit";
 import { AT } from "../layout";
 import { face, usePhotos } from "../photos";
 
@@ -35,18 +59,47 @@ const ALL_PHOTOS = MEMBERS.map((m) => m.photo);
 /** The three replies, each above the member who wrote it: left, middle (yours) and right on screen. */
 const CARD = { w: 2.35, h: 0.94, t: 0.07, y: 2.3 };
 const REPLIES = [
-  { member: 5, u: -2.6, y: 1.68, body: ["Tables were always the pain for us."], votes: 31, you: false },
-  { member: 3, u: 0, y: 2.36, body: ["Switched to ", "Your Product", " last month. Best on messy layouts by far."], votes: 142, you: true },
-  { member: 2, u: 2.6, y: 1.68, body: ["+1, we need self-hosted too."], votes: 9, you: false },
+  {
+    member: 5,
+    u: -2.6,
+    y: 1.68,
+    body: ["Tables were always the pain for us."],
+    votes: 31,
+    you: false,
+  },
+  {
+    member: 3,
+    u: 0,
+    y: 2.36,
+    body: [
+      "Switched to ",
+      "Your Product",
+      " last month. Best on messy layouts by far.",
+    ],
+    votes: 142,
+    you: true,
+  },
+  {
+    member: 2,
+    u: 2.6,
+    y: 1.68,
+    body: ["+1, we need self-hosted too."],
+    votes: 9,
+    you: false,
+  },
 ];
-const cardAt = (u: number, y = CARD.y) => RIGHT.clone().multiplyScalar(u).setY(y);
+const cardAt = (u: number, y = CARD.y) =>
+  RIGHT.clone().multiplyScalar(u).setY(y);
 const VOTERS = [0, 1, 2, 4, 5];
 
 // The story, 0..1 while the camera holds.
 const question = (s: number) => span(s, 0.0, 0.14);
-const arrive = (s: number, i: number) => span(s, 0.06 + 0.035 * i, 0.16 + 0.035 * i);
-const reply = (s: number, j: number) => span(s, 0.26 + 0.09 * j, 0.36 + 0.09 * j);
-const vote = (s: number, k: number) => span(s, 0.56 + 0.05 * k, 0.72 + 0.05 * k);
+const arrive = (s: number, i: number) =>
+  span(s, 0.06 + 0.035 * i, 0.16 + 0.035 * i);
+const reply = (s: number, j: number) =>
+  span(s, 0.26 + 0.09 * j, 0.36 + 0.09 * j);
+const vote = (s: number, k: number) =>
+  span(s, 0.56 + 0.05 * k, 0.72 + 0.05 * k);
 const crowned = (s: number) => span(s, 0.78, 0.92);
 const yourVotes = (s: number) => 12 + 130 * easeOut(span(s, 0.58, 0.84));
 
@@ -105,7 +158,9 @@ function drawQuestion(ctx: Ctx, w: number, h: number) {
   setFont(ctx, 40, 650);
   ctx.letterSpacing = "-0.8px";
   ctx.fillStyle = c.ink;
-  wrap(ctx, "Best tools for processing PDFs at scale?", 540).forEach((line, i) => ctx.fillText(line, 30, 146 + i * 48));
+  wrap(ctx, "Best tools for processing PDFs at scale?", 540).forEach(
+    (line, i) => ctx.fillText(line, 30, 146 + i * 48),
+  );
   ctx.letterSpacing = "0px";
   rrect(ctx, 30, H - 62, 120, 38, 19, "#f4f2eb");
   rrect(ctx, 162, H - 62, 170, 38, 19, "#f4f2eb");
@@ -125,7 +180,17 @@ function drawReply(ctx: Ctx, w: number, h: number, j: number, s: number) {
   ctx.save();
   ctx.scale(k, k);
   const H = h / k;
-  rrect(ctx, 0, 0, 640, H, 26, r.you ? "#f3fcf6" : "#ffffff", r.you ? "rgba(25,231,110,0.45)" : undefined, 3);
+  rrect(
+    ctx,
+    0,
+    0,
+    640,
+    H,
+    26,
+    r.you ? "#f3fcf6" : "#ffffff",
+    r.you ? "rgba(25,231,110,0.45)" : undefined,
+    3,
+  );
   if (r.you) rrect(ctx, 0, 22, 8, H - 44, 4, c.primary);
   face(ctx, m.photo, 52, 50, 22);
   setFont(ctx, 22, 650);
@@ -191,15 +256,30 @@ function drawSilhouette(ctx: Ctx, w: number) {
 function Member({ i }: { i: number }) {
   const bandRef = useBand();
   const m = MEMBERS[i];
-  const photoTex = useCanvas(256, 256, useCallback((ctx: Ctx, w: number) => drawAvatar(ctx, w, m.photo), [m.photo]));
+  const photoTex = useCanvas(
+    256,
+    256,
+    useCallback(
+      (ctx: Ctx, w: number) => drawAvatar(ctx, w, m.photo),
+      [m.photo],
+    ),
+  );
   usePhotos(ALL_PHOTOS, photoTex.paint);
-  const ghost = useCanvas(256, 256, useCallback((ctx: Ctx, w: number) => drawSilhouette(ctx, w), []));
+  const ghost = useCanvas(
+    256,
+    256,
+    useCallback((ctx: Ctx, w: number) => drawSilhouette(ctx, w), []),
+  );
   const lit = useRef<MeshBasicMaterial>(null);
   const head = useRef<Group>(null);
   useFrame((state) => {
     const k = arrive(storyOf(bandRef.current, 3), i);
     if (lit.current) lit.current.opacity = k;
-    if (head.current) head.current.position.y = HEAD_Y + Math.sin(state.clock.elapsedTime * 1.1 + i * 1.3) * 0.015 - (1 - easeOut(k)) * 0.06;
+    if (head.current)
+      head.current.position.y =
+        HEAD_Y +
+        Math.sin(state.clock.elapsedTime * 1.1 + i * 1.3) * 0.015 -
+        (1 - easeOut(k)) * 0.06;
   });
   return (
     <group position={[m.x, 0, m.z]}>
@@ -208,17 +288,32 @@ function Member({ i }: { i: number }) {
         <Solid geometry={cylinder(0.2, 0.02)} />
         <Solid geometry={cylinder(0.035, 0.4)} color="#e3e1da" />
         <Solid geometry={block(0.52, 0.5, 0.07, 0.1)} position-y={0.4} />
-        <Solid geometry={panel(0.5, 0.48, 0.05, 0.1)} position={[0, 0.47, 0.25]} rotation-y={Math.PI} />
+        <Solid
+          geometry={panel(0.5, 0.48, 0.05, 0.1)}
+          position={[0, 0.47, 0.25]}
+          rotation-y={Math.PI}
+        />
       </group>
       <group ref={head} position-y={HEAD_Y}>
         <group quaternion={FACE}>
           <mesh renderOrder={5}>
             <circleGeometry args={[0.24, 48]} />
-            <meshBasicMaterial map={ghost.texture} transparent toneMapped={false} {...PREMULTIPLIED} />
+            <meshBasicMaterial
+              map={ghost.texture}
+              transparent
+              toneMapped={false}
+              {...PREMULTIPLIED}
+            />
           </mesh>
           <mesh renderOrder={6} position-z={0.002}>
             <circleGeometry args={[0.24, 48]} />
-            <meshBasicMaterial ref={lit} map={photoTex.texture} transparent opacity={0} toneMapped={false} />
+            <meshBasicMaterial
+              ref={lit}
+              map={photoTex.texture}
+              transparent
+              opacity={0}
+              toneMapped={false}
+            />
           </mesh>
         </group>
       </group>
@@ -233,14 +328,25 @@ function Reply({ j }: { j: number }) {
   const r = REPLIES[j];
   const m = MEMBERS[r.member];
   const value = useRef(-1);
-  const draw = useCallback((ctx: Ctx, w: number, h: number) => drawReply(ctx, w, h, j, Math.max(0, value.current)), [j]);
-  const tex = useCanvas(Math.round((CARD.w - 0.06) * PX * 1.4), Math.round((CARD.h - 0.06) * PX * 1.4), draw);
+  const draw = useCallback(
+    (ctx: Ctx, w: number, h: number) =>
+      drawReply(ctx, w, h, j, Math.max(0, value.current)),
+    [j],
+  );
+  const tex = useCanvas(
+    Math.round((CARD.w - 0.06) * PX * 1.4),
+    Math.round((CARD.h - 0.06) * PX * 1.4),
+    draw,
+  );
   usePhotos(ALL_PHOTOS, tex.paint);
   const card = useRef<Group>(null);
   const glow = useRef<MeshBasicMaterial>(null);
   const line = useRef<Line2>(null);
   const home = useMemo(() => cardAt(r.u, r.y), [r.u, r.y]);
-  const points = useMemo(() => [new Vector3(m.x, HEAD_Y + 0.26, m.z), home.clone().setY(r.y - 0.02)], [m, home, r.y]);
+  const points = useMemo(
+    () => [new Vector3(m.x, HEAD_Y + 0.26, m.z), home.clone().setY(r.y - 0.02)],
+    [m, home, r.y],
+  );
   useFrame(() => {
     const s = storyOf(bandRef.current, 3);
     const k = reply(s, j);
@@ -263,17 +369,44 @@ function Reply({ j }: { j: number }) {
   });
   return (
     <group>
-      <Line ref={line} points={points} color={c.line} lineWidth={1} transparent visible={false} />
+      <Line
+        ref={line}
+        points={points}
+        color={c.line}
+        lineWidth={1}
+        transparent
+        visible={false}
+      />
       <group ref={card} visible={false}>
         <group rotation-y={Math.PI / 6}>
           {r.you && (
-            <mesh position={[0, CARD.h / 2, -0.05]} scale={[CARD.w * 1.9, CARD.h * 2.6, 1]} renderOrder={-1}>
+            <mesh
+              position={[0, CARD.h / 2, -0.05]}
+              scale={[CARD.w * 1.9, CARD.h * 2.6, 1]}
+              renderOrder={-1}
+            >
               <planeGeometry args={[1, 1]} />
-              <meshBasicMaterial ref={glow} color={c.primary} alphaMap={shadowTexture()} transparent opacity={0} depthWrite={false} toneMapped={false} />
+              <meshBasicMaterial
+                ref={glow}
+                color={c.primary}
+                alphaMap={shadowTexture()}
+                transparent
+                opacity={0}
+                depthWrite={false}
+                toneMapped={false}
+              />
             </mesh>
           )}
-          <Solid geometry={panel(CARD.w, CARD.h, CARD.t, 0.12)} color={r.you ? "#f3fcf6" : "#fbfaf7"} />
-          <Print w={CARD.w - 0.06} h={CARD.h - 0.06} map={tex.texture} position={[0, CARD.h / 2, CARD.t / 2 + 0.003]} />
+          <Solid
+            geometry={panel(CARD.w, CARD.h, CARD.t, 0.12)}
+            color={r.you ? "#f3fcf6" : "#fbfaf7"}
+          />
+          <Print
+            w={CARD.w - 0.06}
+            h={CARD.h - 0.06}
+            map={tex.texture}
+            position={[0, CARD.h / 2, CARD.t / 2 + 0.003]}
+          />
         </group>
       </group>
     </group>
@@ -285,7 +418,10 @@ function Vote({ k }: { k: number }) {
   const bandRef = useBand();
   const c = colors();
   const g = useRef<Group>(null);
-  const from = useMemo(() => new Vector3(MEMBERS[VOTERS[k]].x, HEAD_Y + 0.3, MEMBERS[VOTERS[k]].z), [k]);
+  const from = useMemo(
+    () => new Vector3(MEMBERS[VOTERS[k]].x, HEAD_Y + 0.3, MEMBERS[VOTERS[k]].z),
+    [k],
+  );
   const to = useMemo(() => cardAt(0, REPLIES[1].y + 0.1), []);
   useFrame(() => {
     const f = vote(storyOf(bandRef.current, 3), k);
@@ -306,8 +442,19 @@ function Vote({ k }: { k: number }) {
 
 export function RedditStation() {
   const bandRef = useBand();
-  const top = useCanvas(1024, 1024, useCallback((ctx: Ctx, w: number) => drawTableTop(ctx, w), []));
-  const q = useCanvas(Math.round(2.0 * PX * 1.4), Math.round(1.24 * PX * 1.4), useCallback((ctx: Ctx, w: number, h: number) => drawQuestion(ctx, w, h), []));
+  const top = useCanvas(
+    1024,
+    1024,
+    useCallback((ctx: Ctx, w: number) => drawTableTop(ctx, w), []),
+  );
+  const q = useCanvas(
+    Math.round(2.0 * PX * 1.4),
+    Math.round(1.24 * PX * 1.4),
+    useCallback(
+      (ctx: Ctx, w: number, h: number) => drawQuestion(ctx, w, h),
+      [],
+    ),
+  );
   const stand = useRef<Group>(null);
   const halo = useRef<Mesh>(null);
 
@@ -317,7 +464,8 @@ export function RedditStation() {
       stand.current.visible = k > 0;
       stand.current.scale.setScalar(pop(k));
     }
-    if (halo.current) (halo.current.material as MeshBasicMaterial).opacity = 0.25 * k;
+    if (halo.current)
+      (halo.current.material as MeshBasicMaterial).opacity = 0.25 * k;
   });
 
   return (
@@ -327,24 +475,52 @@ export function RedditStation() {
       <Solid geometry={cylinder(2.95, 0.03)} color="#f0eee8" />
       <Shadow w={3.6} d={3.6} opacity={0.1} position-y={0.032} />
       <Solid geometry={cylinder(0.62, 0.05)} position-y={0.03} />
-      <Solid geometry={cylinder(0.16, TABLE.h - 0.05)} color="#e3e1da" position-y={0.08} />
+      <Solid
+        geometry={cylinder(0.16, TABLE.h - 0.05)}
+        color="#e3e1da"
+        position-y={0.08}
+      />
       <Solid geometry={cylinder(TABLE.r, TABLE.top)} position-y={TABLE.h} />
       <mesh rotation-x={-Math.PI / 2} position-y={TABLE.h + TABLE.top + 0.002}>
         <circleGeometry args={[TABLE.r - 0.04, 96]} />
-        <meshBasicMaterial map={top.texture} transparent toneMapped={false} {...PREMULTIPLIED} polygonOffset polygonOffsetFactor={-1} />
+        <meshBasicMaterial
+          map={top.texture}
+          transparent
+          toneMapped={false}
+          {...PREMULTIPLIED}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
       </mesh>
 
       {/* The question, standing at the centre of the table, a warm glow beneath it. */}
-      <mesh ref={halo} rotation-x={-Math.PI / 2} position-y={TABLE.h + TABLE.top + 0.004} scale={[2.2, 1.4, 1]}>
+      <mesh
+        ref={halo}
+        rotation-x={-Math.PI / 2}
+        position-y={TABLE.h + TABLE.top + 0.004}
+        scale={[2.2, 1.4, 1]}
+      >
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color="#ff4500" alphaMap={shadowTexture()} transparent opacity={0} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial
+          color="#ff4500"
+          alphaMap={shadowTexture()}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+        />
       </mesh>
       <group ref={stand} position-y={TABLE.h + TABLE.top} visible={false}>
         <group rotation-y={Math.PI / 6}>
           <Solid geometry={block(0.8, 0.32, 0.03, 0.12)} />
           <Solid geometry={panel(0.1, 0.24, 0.05, 0.03)} position-z={-0.05} />
           <Solid geometry={panel(2.06, 1.3, 0.07, 0.12)} position-y={0.14} />
-          <Print w={2.0} h={1.24} map={q.texture} position={[0, 0.14 + 0.65, 0.038]} />
+          <Print
+            w={2.0}
+            h={1.24}
+            map={q.texture}
+            position={[0, 0.14 + 0.65, 0.038]}
+          />
         </group>
       </group>
 

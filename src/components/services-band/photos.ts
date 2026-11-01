@@ -55,4 +55,3 @@ export function face(ctx: Ctx, src: string, cx: number, cy: number, r: number) {
   drawPhoto(ctx, src, cx - r, cy - r, r * 2, r * 2);
   ctx.restore();
 }
-

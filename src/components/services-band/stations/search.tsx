@@ -62,7 +62,6 @@ const climb = (s: number) => smoother(span(s, 0.42, 0.78));
 const dealt = (s: number, i: number) =>
   smoother(span(s, 0.12 + 0.07 * i, 0.26 + 0.07 * i));
 const rankOf = (s: number) => 3 - 3 * climb(s);
-const fibreLit = (s: number) => span(s, 0.78, 0.88);
 const unfold = (s: number) => span(s, 0.84, 1);
 
 /**
@@ -541,7 +540,7 @@ export function SearchStation() {
       </group>
 
       {/* The citation travels by fibre to the AI Overview, which springs up on its stand. */}
-      <Fibre route={CITE} lit={(x) => fibreLit(storyOf(x, 2))} />
+      <Fibre route={CITE} />
       <group position={[AI.x, 0, AI.z]}>
         <Shadow w={3.4} d={1.3} />
         <Solid geometry={block(1.3, 0.55, 0.06, 0.24)} />

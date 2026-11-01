@@ -100,12 +100,9 @@ export default function ServicesBand() {
         <Labels />
 
         <div className="pointer-events-none absolute top-24 left-6 z-20 sm:left-12 lg:top-28 xl:left-[6vw]">
-          <p className="font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase">
-            How it works
-          </p>
           <h2
             id="services-band-title"
-            className="mt-3 text-[clamp(1.75rem,2.9vw,2.75rem)] leading-[1.02] font-medium tracking-[-0.05em]"
+            className="text-[clamp(1.75rem,2.9vw,2.75rem)] leading-[1.02] font-medium tracking-[-0.05em]"
           >
             <span className="block text-ink/30">One growth system.</span>
             <span className="block text-ink">Four channels.</span>

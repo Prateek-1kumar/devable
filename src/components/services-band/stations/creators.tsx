@@ -65,7 +65,6 @@ const FEED: [number, number, number][] = [
 ];
 
 const live = (s: number) => span(s, 0.04, 0.18);
-const feedLit = (s: number) => span(s, 0.2, 0.32);
 const rowFill = (s: number, j: number) =>
   span(s, 0.3 + 0.16 * j, 0.52 + 0.16 * j);
 const fmt = (n: number) =>
@@ -476,7 +475,7 @@ export function CreatorStation() {
       </group>
 
       {/* The signal from the desk to the audience. */}
-      <Fibre route={FEED} lit={(x) => feedLit(storyOf(x, 4))} />
+      <Fibre route={FEED} />
 
       {/* The audience stand: three tiers, one per platform, and the reach scoreboard above. */}
       <group position={[STAND.x, 0.04, STAND.z]}>

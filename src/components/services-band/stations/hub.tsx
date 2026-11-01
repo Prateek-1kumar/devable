@@ -23,7 +23,6 @@ import {
   block,
   colors,
   cylinder,
-  easeInOut,
   easeOut,
   panel,
   pop,
@@ -850,18 +849,12 @@ export function Hub() {
  * Pipes from the hub's ports into the back of each station. Each one's fibre lights from the hub outward
  * as the camera first travels to its station; pulses keep flowing out, and reverse home at the last beat.
  */
+/** The four channels from the hub to the stations: always lit, light flowing outward while in view. */
 export function Pipes() {
   return (
     <group>
       {ROUTES.map((route, i) => (
-        <Channel
-          key={i}
-          route={route}
-          // Lights while the camera travels to station i + 1.
-          lit={(x) => easeInOut(span(x, i + 0.36, i + 0.64))}
-          // Out to the stations, then home to the hub for the closing beat (easing through a stop).
-          flow={(x) => 1 - 2 * easeInOut(span(x, 4.4, 4.75))}
-        />
+        <Channel key={i} route={route} />
       ))}
     </group>
   );
