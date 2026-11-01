@@ -339,23 +339,14 @@ export const MIX = {
   ],
 };
 
-export const TECHNICAL = {
-  label: "Built for technical products",
-  title: "Search strategy without the technical learning curve.",
-  points: [
-    {
-      title: "Product understanding comes first",
-      body: "We understand the product, APIs, use cases, integrations, and technical category before deciding what to optimize.",
-    },
-    {
-      title: "Technical content is part of execution",
-      body: "Our technical writers and engineers can create the tutorials, comparisons, use-case pages, and content the strategy requires.",
-    },
-    {
-      title: "Search and AI work as one system",
-      body: "SEO, AI visibility, content, and external authority are managed together instead of as disconnected channels.",
-    },
-  ],
+// Copy from the client: the commitment we make when we work with a client. Text-led on purpose.
+export const COMMITMENT = {
+  label: "Our commitment to you",
+  // "A 90-day plan prioritized by commercial impact." with its two key phrases picked out in green.
+  title: { a: "A", plan: "90-day plan", b: "prioritized by", impact: "commercial impact", end: "." },
+  body: "We turn the opportunities we identify into a clear 90-day plan, then break that into monthly sprints with specific performance objectives.",
+  // The three horizons, longest first, each in its own lane of a twelve-month timeline (see Commitment).
+  horizons: ["Long-term strategy.", "90-day priorities.", "Monthly execution."],
 };
 
 export const MEASURE = {

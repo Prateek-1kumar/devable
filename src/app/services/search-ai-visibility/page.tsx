@@ -7,7 +7,7 @@ import Expanded from "@/components/services/search/Expanded";
 import Hero from "@/components/services/search/Hero";
 import Measure from "@/components/services/search/Measure";
 import Mix from "@/components/services/search/Mix";
-import Technical from "@/components/services/search/Technical";
+import Commitment from "@/components/services/search/Commitment";
 import Workbench from "@/components/services/search/Workbench";
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export default function SearchAiVisibility() {
       <Expanded />
       <Workbench />
       <Mix />
-      <Technical />
+      <Commitment />
       <Measure />
       <Cases />
       <FinalCta title={CTA.title} subtitle="" body={CTA.body} ctaLabel={CTA.button} caseStudiesHref="#case-studies" caseStudiesLabel="See case studies" />
