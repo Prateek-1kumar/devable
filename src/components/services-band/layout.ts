@@ -22,22 +22,22 @@ export const DIRS = [
   new Vector3(0, 0, 1),
 ];
 /** Pipe radius: the glass shell, and the fibre running down its middle. */
-export const PIPE = { r: 0.085, fibre: 0.032 };
+export const PIPE = { r: 0.02, fibre: 0.011 };
 const R = PIPE.r;
-const PORT = PORT_MODULE.reach;
+// Channels start under the port modules, so they emerge from beneath them.
+const PORT = PORT_MODULE.from + 0.4;
 /**
  * Each pipe's route over the floor (world points, corners rounded when built): from its hub port out to its
  * station, round behind it, and into the back of the station's main piece. Hidden ends tuck behind solids.
  */
 export const ROUTES: [number, number, number][][] = [
-  // Technical Content: up the back of the monitor's stand.
+  // Technical Content: round behind the station, ending under the monitor's stand.
   [
     [-PORT, R, 0],
     [-8.05, R, 0],
     [-8.05, R, -2.6],
     [-11.2, R, -2.6],
-    [-11.2, R, -1.95],
-    [-11.2, 1.0, -1.95],
+    [-11.2, R, -1.75],
   ],
   // Search: round behind the results rack, into the back of its base.
   [
