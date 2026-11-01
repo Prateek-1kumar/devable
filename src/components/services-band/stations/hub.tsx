@@ -863,18 +863,24 @@ export function Pipes() {
 // ─────────────────────────────── Beat 5: every station named ───────────────────────────────
 
 /** Each station's name, pinned just above its tallest piece. */
-const STATION_LABELS: [string, [number, number, number]][] = [
-  ["01 · Technical Content", [AT.content.x - 0.2, 2.75, AT.content.z - 1.7]],
-  ["02 · Search & AI Visibility", [AT.search.x, 4.0, AT.search.z]],
-  ["03 · Reddit", [AT.reddit.x, 4.1, AT.reddit.z]],
-  ["04 · Creator Distribution", [AT.creators.x, 3.0, AT.creators.z]],
+/** Each station's name for the overview, pinned to a point with clear sky above it (the pill sits above). */
+const STATION_LABELS: [string, string, [number, number, number]][] = [
+  ["01", "Technical Content", [AT.content.x - 0.2, 2.5, AT.content.z - 1.7]],
+  ["02", "Search & AI Visibility", [AT.search.x, 3.35, AT.search.z]],
+  ["03", "Reddit", [AT.reddit.x, 3.45, AT.reddit.z]],
+  [
+    "04",
+    "Creator Distribution",
+    [AT.creators.x - 1.8, 1.9, AT.creators.z + 0.8],
+  ],
 ];
-export const OVERVIEW_LABELS: LabelSpec[] = [
-  ...STATION_LABELS.map(([name, p], i): LabelSpec => ({
+export const OVERVIEW_LABELS: LabelSpec[] = STATION_LABELS.map(
+  ([n, name, p], i): LabelSpec => ({
     key: `station-${i}`,
     at: p,
+    n,
     text: name,
     beat: 5,
-    from: 0.1 + i * 0.06,
-  })),
-];
+    from: 0.1 + i * 0.08,
+  }),
+);

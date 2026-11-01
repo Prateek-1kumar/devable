@@ -7,6 +7,8 @@ export type LabelSpec = {
   /** World point the tag pins to. */
   at: [number, number, number];
   text: string;
+  /** Its number, shown in a dark disc before the name. */
+  n?: string;
   /** Which side of its point the tag sits: above (default) or below. */
   side?: "up" | "down";
   /** The beat it belongs to and the part of that beat's story it shows from (see `shown`). */

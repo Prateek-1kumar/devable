@@ -3,8 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { labelStore, noLabels, type LabelSpec } from "./label-store";
 
-// The in-scene name tags as HTML over the canvas: quiet mono captions with a soft white halo, crisp at any zoom.
-// The story's steps live in the caption card, not in the scene. Tags hide on phones.
+// The in-scene name tags as HTML over the canvas, crisp at any zoom: white pills on short leaders. The story's
+// steps live in the caption card, not in the scene. Tags hide on phones.
 
 export default function Labels() {
   const specs = useSyncExternalStore(
@@ -34,17 +34,22 @@ export default function Labels() {
   );
 }
 
-const HALO = {
-  textShadow: "0 0 2px #fff, 0 0 6px #fff, 0 0 12px #fff, 0 0 18px #fff",
-};
-
+/** A station's name: a white pill with a numbered disc, on a short hairline leader down to a dot on the station. */
 function Tag({ spec }: { spec: LabelSpec }) {
   return (
-    <span
-      style={HALO}
-      className="block font-mono text-[0.66rem] leading-none tracking-[0.14em] whitespace-nowrap text-ink/60 uppercase max-sm:hidden"
-    >
-      {spec.text}
+    <span className="flex flex-col items-center max-sm:hidden">
+      <span className="flex items-center gap-2 rounded-full border border-line bg-white py-[0.3rem] pr-4 pl-[0.3rem] shadow-[0_10px_28px_-14px_rgb(23_44_33/0.45)]">
+        {spec.n && (
+          <span className="grid size-[1.6rem] place-items-center rounded-full bg-ink font-mono text-[0.68rem] text-primary">
+            {spec.n}
+          </span>
+        )}
+        <span className="text-[0.95rem] leading-none font-medium tracking-[-0.02em] whitespace-nowrap text-ink">
+          {spec.text}
+        </span>
+      </span>
+      <span className="h-6 w-px bg-ink/35" />
+      <span className="size-2 rounded-full border-[1.5px] border-ink bg-white shadow-[0_0_0_3px_rgb(255_255_255/0.85)]" />
     </span>
   );
 }

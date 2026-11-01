@@ -115,8 +115,9 @@ export default function ServicesBand() {
           className="absolute right-4 bottom-4 left-4 z-20 rounded-2xl border border-line bg-white/95 p-5 shadow-[0_18px_40px_-24px_rgb(23_44_33/0.35)] backdrop-blur sm:left-auto sm:w-[23rem] lg:right-12 lg:bottom-10 xl:right-[6vw]"
         >
           <div key={active} className="animate-fade-up">
-            <p className="font-mono text-[0.68rem] tracking-[0.12em] text-muted uppercase">
-              {beat.n} · {beat.eyebrow}
+            <p className="flex items-center gap-2 font-mono text-[0.68rem] tracking-[0.12em] text-muted uppercase">
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[#14833f]">{beat.n}</span>
+              {beat.eyebrow}
             </p>
             <h3 className="mt-2 text-[1.3rem] leading-tight font-medium tracking-[-0.035em] text-ink">
               {beat.title}
@@ -132,7 +133,7 @@ export default function ServicesBand() {
                   className={`flex items-center gap-2 text-[0.86rem] leading-tight transition-colors duration-300 ${k <= step ? "text-ink" : "text-ink/35"}`}
                 >
                   <span
-                    className={`grid size-[1.2rem] shrink-0 place-items-center rounded-full font-mono text-[0.6rem] transition-colors duration-300 ${k <= step ? "bg-ink text-white" : "bg-ink/10 text-ink/50"}`}
+                    className={`grid size-[1.2rem] shrink-0 place-items-center rounded-full font-mono text-[0.6rem] transition-colors duration-300 ${k < step ? "bg-ink text-primary" : k === step ? "bg-primary text-ink" : "bg-ink/10 text-ink/50"}`}
                   >
                     {k + 1}
                   </span>
@@ -150,7 +151,7 @@ export default function ServicesBand() {
                     key={b.n}
                     className="relative h-1.5 w-12 overflow-hidden rounded-full bg-ink/10"
                   >
-                    <span className="absolute inset-0 origin-left scale-x-[var(--k,0)] rounded-full bg-ink" />
+                    <span className="absolute inset-0 origin-left scale-x-[var(--k,0)] rounded-full bg-primary" />
                   </li>
                 ) : (
                   <li
@@ -169,7 +170,7 @@ export default function ServicesBand() {
                 Explore
                 <span
                   aria-hidden="true"
-                  className="transition-transform duration-300 group-hover:translate-x-0.5"
+                  className="grid size-5 place-items-center rounded-full bg-primary text-[0.75rem] text-ink transition-transform duration-300 group-hover:translate-x-0.5"
                 >
                   →
                 </span>
