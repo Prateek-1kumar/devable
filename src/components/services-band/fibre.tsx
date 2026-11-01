@@ -110,9 +110,9 @@ export function Fibre({ route, lit, r = LOCAL.r, core = LOCAL.fibre }: { route: 
     return {
       shell: new TubeGeometry(path, segs, r, 14, false),
       fibre: new TubeGeometry(path, segs, core, 10, false),
-      material: fibreMaterial(c.primary, "#dfe9e3", mix(c.primary, "#ffffff", 0.6), length),
+      material: fibreMaterial(mix(c.primary, c.ink, 0.22), "#e2e6df", mix(c.primary, "#ffffff", 0.45), length),
     };
-  }, [route, r, core, c.primary]);
+  }, [route, r, core, c.primary, c.ink]);
   const shell = useMemo(() => shellMaterial(c.line), [c.line]);
   const phase = useRef(0);
   const core$ = useRef<Mesh>(null);

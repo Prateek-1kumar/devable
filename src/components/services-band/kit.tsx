@@ -2,6 +2,8 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
+  useEffect,
   useRef,
   type Ref,
   type RefObject,
@@ -11,6 +13,9 @@ import { Edges, Outlines } from "@react-three/drei";
 import { toCreasedNormals } from "three-stdlib";
 import {
   CanvasTexture,
+  CustomBlending,
+  OneFactor,
+  OneMinusSrcAlphaFactor,
   CylinderGeometry,
   ExtrudeGeometry,
   Matrix4,
@@ -27,7 +32,6 @@ import {
 import { drawGlyph } from "../growth-engine/channels";
 import { paintMark } from "../growth-engine/marks";
 import { mix, palette } from "../growth-engine/palette";
-import { useCanvasTexture } from "../growth-engine/useCanvasTexture";
 import { MARKS, MARK_COLOR } from "../how-we-work/marks";
 
 // The band's drawing kit. The look is a technical illustration: white solids rounded in plan, flat-lit, with
@@ -55,7 +59,7 @@ export const colors = () => {
   return {
     ...p,
     /** Outlines and rims: ink, softened. */
-    line: mix(p.ink, "#ffffff", 0.3),
+    line: mix(p.ink, "#ffffff", 0.38),
     /** Off-white panels inside screens (the site's #f4f2eb). */
     shade: "#f4f2eb",
     /** Faint ink for placeholder text bars. */
@@ -165,7 +169,7 @@ export const upvote = () =>
  */
 export function Solid({
   geometry,
-  color = "#ffffff",
+  color = "#fbfaf7",
   ref,
   ...props
 }: {
@@ -193,7 +197,7 @@ export function Solid({
 
 // A soft radial falloff, shared by every contact shadow.
 let shadowMap: Texture | null = null;
-function shadowTexture() {
+export function shadowTexture() {
   if (shadowMap) return shadowMap;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 128;
@@ -237,7 +241,7 @@ export function Shadow({
 }
 
 // ── Canvas drawing: textures are drawn at PX pixels per world unit in the page's own fonts. ──
-export const PX = 360;
+export const PX = 480;
 type Ctx = CanvasRenderingContext2D;
 
 export function setFont(ctx: Ctx, size: number, weight = 500, mono = false) {
@@ -414,13 +418,18 @@ export function Badge({
     },
     [mark],
   );
-  const { texture } = useCanvasTexture(256, 256, draw);
+  const { texture } = useCanvas(256, 256, draw);
   return (
     <group ref={ref} {...props}>
       <group quaternion={FACE}>
         <mesh renderOrder={6}>
           <circleGeometry args={[r, 48]} />
-          <meshBasicMaterial map={texture} transparent toneMapped={false} />
+          <meshBasicMaterial
+            map={texture}
+            transparent
+            toneMapped={false}
+            {...PREMULTIPLIED}
+          />
         </mesh>
       </group>
     </group>
@@ -450,20 +459,69 @@ export function Print({
 }
 
 type Render = (ctx: Ctx, w: number, h: number, v: number) => void;
+type Draw = (ctx: Ctx, w: number, h: number) => void;
 
 /**
- * A canvas texture `w` × `h` world units that redraws only when its live value changes. `render` must be
- * stable (module level or memoised). Returns the texture and a setter to call every frame.
+ * Blending for canvas textures uploaded premultiplied: text and shapes keep clean edges instead of picking up
+ * a dark fringe from the canvas's transparent (black) pixels.
  */
-export function useLive(w: number, h: number, render: Render) {
+export const PREMULTIPLIED = {
+  blending: CustomBlending,
+  blendSrc: OneFactor,
+  blendDst: OneMinusSrcAlphaFactor,
+} as const;
+
+const upload = (texture: Texture) => {
+  texture.needsUpdate = true;
+};
+
+/**
+ * A 2D-canvas texture for crisp text on 3D faces, in the page's own fonts: uploaded premultiplied (use
+ * PREMULTIPLIED on its material) and sharply filtered at grazing angles. `draw` must be stable; call `paint()`
+ * to redraw.
+ */
+export function useCanvas(width: number, height: number, draw: Draw) {
+  const invalidate = useThree((s) => s.invalidate);
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const t = new CanvasTexture(canvas);
+    t.colorSpace = SRGBColorSpace;
+    t.premultiplyAlpha = true;
+    t.anisotropy = 16;
+    return t;
+  }, [width, height]);
+  const paint = useCallback(() => {
+    const ctx = (texture.image as HTMLCanvasElement).getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, width, height);
+    draw(ctx, width, height);
+    upload(texture);
+    invalidate();
+  }, [texture, width, height, draw, invalidate]);
+  useEffect(() => {
+    paint();
+    // Repaint once web fonts are ready so text never sticks in a fallback face.
+    document.fonts.ready.then(paint);
+  }, [paint]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return { texture, paint };
+}
+
+/**
+ * A canvas texture `w` × `h` world units (at `scale` × the usual density) that redraws only when its live
+ * value changes. `render` must be stable. Returns the texture and a setter to call every frame.
+ */
+export function useLive(w: number, h: number, render: Render, scale = 1) {
   const value = useRef(0);
   const draw = useCallback(
     (ctx: Ctx, cw: number, ch: number) => render(ctx, cw, ch, value.current),
     [render],
   );
-  const { texture, paint } = useCanvasTexture(
-    Math.round(w * PX),
-    Math.round(h * PX),
+  const { texture, paint } = useCanvas(
+    Math.round(w * PX * scale),
+    Math.round(h * PX * scale),
     draw,
   );
   const set = useCallback(
@@ -477,11 +535,8 @@ export function useLive(w: number, h: number, render: Render) {
   return [texture, set] as const;
 }
 
-/** A canvas texture `w` × `h` world units drawn once. */
-export function useStatic(
-  w: number,
-  h: number,
-  draw: (ctx: Ctx, cw: number, ch: number) => void,
-) {
-  return useCanvasTexture(Math.round(w * PX), Math.round(h * PX), draw).texture;
+/** A canvas texture `w` × `h` world units (at `scale` × the usual density), drawn once. */
+export function useStatic(w: number, h: number, draw: Draw, scale = 1) {
+  return useCanvas(Math.round(w * PX * scale), Math.round(h * PX * scale), draw)
+    .texture;
 }

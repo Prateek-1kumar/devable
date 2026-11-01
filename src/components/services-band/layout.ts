@@ -39,14 +39,14 @@ export const ROUTES: [number, number, number][][] = [
     [-11.2, R, -1.95],
     [-11.2, 1.0, -1.95],
   ],
-  // Search: round behind the results and up to the search bar.
+  // Search: round behind the results rack, into the back of its base.
   [
     [0, R, -PORT],
     [0, R, -8.7],
     [2.6, R, -8.7],
-    [2.6, R, -11.8],
-    [0.6, R, -11.8],
-    [0.6, 2.75, -11.8],
+    [2.6, R, -11.85],
+    [0.6, R, -11.85],
+    [0.6, R, -11.6],
   ],
   // Reddit: round behind the board, into its foot.
   [
@@ -56,10 +56,12 @@ export const ROUTES: [number, number, number][][] = [
     [11.4, R, -1.5],
     [11.4, R, -0.94],
   ],
-  // Creators: straight into the back of the creator's pedestal.
+  // Creators: round the audience stand, into the back of the creator's desk.
   [
     [0, R, PORT],
-    [0, R, 10.08],
+    [0, R, 8.7],
+    [-1.8, R, 8.7],
+    [-1.8, R, 11.2],
   ],
 ];
 export const LANE_NAMES = [

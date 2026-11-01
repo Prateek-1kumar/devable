@@ -675,15 +675,10 @@ export function Pipes() {
         return {
           shell: new TubeGeometry(path, segs, PIPE.r, 16, false),
           fibre: new TubeGeometry(path, segs, PIPE.fibre, 10, false),
-          material: fibreMaterial(
-            c.primary,
-            "#dfe9e3",
-            mix(c.primary, "#ffffff", 0.6),
-            length,
-          ),
+          material: fibreMaterial(mix(c.primary, c.ink, 0.22), "#e2e6df", mix(c.primary, "#ffffff", 0.45), length),
         };
       }),
-    [c.primary],
+    [c.primary, c.ink],
   );
   const shell = useMemo(() => shellMaterial(c.line), [c.line]);
   const phase = useRef(0);
@@ -691,12 +686,11 @@ export function Pipes() {
   useFrame((_, delta) => {
     const x = bandRef.current;
     // Out to the stations, then home to the hub for the closing beat (easing through a stop).
-    const dir = 1 - 2 * easeInOut(span(x, 4.55, 4.95));
+    const dir = 1 - 2 * easeInOut(span(x, 4.4, 4.75));
     phase.current += Math.min(delta, 1 / 30) * 0.85 * dir;
     pipes.forEach((pipe, i) => {
-      pipe.material.uniforms.lit.value = easeInOut(
-        span(x, i + 1 - 0.8, i + 1 - 0.2),
-      );
+      // Lights while the camera travels to station i + 1.
+      pipe.material.uniforms.lit.value = easeInOut(span(x, i + 0.36, i + 0.64));
       pipe.material.uniforms.phase.value = phase.current;
     });
   });

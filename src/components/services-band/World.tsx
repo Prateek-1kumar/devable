@@ -114,9 +114,9 @@ function Projector() {
 const FRAMES = [
   { at: new Vector3(0, 1.0, 0), w: 8.8, h: 6.2 },
   { at: AT.content.clone().add(new Vector3(0.4, 1.0, -0.2)), w: 9.8, h: 6.4 },
-  { at: AT.search.clone().add(new Vector3(-1.4, 1.4, 0.5)), w: 10.2, h: 6.6 },
+  { at: AT.search.clone().add(new Vector3(-0.5, 1.8, 0.45)), w: 9.2, h: 6.3 },
   { at: AT.reddit.clone().add(new Vector3(0, 1.5, 0)), w: 7.6, h: 5.4 },
-  { at: AT.creators.clone().add(new Vector3(0.1, 0.9, 0.9)), w: 10.4, h: 6.8 },
+  { at: AT.creators.clone().add(new Vector3(0.95, 1.25, -0.35)), w: 7.7, h: 5.5 },
   { at: new Vector3(0.2, 2.1, 0.6), w: 33, h: 18 },
 ];
 
@@ -146,7 +146,7 @@ function Rig({
     const x = Math.min(FRAMES.length - 1, Math.max(0, bandRef.current));
     const i = Math.min(Math.floor(x), FRAMES.length - 2);
     // A long, soft sine ease between beats (no hard acceleration).
-    const f = 0.5 - 0.5 * Math.cos(Math.PI * span(x - i, 0.22, 0.78));
+    const f = 0.5 - 0.5 * Math.cos(Math.PI * span(x - i, 0.36, 0.64));
     const a = FRAMES[i];
     const b = FRAMES[i + 1];
     at.lerpVectors(a.at, b.at, f);
@@ -164,7 +164,7 @@ function Rig({
         ? 1 +
           0.05 *
             easeInOut(storyOf(bandRef.current, beat)) *
-            (1 - span(Math.abs(x - beat), 0.2, 0.3))
+            (1 - span(Math.abs(x - beat), 0.3, 0.36))
         : 1;
     const zoom =
       (Math.min(

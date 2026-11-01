@@ -71,7 +71,7 @@ export default function ServicesBand() {
     <section
       ref={section}
       aria-labelledby="services-band-title"
-      className="relative h-[1100svh] bg-white"
+      className="relative h-[1300svh] bg-[#f4f3ee]"
     >
       {/* The whole story for assistive tech; the stage below is visual. */}
       <ol className="sr-only">
@@ -94,7 +94,7 @@ export default function ServicesBand() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(120% 95% at 56% 54%, rgb(255 255 255 / 0) 52%, rgb(255 255 255 / 0.85) 78%, #fff 96%)",
+              "radial-gradient(120% 95% at 56% 54%, rgb(244 243 238 / 0) 52%, rgb(244 243 238 / 0.85) 78%, #f4f3ee 96%)",
           }}
         />
         <Labels />

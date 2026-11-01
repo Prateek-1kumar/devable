@@ -1,10 +1,9 @@
 import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
-import { useCanvasTexture } from "../../growth-engine/useCanvasTexture";
 import { span, storyOf } from "../content";
 import { Fibre, LOCAL } from "../fibre";
-import { PX, Print, Shadow, Solid, block, colors, cylinder, drawMark, panel, paragraph, pop, rrect, setFont, useBand, useLive, useStatic, wrap } from "../kit";
+import { PX, Print, useCanvas, Shadow, Solid, block, colors, cylinder, drawMark, panel, paragraph, pop, rrect, setFont, useBand, useLive, useStatic, wrap } from "../kit";
 import { AT } from "../layout";
 
 // Beat 1, Technical Content. ① Engineers write a tutorial: it builds on the monitor and its code types out.
@@ -359,7 +358,7 @@ function LiveScreen({ index }: { index: number }) {
   const value = useRef(-1);
   const sc = SCREENS[index];
   const draw = useCallback((ctx: Ctx, w: number, h: number) => sc.draw(ctx, w, h, Math.max(0, value.current)), [sc]);
-  const tex = useCanvasTexture(Math.round((SCR.w - 0.1) * PX * TEX_SCALE), Math.round((SCR.h - 0.1) * PX * TEX_SCALE), draw);
+  const tex = useCanvas(Math.round((SCR.w - 0.1) * PX * TEX_SCALE), Math.round((SCR.h - 0.1) * PX * TEX_SCALE), draw);
   const led = useRef<Group>(null);
   useFrame(() => {
     const v = Math.round(screenOn(storyOf(bandRef.current, 1), index) * 60) / 60;
