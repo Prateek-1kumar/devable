@@ -6,13 +6,21 @@ import type { Icon } from "../parts";
 // the design. "Your product" stands in for the client. Replace with real threads (with permission) before
 // this ships; the case-study slots stay flagged until the case studies are finalized.
 
+/** A stretch of a comment. `product` is the product's name, `point` is the useful part the reader should notice. */
+export type Part = { t: string; mark?: "product" | "point" };
+
 export type Thread = {
   sub: string;
+  /** What kind of conversation it is, for the screen-reader description. */
+  kind: string;
+  /** The question that started the thread. */
   title: string;
-  /** The helpful reply that recommends the product, in context. `mention` is the product name inside `text`. */
-  reply: { user: string; text: string; mention: string; votes: number; from: number };
-  /** A follow-up reply that arrives under it. */
-  followUp: { user: string; text: string };
+  /** The thread's own score and size. */
+  meta: { score: string; comments: number };
+  /** The helpful comment: useful first, the product second. `badge` is set where it earned one. */
+  reply: { user: string; age: string; parts: Part[]; votes: number; from: number; badge?: "Top comment" | "OP replied" };
+  /** What sits under it: a reply shown in full, or only how many replies there are. */
+  under: { user: string; text: string; op?: boolean } | { replies: number };
 };
 
 export const HERO = {
@@ -20,25 +28,70 @@ export const HERO = {
   title: "Become the product people recommend when your category comes up.",
   body: "We help AI-native and technical companies build a credible Reddit presence in the communities their buyers trust, then turn that presence into stronger recommendations, search visibility, and AI discovery.",
   cta: "Speak with the Team",
-  // SAMPLE: three communities, three conversations, the product recommended naturally in each.
+  // SAMPLE: three kinds of real conversation (a category recommendation, a problem someone is solving, an
+  // experience comparing options), each with a useful comment that mentions the product second. They differ on
+  // purpose in length, votes, age and what sits under the comment, so the row doesn't read as a template.
   threads: [
     {
-      sub: "r/devops",
-      title: "What are you using to catch flaky tests in CI?",
-      reply: { user: "u/sre_dana", text: "We moved our suite to Your product last quarter. It reruns and quarantines flaky tests per branch, so main stays green.", mention: "Your product", votes: 92, from: 71 },
-      followUp: { user: "u/kube_lee", text: "Same here, the per-branch quarantine is the killer feature." },
-    },
-    {
       sub: "r/LocalLLaMA",
-      title: "How do you eval agents before shipping?",
-      reply: { user: "u/ml_ops_k", text: "Simulated conversations. We run ~2k scenarios through Your product on every PR and fail the build on regressions.", mention: "Your product", votes: 214, from: 168 },
-      followUp: { user: "u/tensor_ish", text: "Didn't know it hooked into CI. Trying this." },
+      kind: "a recommendation thread",
+      title: "Anyone here doing evals for agents before pushing to prod? Curious what you’re using.",
+      meta: { score: "312", comments: 48 },
+      reply: {
+        user: "u/ml_ops_k",
+        age: "4h",
+        parts: [
+          { t: "We ended up using " },
+          { t: "Your Product", mark: "product" },
+          { t: " after trying a couple of internal scripts. " },
+          { t: "The useful part for us was being able to run the same eval set on every release and catch regressions before they hit prod.", mark: "point" },
+          { t: " Took a bit of setup, but it’s been solid." },
+        ],
+        votes: 214,
+        from: 168,
+        badge: "Top comment",
+      },
+      under: { user: "u/tensor_ish", text: "Same here. One eval set on every release is the whole point." },
     },
     {
       sub: "r/MachineLearning",
-      title: "Best way to parse messy PDFs into structured data?",
-      reply: { user: "u/doc_nerd", text: "Layout-aware extraction beats raw OCR here. Your product handled our tables and checkboxes without custom rules.", mention: "Your product", votes: 61, from: 44 },
-      followUp: { user: "u/vector_v", text: "+1, the table handling is what sold us." },
+      kind: "a problem-solving thread",
+      title: "How are people handling multi-document PDFs in production?",
+      meta: { score: "1.2k", comments: 96 },
+      reply: {
+        user: "u/doc_nerd",
+        age: "1d",
+        parts: [
+          { t: "We stopped treating the whole bundle as one document. Now we split it first, classify the docs, then run extraction separately. " },
+          { t: "Your Product", mark: "product" },
+          { t: " " },
+          { t: "handled the layout-heavy stuff better than the OCR pipeline we had before, especially tables and checkboxes.", mark: "point" },
+        ],
+        votes: 87,
+        from: 61,
+        badge: "OP replied",
+      },
+      under: { user: "u/pdf_pipeline", text: "Splitting first is the part we skipped. Trying this.", op: true },
+    },
+    {
+      sub: "r/llms",
+      kind: "an experience thread",
+      title: "Anyone using AI observability tools in prod? Which ones are actually useful?",
+      meta: { score: "87", comments: 23 },
+      reply: {
+        user: "u/agent_dev",
+        age: "2d",
+        parts: [
+          { t: "We tried a few. " },
+          { t: "Your Product", mark: "product" },
+          { t: " " },
+          { t: "has been the easiest one to keep around so far, mostly because the tracing is useful without adding a ton of noise.", mark: "point" },
+          { t: " Still not perfect for really custom workflows, but for normal agent debugging it’s been solid." },
+        ],
+        votes: 38,
+        from: 24,
+      },
+      under: { replies: 3 },
     },
   ] as Thread[],
 };
