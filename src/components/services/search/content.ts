@@ -170,22 +170,46 @@ export const VIS = {
   ] as View[],
 };
 
-export type Status = "shown" | "stale" | "missing";
-export const STATUS_LABEL: Record<Status, string> = { shown: "Shown", stale: "Out of date", missing: "Not shown" };
-
+// Copy from the client; the visual's rows and numbers are SAMPLE data to judge the design. Each shows one
+// product's journey on both surfaces, from where it starts to where the work gets it: a query's position in
+// Google, and whether each AI engine mentions, cites and recommends it.
 export const EXPANDED = {
   label: "Search has expanded beyond Google",
-  title: "Search is no longer just rankings.",
-  body: "Buyers and developers discover products through search engines, AI answers, technical content, comparisons, and trusted third-party sources.",
-  challenge: "The challenge is making sure your product appears in those moments and is represented accurately when it does.",
-  // SAMPLE: how one product shows up on each surface.
-  surfaces: [
-    { name: "Search engines", marks: ["google"], seen: "Position 4 for “vector database for RAG”", status: "shown" },
-    { name: "AI answers", marks: ["chatgpt", "perplexity", "claude"], seen: "Described with last year’s pricing", status: "stale" },
-    { name: "Technical content", marks: ["github", "docs"], seen: "Quickstart tutorial cited in answers", status: "shown" },
-    { name: "Comparisons", marks: ["g2"], seen: "Missing from “Best vector databases”", status: "missing" },
-    { name: "Third-party sources", marks: ["reddit", "hackernews"], seen: "Recommended in a top Reddit thread", status: "shown" },
-  ] as { name: string; marks: Icon[]; seen: string; status: Status }[],
+  title: "Search and AI visibility now work together.",
+  body: "We help your product get discovered across traditional search and AI answers, then strengthen the content, authority, and third-party signals that influence both.",
+  search: {
+    name: "Search Visibility",
+    title: "Win the searches that matter.",
+    body: "Build visibility across category, comparison, and high-intent queries tied to your product.",
+    // Position in Google before and after (rank 1 is first), and the page that ranks.
+    queries: [
+      { q: "vector database for RAG", kind: "Category", url: "/docs/vector-search-rag", from: 9, to: 4 },
+      { q: "northwind alternative", kind: "Comparison", url: "/compare/northwind", from: 14, to: 3 },
+      { q: "hybrid search api", kind: "High-intent", url: "/api/hybrid-search", from: 21, to: 6 },
+    ],
+    pageOne: { label: "Queries on page one", from: 14, to: 31 },
+  },
+  ai: {
+    name: "AI Visibility",
+    title: "Show up in the answers that shape decisions.",
+    body: "Improve how your product is mentioned, cited, and recommended across ChatGPT, Perplexity, Claude, and other AI search experiences.",
+    steps: ["Mentioned", "Cited", "Recommended"],
+    // Per engine: the three steps before and after, and its share of answers (%) before and after.
+    engines: [
+      { name: "ChatGPT", mark: "chatgpt", from: [true, false, false], to: [true, true, true], share: [12, 38] },
+      { name: "Perplexity", mark: "perplexity", from: [true, false, false], to: [true, true, true], share: [9, 33] },
+      { name: "Claude", mark: "claude", from: [false, false, false], to: [true, true, false], share: [0, 24] },
+    ] as { name: string; mark: Icon; from: boolean[]; to: boolean[]; share: number[] }[],
+  },
+  // What feeds both.
+  signals: {
+    label: "Strengthening the signals that influence both",
+    items: [
+      { name: "Content", note: "Technical pages and docs", marks: ["docs"] },
+      { name: "Authority", note: "Links and press coverage", marks: ["news"] },
+      { name: "Third-party signals", note: "Reddit, reviews, comparisons", marks: ["reddit", "g2"] },
+    ] as { name: string; note: string; marks: Icon[] }[],
+  },
 };
 
 export type Area = { name: string; summary: string; listLabel: string; items: string[] };
