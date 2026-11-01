@@ -224,13 +224,26 @@ export const COMMUNITIES = {
 export const MEASURE = {
   label: "What we measure",
   title: "Karma is not the KPI.",
-  body: "We care about whether Reddit is improving how people discover, discuss, and evaluate your product.",
+  body: "We don’t optimize for account vanity metrics. We measure whether Reddit is improving the conversations, discovery, and commercial outcomes that actually matter.",
   // SAMPLE: the vanity number we don't report on.
   karma: "12,480",
+  // Community feeds Discovery, which feeds Business: the order is the point. `icons` line up with `items`.
   groups: [
-    { name: "Community", marks: ["reddit"] as Icon[], items: ["Relevant conversations", "Brand mentions", "Recommendation visibility", "Engagement quality"] },
-    { name: "Discovery", marks: ["google", "chatgpt"] as Icon[], items: ["Search visibility", "AI mentions and citations", "Share of voice", "Relevant thread visibility"] },
-    { name: "Business", marks: [] as Icon[], items: ["Qualified referral traffic", "Signups", "Demo requests", "Pipeline contribution where measurable"] },
+    {
+      name: "Community",
+      marks: ["reddit"] as Icon[],
+      items: ["Relevant conversations", "Brand mentions", "Relevant recommendations", "Engagement quality"],
+    },
+    {
+      name: "Discovery",
+      marks: ["google", "chatgpt", "perplexity"] as Icon[],
+      items: ["Search visibility", "AI mentions / citations", "Relevant thread rankings", "Share of voice"],
+    },
+    {
+      name: "Business",
+      marks: [] as Icon[],
+      items: ["Qualified referral traffic", "Signups", "Demo requests", "Pipeline contribution where measurable"],
+    },
   ],
 };
 
