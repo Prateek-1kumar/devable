@@ -495,7 +495,8 @@ export function useCanvas(width: number, height: number, draw: Draw) {
   const paint = useCallback(() => {
     const ctx = (texture.image as HTMLCanvasElement).getContext("2d");
     if (!ctx) return;
-    ctx.clearRect(0, 0, width, height);
+    // Start every repaint from a clean state (a draw that leaves a transform behind can't stack up).
+    ctx.reset();
     draw(ctx, width, height);
     upload(texture);
     invalidate();

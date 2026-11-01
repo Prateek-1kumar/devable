@@ -48,13 +48,10 @@ export const ROUTES: [number, number, number][][] = [
     [0.6, R, -11.85],
     [0.6, R, -11.6],
   ],
-  // Reddit: round behind the board, into its foot.
+  // Reddit: straight in, to the foot of the roundtable.
   [
     [PORT, R, 0],
-    [8.6, R, 0],
-    [8.6, R, -1.5],
-    [11.4, R, -1.5],
-    [11.4, R, -0.94],
+    [10.38, R, 0],
   ],
   // Creators: round the audience stand, into the back of the creator's desk.
   [

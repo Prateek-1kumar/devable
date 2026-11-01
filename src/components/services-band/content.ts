@@ -55,8 +55,8 @@ export const BEATS: Beat[] = [
     href: "/services/reddit",
     steps: [
       { text: "A developer asks the community", from: -0.1 },
-      { text: "Your product comes up", from: 0.36 },
-      { text: "Upvoted to the top", from: 0.72 },
+      { text: "A member recommends your product", from: 0.3 },
+      { text: "The community upvotes it to the top", from: 0.56 },
     ],
   },
   {

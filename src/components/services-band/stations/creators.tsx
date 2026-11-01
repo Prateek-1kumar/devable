@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, type MeshBasicMaterial } from "three";
 import { span, storyOf } from "../content";
@@ -22,6 +22,7 @@ import {
   useCanvas,
 } from "../kit";
 import { AT } from "../layout";
+import { drawPhoto, face, usePhotos } from "../photos";
 
 // Beat 4, Creator Distribution, as a small creator studio. ① A creator developers trust goes live: the key
 // light warms, the ON AIR sign lights and the stream starts on the desk monitor. ② Their audience tunes in: a
@@ -69,59 +70,6 @@ const rowFill = (s: number, j: number) =>
   span(s, 0.3 + 0.16 * j, 0.52 + 0.16 * j);
 const fmt = (n: number) =>
   n >= 1000 ? `${Math.round(n / 1000)}K` : String(Math.round(n));
-
-// ── Photos, loaded once and shared; textures repaint as they arrive. ──
-const photos = new Map<string, HTMLImageElement>();
-function photo(src: string) {
-  let img = photos.get(src);
-  if (!img) {
-    img = new Image();
-    img.src = src;
-    photos.set(src, img);
-  }
-  return img;
-}
-function usePhotos(srcs: string[], paint: () => void) {
-  useEffect(() => {
-    const pending = srcs.map(photo).filter((img) => !img.complete);
-    pending.forEach((img) =>
-      img.addEventListener("load", paint, { once: true }),
-    );
-    return () =>
-      pending.forEach((img) => img.removeEventListener("load", paint));
-  }, [srcs, paint]);
-}
-function drawPhoto(
-  ctx: Ctx,
-  src: string,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
-  const img = photo(src);
-  if (!img.complete || !img.naturalWidth) {
-    ctx.fillStyle = "#e4e2db";
-    ctx.fillRect(x, y, w, h);
-    return;
-  }
-  const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-  ctx.drawImage(
-    img,
-    x + (w - img.naturalWidth * s) / 2,
-    y + (h - img.naturalHeight * s) / 2,
-    img.naturalWidth * s,
-    img.naturalHeight * s,
-  );
-}
-function face(ctx: Ctx, src: string, cx: number, cy: number, r: number) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-  drawPhoto(ctx, src, cx - r, cy - r, r * 2, r * 2);
-  ctx.restore();
-}
 
 /** A texture redrawn from the story's progress `s` (quantised), and when its photos load. */
 function useStoryTexture(

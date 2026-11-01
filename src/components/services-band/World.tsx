@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import {
   Color,
   ShaderMaterial,
   Vector3,
+  type Group,
   type OrthographicCamera as OrthoCam,
 } from "three";
 import { damp } from "../growth-engine/story";
@@ -53,10 +60,18 @@ export default function World({ trackRef, still, active }: Props) {
         <Floor />
         <Pipes />
         <Hub />
-        <ContentStation />
-        <SearchStation />
-        <RedditStation />
-        <CreatorStation />
+        <Near beat={1}>
+          <ContentStation />
+        </Near>
+        <Near beat={2}>
+          <SearchStation />
+        </Near>
+        <Near beat={3}>
+          <RedditStation />
+        </Near>
+        <Near beat={4}>
+          <CreatorStation />
+        </Near>
         <Projector />
       </BandContext.Provider>
     </Canvas>
@@ -65,6 +80,21 @@ export default function World({ trackRef, still, active }: Props) {
 
 const SAFE = 16;
 const LABELS: LabelSpec[] = OVERVIEW_LABELS;
+
+/**
+ * Shows a station only while the camera is near it (and in the closing overview), so neighbours never crowd
+ * the edges of another station's frame.
+ */
+function Near({ beat, children }: { beat: number; children: ReactNode }) {
+  const bandRef = useBand();
+  const group = useRef<Group>(null);
+  useFrame(() => {
+    const x = bandRef.current;
+    if (group.current)
+      group.current.visible = Math.abs(x - beat) < 0.62 || x > 4.5;
+  });
+  return <group ref={group}>{children}</group>;
+}
 
 /**
  * Publishes the labels to the page (which renders them as HTML over the canvas), then pins each one to its
@@ -115,8 +145,12 @@ const FRAMES = [
   { at: new Vector3(0, 1.0, 0), w: 8.8, h: 6.2 },
   { at: AT.content.clone().add(new Vector3(0.4, 1.0, -0.2)), w: 9.8, h: 6.4 },
   { at: AT.search.clone().add(new Vector3(-0.5, 1.8, 0.45)), w: 9.2, h: 6.3 },
-  { at: AT.reddit.clone().add(new Vector3(0, 1.5, 0)), w: 7.6, h: 5.4 },
-  { at: AT.creators.clone().add(new Vector3(0.95, 1.25, -0.35)), w: 7.7, h: 5.5 },
+  { at: AT.reddit.clone().add(new Vector3(0.35, 0.95, 0.15)), w: 9.2, h: 5.7 },
+  {
+    at: AT.creators.clone().add(new Vector3(0.95, 1.25, -0.35)),
+    w: 7.7,
+    h: 5.5,
+  },
   { at: new Vector3(0.2, 2.1, 0.6), w: 33, h: 18 },
 ];
 

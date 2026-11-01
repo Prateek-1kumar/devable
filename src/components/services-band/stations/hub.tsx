@@ -14,8 +14,10 @@ import { mix } from "../../growth-engine/palette";
 import { span, storyOf } from "../content";
 import type { LabelSpec } from "../label-store";
 import {
+  PX,
   Print,
   Shadow,
+  useCanvas,
   Solid,
   block,
   colors,
@@ -74,11 +76,11 @@ const RAIL = {
 };
 /** The outcome columns in the deck's free corners: reach, demand and (tallest, mint) pipeline. */
 const BARS = [
-  { at: [1.6, 1.6], h: 0.9, name: "Reach" },
+  { at: [-1.6, 1.6], h: 0.9, name: "Reach" },
   { at: [1.65, -1.65], h: 1.5, name: "Demand" },
   { at: [-1.65, -1.65], h: 2.55, name: "Pipeline", you: true },
 ] as const;
-const DROP = 1.7;
+const DROP = 0.42;
 const drop = (s: number) => easeOut(span(s, 0, 0.3));
 /** Ports light in visiting order as the hub's story ends. */
 const portLit = (s: number, i: number) =>
@@ -161,53 +163,46 @@ function drawPlate(ctx: Ctx, w: number, h: number, i: number) {
   ctx.save();
   ctx.scale(k, k);
   const W = w / k;
-  // Engraved plate: a soft inset panel, an icon tile, the port number and the channel on two lines.
-  rrect(ctx, 4, 4, W - 8, 132, 18, "#fbfaf7", c.line, 2);
-  rrect(ctx, 20, 26, 88, 88, 16, c.ink);
-  ctx.fillStyle = c.primary;
-  ctx.strokeStyle = c.primary;
-  ctx.lineWidth = 7;
+  // A light engraved label: an inset panel, a mint icon tile, the port number and the channel, large.
+  rrect(ctx, 3, 4, W - 6, 132, 20, "#f4f3ee", "rgba(23,44,33,0.12)", 2);
+  rrect(ctx, 16, 32, 76, 76, 18, c.lightGreenSoft);
+  ctx.fillStyle = c.deep;
+  ctx.strokeStyle = c.deep;
+  ctx.lineWidth = 6;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   const g = GLYPHS[i];
   if (g === "search") {
     ctx.beginPath();
-    ctx.arc(60, 66, 16, 0, Math.PI * 2);
-    ctx.moveTo(72, 78);
-    ctx.lineTo(84, 90);
+    ctx.arc(50, 66, 14, 0, Math.PI * 2);
+    ctx.moveTo(60, 76);
+    ctx.lineTo(71, 87);
     ctx.stroke();
   } else if (g === "play") {
     ctx.beginPath();
-    ctx.moveTo(52, 48);
-    ctx.lineTo(82, 70);
-    ctx.lineTo(52, 92);
+    ctx.moveTo(44, 50);
+    ctx.lineTo(68, 70);
+    ctx.lineTo(44, 90);
     ctx.closePath();
     ctx.fill();
   } else {
-    setFont(ctx, 34, 600, true);
+    setFont(ctx, 30, 650, true);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(g, 64, 72);
+    ctx.fillText(g, 54, 72);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
   }
-  setFont(ctx, 18, 500, true);
-  ctx.letterSpacing = "3px";
+  setFont(ctx, 16, 500, true);
+  ctx.letterSpacing = "2.5px";
   ctx.fillStyle = c.muted;
-  ctx.fillText(`PORT 0${i + 1}`, 130, 54);
-  setFont(ctx, 30, 600);
-  ctx.letterSpacing = "-0.6px";
+  ctx.fillText(`PORT 0${i + 1}`, 108, 34);
+  ctx.letterSpacing = "-0.8px";
   ctx.fillStyle = c.ink;
-  const name = LANE_NAMES[i];
-  const words = name.split(" ");
-  // Fits on one line where it can; otherwise breaks before the last word.
-  if (ctx.measureText(name).width < W - 150) ctx.fillText(name, 130, 96);
-  else {
-    setFont(ctx, 26, 600);
-    ctx.fillText(words.slice(0, -1).join(" "), 130, 86);
-    ctx.fillText(words[words.length - 1], 130, 116);
-  }
-  // A status line: lit when the port is.
+  setFont(ctx, 36, 620);
+  const words = LANE_NAMES[i].split(" ");
+  const lines = words.length > 1 ? [words.slice(0, -1).join(" "), words[words.length - 1]] : words;
+  lines.forEach((line, n) => ctx.fillText(line, 108, lines.length > 1 ? 76 + n * 40 : 92));
   ctx.restore();
 }
 
@@ -245,20 +240,42 @@ function drawTray(ctx: Ctx, w: number, h: number) {
 
 function drawBaseFront(ctx: Ctx, w: number, h: number) {
   const c = colors();
-  // Left: the engraved name. Right: vent slots.
-  setFont(ctx, h * 0.34, 500, true);
-  ctx.letterSpacing = `${h * 0.12}px`;
-  ctx.fillStyle = c.muted;
+  // An inset nameplate on the left, a status light, and machined vent slots on the right.
+  const pw = h * 9.5;
+  rrect(
+    ctx,
+    h * 0.1,
+    h * 0.12,
+    pw,
+    h * 0.76,
+    h * 0.2,
+    "#efeee8",
+    "rgba(23,44,33,0.14)",
+    Math.max(1.5, h * 0.02),
+  );
+  ctx.beginPath();
+  ctx.arc(h * 0.5, h / 2, h * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = c.primary;
+  ctx.fill();
   ctx.textBaseline = "middle";
-  ctx.fillText("DEVABLE · GROWTH SYSTEM", h * 0.3, h / 2 + 1);
-  ctx.globalAlpha = 0.5;
-  for (let i = 0; i < 9; i++)
+  setFont(ctx, h * 0.38, 650);
+  ctx.letterSpacing = `${h * 0.02}px`;
+  ctx.fillStyle = c.ink;
+  ctx.fillText("Devable", h * 0.8, h / 2 + 1);
+  const dw = ctx.measureText("Devable").width;
+  setFont(ctx, h * 0.26, 500, true);
+  ctx.letterSpacing = `${h * 0.08}px`;
+  ctx.fillStyle = c.muted;
+  ctx.fillText("GROWTH SYSTEM · GS-01", h * 1.1 + dw, h / 2 + 1);
+  ctx.letterSpacing = "0px";
+  ctx.globalAlpha = 0.55;
+  for (let i = 0; i < 14; i++)
     rrect(
       ctx,
-      w * 0.66 + i * h * 0.34,
-      h * 0.28,
+      w - h * 0.5 - (i + 1) * h * 0.32,
+      h * 0.26,
       h * 0.12,
-      h * 0.44,
+      h * 0.48,
       h * 0.06,
       c.line,
     );
@@ -316,16 +333,140 @@ function curtainTexture() {
 
 const portModuleAt = (i: number) =>
   DIRS[i].clone().multiplyScalar((PORT_MODULE.from + PORT_MODULE.reach) / 2);
+const CONSOLE = { x: 1.2, z: 1.8, w: 1.0, h: 0.62 };
+const SCAN_ROWS = ["What it does", "Who it's for", "Where they look"];
+const scanned = (s: number) => span(s, 0.28, 0.62);
+
+/** The scan console's screen: progress, the three things it reads, and the channels it maps. */
+function drawConsole(ctx: Ctx, w: number, h: number, s: number) {
+  const c = colors();
+  const k = w / 600;
+  ctx.save();
+  ctx.scale(k, k);
+  const H = h / k;
+  rrect(ctx, 0, 0, 600, H, 26, "#fbfaf7");
+  const p = scanned(s);
+  ctx.textBaseline = "middle";
+  setFont(ctx, 20, 500, true);
+  ctx.letterSpacing = "3px";
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.fillText(
+    p >= 1
+      ? "PRODUCT UNDERSTOOD"
+      : p > 0
+        ? "SCANNING PRODUCT"
+        : "AWAITING PRODUCT",
+    30,
+    40,
+  );
+  ctx.letterSpacing = "0px";
+  setFont(ctx, 30, 650);
+  ctx.fillStyle = p >= 1 ? c.deep : c.ink;
+  ctx.textAlign = "right";
+  ctx.fillText(`${Math.round(p * 100)}%`, 570, 40);
+  ctx.textAlign = "left";
+  rrect(ctx, 30, 70, 540, 8, 4, "rgba(23,44,33,0.08)");
+  if (p > 0) rrect(ctx, 30, 70, 540 * p, 8, 4, c.primary);
+  SCAN_ROWS.forEach((label, i) => {
+    const y = 126 + i * 56;
+    const done = p > (i + 1) / 3 - 0.02;
+    ctx.beginPath();
+    ctx.arc(46, y, 14, 0, Math.PI * 2);
+    ctx.fillStyle = done ? c.primary : "rgba(23,44,33,0.08)";
+    ctx.fill();
+    if (done) {
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(39, y);
+      ctx.lineTo(44, y + 6);
+      ctx.lineTo(54, y - 6);
+      ctx.stroke();
+    }
+    setFont(ctx, 26, 550);
+    ctx.fillStyle = done ? c.ink : "rgba(23,44,33,0.4)";
+    ctx.fillText(label, 76, y + 1);
+  });
+  // Channels mapped, lit as the ports light.
+  const y = H - 46;
+  setFont(ctx, 18, 500, true);
+  ctx.letterSpacing = "2px";
+  ctx.fillStyle = c.muted;
+  ctx.fillText("CHANNELS", 30, y);
+  ctx.letterSpacing = "0px";
+  [0, 1, 2, 3].forEach((i) => {
+    rrect(
+      ctx,
+      176 + i * 100,
+      y - 14,
+      86,
+      28,
+      14,
+      portLit(s, i) > 0.5 ? c.primary : "rgba(23,44,33,0.08)",
+    );
+  });
+  ctx.restore();
+}
+
+function Console() {
+  const bandRef = useBand();
+  const value = useRef(-1);
+  const draw = useCallback(
+    (ctx: Ctx, w: number, h: number) =>
+      drawConsole(ctx, w, h, Math.max(0, value.current)),
+    [],
+  );
+  const { texture, paint } = useCanvas(
+    Math.round((CONSOLE.w - 0.06) * PX * 1.6),
+    Math.round((CONSOLE.h - 0.06) * PX * 1.6),
+    draw,
+  );
+  useFrame(() => {
+    const q = Math.round(storyOf(bandRef.current, 0) * 100) / 100;
+    if (q === value.current) return;
+    value.current = q;
+    paint();
+  });
+  return (
+    <group position={[CONSOLE.x, TOP, CONSOLE.z]} rotation-y={Math.PI / 6}>
+      <Shadow w={1.2} d={0.7} opacity={0.1} position-y={0.002} />
+      <Solid geometry={block(CONSOLE.w + 0.1, 0.42, 0.14, 0.08)} />
+      <group position={[0, 0.12, -0.1]} rotation-x={-0.55}>
+        <Solid
+          geometry={panel(CONSOLE.w, CONSOLE.h, 0.06, 0.06)}
+          color="#ffffff"
+        />
+        <Print
+          w={CONSOLE.w - 0.06}
+          h={CONSOLE.h - 0.06}
+          map={texture}
+          position={[0, CONSOLE.h / 2, 0.033]}
+        />
+      </group>
+    </group>
+  );
+}
+
 /** A port module's printed side: icon, port number and channel name. */
+/** The part of a port module that stands clear of the base, where its label goes (module-local). */
+const PLATE = {
+  len: PORT_MODULE.reach - PLATFORM.size / 2 - 0.12,
+  at:
+    (PORT_MODULE.reach + PLATFORM.size / 2) / 2 -
+    (PORT_MODULE.from + PORT_MODULE.reach) / 2,
+};
+
 function PortPlate({
   index,
   along,
-  len,
 }: {
   index: number;
   along: boolean;
-  len: number;
+  len?: number;
 }) {
+  const len = PLATE.len + 0.1;
+  const d = DIRS[index];
   const map = useStatic(
     len - 0.1,
     PORT_MODULE.h - 0.1,
@@ -341,8 +482,8 @@ function PortPlate({
       map={map}
       position={
         along
-          ? [0, PORT_MODULE.h / 2, PORT_MODULE.w / 2 + 0.003]
-          : [PORT_MODULE.w / 2 + 0.003, PORT_MODULE.h / 2, 0]
+          ? [d.x * PLATE.at, PORT_MODULE.h / 2, PORT_MODULE.w / 2 + 0.003]
+          : [PORT_MODULE.w / 2 + 0.003, PORT_MODULE.h / 2, d.z * PLATE.at]
       }
       rotation-y={along ? 0 : Math.PI / 2}
     />
@@ -562,7 +703,7 @@ export function Hub() {
           <group key={a} position={[a * RAIL.x, TOP, 0]}>
             <Solid
               geometry={block(0.36, GANTRY.depth + 0.14, 0.12, 0.06)}
-              color={c.ink}
+              color="#dcdad2"
             />
             <Solid
               geometry={block(GANTRY.pillar, GANTRY.depth, GANTRY.h, 0.09)}
@@ -610,7 +751,7 @@ export function Hub() {
               0.07,
               0.05,
             )}
-            color={c.ink}
+            color="#e3e1da"
             position-y={-0.07}
           />
           <mesh position-y={-0.075}>
@@ -638,6 +779,8 @@ export function Hub() {
           />
         </mesh>
       </group>
+
+      <Console />
 
       {/* Beat 5: the outcome columns. */}
       {BARS.map((bar, i) => (
@@ -675,7 +818,12 @@ export function Pipes() {
         return {
           shell: new TubeGeometry(path, segs, PIPE.r, 16, false),
           fibre: new TubeGeometry(path, segs, PIPE.fibre, 10, false),
-          material: fibreMaterial(mix(c.primary, c.ink, 0.22), "#e2e6df", mix(c.primary, "#ffffff", 0.45), length),
+          material: fibreMaterial(
+            mix(c.primary, c.ink, 0.22),
+            "#e2e6df",
+            mix(c.primary, "#ffffff", 0.45),
+            length,
+          ),
         };
       }),
     [c.primary, c.ink],
@@ -713,7 +861,7 @@ export function Pipes() {
 const STATION_LABELS: [string, [number, number, number]][] = [
   ["01 · Technical Content", [AT.content.x - 0.2, 2.75, AT.content.z - 1.7]],
   ["02 · Search & AI Visibility", [AT.search.x, 4.0, AT.search.z]],
-  ["03 · Reddit", [AT.reddit.x, 3.4, AT.reddit.z - 0.4]],
+  ["03 · Reddit", [AT.reddit.x, 4.1, AT.reddit.z]],
   ["04 · Creator Distribution", [AT.creators.x, 3.0, AT.creators.z]],
 ];
 export const OVERVIEW_LABELS: LabelSpec[] = [
