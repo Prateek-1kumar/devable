@@ -183,8 +183,9 @@ function FeaturePanel({ items, feature, onItemClick }: { items: NavSubItem[]; fe
     <div className="grid w-[42rem] grid-cols-[1fr_1.15fr] gap-1.5">
       <ul className="flex flex-col gap-0.5">
         {items.map((sub) => (
-          <li key={sub.name}>
-            <NavigationMenuLink href={sub.link} onClick={onItemClick} className="group/link block rounded-xl px-3.5 py-3 hover:bg-ink/[0.04] focus-visible:bg-ink/[0.04]">
+          // flex-1: the links share the card's height, so the left column has no empty tail.
+          <li key={sub.name} className="flex flex-1">
+            <NavigationMenuLink href={sub.link} onClick={onItemClick} className="group/link flex w-full flex-col justify-center rounded-xl px-3.5 py-3 hover:bg-ink/[0.04] focus-visible:bg-ink/[0.04]">
               <span className="flex items-center justify-between text-[0.92rem] font-medium text-ink">
                 {sub.name}
                 <span aria-hidden="true" className="text-ink/30 transition-[translate,color] duration-300 group-hover/link:translate-x-0.5 group-hover/link:text-ink">
