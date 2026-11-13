@@ -1,16 +1,16 @@
 import ArcButton from "../../ArcButton";
 import { Label } from "../kit";
 import { HERO } from "./content";
-import HeroOrbits from "./HeroOrbits";
+import HeroWave from "./HeroWave";
 import HeroSurfaces from "./HeroSurfaces";
 
 // The first viewport: the claim centred on the page (chip, headline, body, one button), and under it the six places
 // buyers look, as real marks on six tiles (see HeroSurfaces). No panel and no dashboard: the headline is the focal
-// point, and the margins carry the page's own idea, visibility spreading outward (see HeroOrbits).
+// point, and one streamline carries the page's idea from one side to the other (see HeroWave).
 export default function Hero() {
   return (
     <section className="relative isolate px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
-      <HeroOrbits />
+      <HeroWave />
       <div className="mx-auto max-w-[76rem] px-3 pt-14 sm:px-8 sm:pt-20">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center px-3 text-center sm:px-4">
           <Label>{HERO.label}</Label>

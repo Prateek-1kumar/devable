@@ -16,9 +16,9 @@ import { EXPANDED } from "./content";
 const { search, ai, together, signals } = EXPANDED;
 
 const CARD =
-  "relative flex flex-col rounded-[28px] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_0_0_1px_rgb(23_44_33/0.07),0_1px_2px_rgb(23_44_33/0.04),0_28px_50px_-32px_rgb(23_44_33/0.28),inset_0_1px_0_#fff] sm:p-9";
+  "relative flex flex-col rounded-[28px] bg-[#faf9f5] p-6 shadow-[0_0_0_1px_rgb(23_44_33/0.03),0_22px_40px_-40px_rgb(23_44_33/0.1)] sm:p-9";
 const PANEL =
-  "rounded-2xl bg-white shadow-[0_0_0_1px_rgb(23_44_33/0.07),0_1px_2px_rgb(23_44_33/0.05),0_16px_30px_-22px_rgb(23_44_33/0.3)]";
+  "rounded-2xl bg-white shadow-[0_0_0_1px_rgb(23_44_33/0.035),0_14px_26px_-22px_rgb(23_44_33/0.16)]";
 const BAR = "block h-[7px] rounded-full bg-ink/[0.1]";
 
 export default function Expanded() {
@@ -64,7 +64,7 @@ export default function Expanded() {
 
               <div aria-hidden="true" className="mt-auto pt-7">
                 <div className={`${PANEL} p-4 sm:p-5`}>
-                  <div className="flex items-center gap-3 rounded-full bg-[#f6f5f1] px-4 py-3 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.06)]">
+                  <div className="flex items-center gap-3 rounded-full bg-[#f6f5f1] px-4 py-3 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.03)]">
                     <Search
                       className="size-4 shrink-0 text-ink/45"
                       strokeWidth={2}
@@ -80,7 +80,7 @@ export default function Expanded() {
                     ].map((r, i) => (
                       <li
                         key={i}
-                        className={`relative flex h-10 items-center gap-3 rounded-xl px-3 ${r.win ? "z-10 bg-[color-mix(in_srgb,var(--primary)_10%,white)] shadow-[inset_0_0_0_1px_rgb(25_231_110/0.3)] " + climb : "bg-[#f9f8f4] " + settle}`}
+                        className={`relative flex h-10 items-center gap-3 rounded-xl px-3 ${r.win ? "z-10 bg-[color-mix(in_srgb,var(--primary)_10%,white)] shadow-[inset_0_0_0_1px_rgb(25_231_110/0.2)] " + climb : "bg-[#f9f8f4] " + settle}`}
                       >
                         <span
                           className={`size-4 shrink-0 rounded-[5px] ${r.win ? "bg-primary" : "bg-ink/[0.12]"}`}
@@ -100,13 +100,10 @@ export default function Expanded() {
               </div>
             </article>
 
-            {/* The plus */}
-            <div
-              aria-hidden="true"
-              className="z-10 mx-auto grid size-12 place-items-center self-center rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[1.5rem] leading-none font-light text-ink shadow-[0_0_0_1px_rgb(25_231_110/0.25),0_8px_18px_-10px_rgb(25_231_110/0.5)] motion-safe:animate-breathe"
-            >
+            {/* The plus: only a glyph in the gutter. */}
+            <span aria-hidden="true" className="select-none text-center text-[1.6rem] leading-none font-light text-ink/25 max-lg:-my-1 lg:self-center">
               +
-            </div>
+            </span>
 
             {/* AI */}
             <article
@@ -131,7 +128,7 @@ export default function Expanded() {
 
               <div aria-hidden="true" className="mt-auto pt-7">
                 <div className={`${PANEL} p-4 sm:p-5`}>
-                  <div className="flex items-center gap-3 rounded-full bg-[#f6f5f1] px-4 py-3 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.06)]">
+                  <div className="flex items-center gap-3 rounded-full bg-[#f6f5f1] px-4 py-3 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.03)]">
                     <Sparkles
                       className="size-4 shrink-0 text-[#4285f4]"
                       strokeWidth={2}
@@ -149,7 +146,7 @@ export default function Expanded() {
                       />
                     ))}
                     {/* the source it cites */}
-                    <div className="flex items-center gap-3 rounded-xl bg-[color-mix(in_srgb,var(--primary)_10%,white)] px-3 py-2.5 shadow-[inset_0_0_0_1px_rgb(25_231_110/0.3)]">
+                    <div className="flex items-center gap-3 rounded-xl bg-[color-mix(in_srgb,var(--primary)_10%,white)] px-3 py-2.5 shadow-[inset_0_0_0_1px_rgb(25_231_110/0.2)]">
                       <span className="size-4 shrink-0 rounded-[5px] bg-primary" />
                       <span className="flex flex-1 flex-col gap-1.5">
                         <span
@@ -172,29 +169,29 @@ export default function Expanded() {
 
           {/* Together */}
           <div className="mt-8 flex items-center gap-5">
-            <span aria-hidden="true" className="h-px flex-1 bg-ink/12" />
-            <p className="flex items-center gap-2.5 rounded-full bg-white px-5 py-2.5 text-[0.98rem] font-medium text-ink shadow-[0_0_0_1px_rgb(23_44_33/0.08),0_8px_20px_-14px_rgb(23_44_33/0.25)]">
+            <span aria-hidden="true" className="h-px flex-1 bg-ink/[0.07]" />
+            <p className="flex items-center gap-2.5 text-[0.98rem] font-medium text-ink/80">
               <Tick className="size-5" />
               {together}
             </p>
-            <span aria-hidden="true" className="h-px flex-1 bg-ink/12" />
+            <span aria-hidden="true" className="h-px flex-1 bg-ink/[0.07]" />
           </div>
 
           {/* The signals that feed both */}
-          <div className="mt-6 grid gap-3 rounded-[24px] bg-[#f6f5f1] p-3 lg:grid-cols-[13rem_repeat(3,minmax(0,1fr))] lg:items-stretch">
-            <p className="flex items-center px-3 py-2 text-[0.9rem] leading-snug text-ink/55 lg:border-r lg:border-ink/10 lg:pr-5">
+          <div className="mt-6 grid gap-3 rounded-[24px] bg-[#faf9f5] p-3 lg:grid-cols-[13rem_repeat(3,minmax(0,1fr))] lg:items-stretch">
+            <p className="flex items-center px-3 py-2 text-[0.9rem] leading-snug text-ink/55 lg:border-r lg:border-ink/[0.06] lg:pr-5">
               {signals.label}
             </p>
             {signals.items.map((s) => (
               <div
                 key={s.name}
-                className="group flex items-center gap-3.5 rounded-2xl bg-white px-4 py-4 shadow-[0_0_0_1px_rgb(23_44_33/0.06),0_1px_2px_rgb(23_44_33/0.04)] transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgb(25_231_110/0.35),0_14px_24px_-16px_rgb(25_231_110/0.45)]"
+                className="group flex items-center gap-3.5 rounded-2xl bg-white px-4 py-4 shadow-[0_0_0_1px_rgb(23_44_33/0.03)] transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgb(25_231_110/0.28),0_14px_24px_-18px_rgb(25_231_110/0.4)]"
               >
                 <span className="flex shrink-0 -space-x-2">
                   {s.marks.map((m) => (
                     <span
                       key={m}
-                      className="grid size-10 place-items-center rounded-full bg-[#f4f3ee] shadow-[0_0_0_2px_#fff]"
+                      className="grid size-10 place-items-center rounded-full bg-[#f6f5f1] shadow-[0_0_0_2px_#fff]"
                     >
                       {m === "link" ? (
                         <Link2
