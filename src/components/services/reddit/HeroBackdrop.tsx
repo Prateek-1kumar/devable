@@ -2,31 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// The Reddit hero's backdrop, drawn from the thing Reddit is made of: the comment thread. In each margin a fine vertical
-// line runs down the page like the line beside a comment, and replies branch off it with a soft curve, some branching
-// again, each ending in a small avatar-sized node. The two margins are different trees. One branch is the lit one,
-// the reply that was upvoted, in brand green, with a slow glint of light passing along it. Everything is a hairline;
-// a fine dot texture sits only along the page edges. Nothing passes under the headline: a soft mask clears it, and
-// the cards sit over the rest. Shown from 1280px up, where there are margins; reduced motion draws it still.
+// The Reddit hero's backdrop: ripples. A recommendation in the right thread travels outward, so a set of very faint, wide
+// arcs rises from behind the middle card and sweeps out past both sides of the page, each one wider and fainter than the
+// last, like rings on water. A few tiny nodes sit on the arcs (the communities it reaches), one stretch of one arc is lit
+// in brand green on each side, and a single soft glint of light glides slowly along that arc. A fine dot texture runs along
+// the page edges only. Nothing passes under the headline: a soft mask clears it, and the cards sit over the middle.
+// Shown from 1280px up, where there are margins to use; reduced motion draws it still.
 
 const KEYFRAMES = `
-@keyframes thread-run { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
-@keyframes thread-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes ripple-run { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+@keyframes ripple-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 `;
 
-const R = 58; // how wide a branch's curve sweeps out of its line, px
+const RADII = Array.from({ length: 17 }, (_, k) => Math.round(360 * 1.13 ** k)); // px; the gaps widen outward
+const LIT = [3, 6]; // the arcs with a lit stretch
+const DY = 140; // arcs are drawn down to this far below their centre, then fade out
 const HALF = 430; // half-width of the headline block, px
-
-type Tree = { x: number; from: number; to: number; leaves: [y: number, end: number][]; kids?: { at: number; y: number; to: number; leaves: [number, number][] }[]; lit?: number };
-
-// One tree per margin, measured from its page edge. `leaves`: [height a reply leaves the line at, how far it runs].
-const TREES: Tree[] = [
-  { x: 44, from: 96, to: 1160, leaves: [[250, 110], [430, 150], [700, 120], [940, 150]], kids: [{ at: 430, y: 560, to: 600, leaves: [[500, 90]] }], lit: 700 },
-  { x: 62, from: 120, to: 1120, leaves: [[190, 120], [340, 90], [600, 140], [840, 110], [1010, 70]], kids: [{ at: 600, y: 700, to: 760, leaves: [[660, 80]] }] },
-];
-
-/** A reply leaving a vertical line at height y: a soft curve out of the line, then straight along to `end`. */
-const leaf = (x: number, y: number, end: number) => `M${x} ${y - R} C${x} ${y - R * 0.45} ${x + R * 0.45} ${y} ${x + R} ${y} H${x + R + end}`;
+// Tiny nodes on the arcs: [arc, height on the left, height on the right], px from the top of the hero.
+const NODES: [number, number, number][] = [[1, 640, 560], [2, 540, 650], [3, 450, 380], [4, 360, 470], [5, 290, 230], [6, 400, 330], [7, 210, 300], [8, 520, 180], [9, 140, 420], [10, 330, 540], [11, 600, 250], [12, 260, 480], [13, 460, 160]];
 
 export default function HeroBackdrop() {
   const box = useRef<HTMLDivElement>(null);
@@ -39,6 +32,13 @@ export default function HeroBackdrop() {
     return () => ro.disconnect();
   }, []);
   const { w, h } = size;
+  const cx = w / 2;
+  const cy = h - 420; // behind the middle card
+
+  const arc = (r: number) => {
+    const s = Math.sqrt(r * r - DY * DY);
+    return `M${cx - s} ${cy + DY} A${r} ${r} 0 1 1 ${cx + s} ${cy + DY}`;
+  };
 
   return (
     <div ref={box} aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 hidden xl:block">
@@ -49,62 +49,73 @@ export default function HeroBackdrop() {
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: "radial-gradient(rgb(23 44 33 / 0.13) 1px, transparent 1.3px)",
-          backgroundSize: "16px 16px",
-          maskImage: "linear-gradient(90deg, #000 0, transparent 17%, transparent 83%, #000 100%), linear-gradient(180deg, transparent 0, #000 22%, #000 100%)",
+          backgroundImage: "radial-gradient(rgb(23 44 33 / 0.16) 1px, transparent 1.3px)",
+          backgroundSize: "14px 14px",
+          maskImage: "linear-gradient(90deg, #000 0, transparent 24%, transparent 76%, #000 100%), linear-gradient(180deg, transparent 0, #000 22%, #000 100%)",
           maskComposite: "intersect",
           WebkitMaskComposite: "source-in",
         }}
       />
       {w > 0 && (
-        <svg width={w} height={h} className="absolute inset-0 overflow-visible" style={{ maskImage: "linear-gradient(180deg, transparent 0, #000 14%, #000 88%, transparent 100%)" }}>
+        <svg width={w} height={h} className="absolute inset-0" style={{ maskImage: "linear-gradient(180deg, transparent 0, #000 12%, #000 74%, transparent 96%)" }}>
           <defs>
-            <filter id="rd-soft" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="rp-soft" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="14" />
             </filter>
-            <mask id="rd-clear" maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={h}>
+            <mask id="rp-clear" maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={h}>
               <rect width={w} height={h} fill="white" />
-              <rect x={w / 2 - HALF} y={90} width={HALF * 2} height={560} rx={28} fill="black" filter="url(#rd-soft)" />
+              <rect x={cx - HALF} y={90} width={HALF * 2} height={560} rx={28} fill="black" filter="url(#rp-soft)" />
             </mask>
+            {LIT.flatMap((k, n) =>
+              [0, 1].map((side) => {
+                // the stretch sits where this arc is in the margin beside the headline
+                const dx = Math.sqrt(Math.max(0, RADII[k] ** 2 - (cy - (n ? 330 : 470)) ** 2));
+                const x0 = side ? cx + dx - 90 : cx - dx - 90;
+                return (
+                  <linearGradient key={`${k}-${side}`} id={`rp-lit-${n}-${side}`} gradientUnits="userSpaceOnUse" x1={x0} x2={x0 + 180} y1="0" y2="0">
+                    <stop offset="0" stopColor="rgb(25 231 110)" stopOpacity="0" />
+                    <stop offset="0.5" stopColor="rgb(25 231 110)" stopOpacity="1" />
+                    <stop offset="1" stopColor="rgb(25 231 110)" stopOpacity="0" />
+                  </linearGradient>
+                );
+              }),
+            )}
           </defs>
-          <g mask="url(#rd-clear)" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            {TREES.map((t, side) => (
-              <g key={side} transform={side ? `translate(${w} 0) scale(-1 1)` : undefined}>
-                <g stroke="rgb(23 44 33 / 0.1)" strokeWidth="1.1">
-                  <path d={`M${t.x} ${t.from} V${t.to}`} />
-                  {t.leaves.map(([y, end]) => (
-                    <path key={y} d={leaf(t.x, y, end)} />
-                  ))}
-                  {t.kids?.map((k) => {
-                    const cx = t.x + R + 62; // the nested thread's own line, set in from its parent's
-                    return (
-                      <g key={k.at}>
-                        <path d={`M${cx} ${k.at} V${k.to}`} />
-                        {k.leaves.map(([y, end]) => (
-                          <path key={y} d={leaf(cx, y, end)} />
-                        ))}
-                      </g>
-                    );
-                  })}
-                </g>
-                {/* the avatar-sized node at the end of each reply */}
-                <g fill="white" stroke="rgb(23 44 33 / 0.16)" strokeWidth="1.1">
-                  {t.leaves.map(([y, end]) => (
-                    <circle key={y} cx={t.x + R + end} cy={y} r="5" />
-                  ))}
-                  {t.kids?.flatMap((k) => k.leaves.map(([y, end]) => <circle key={`${k.at}-${y}`} cx={t.x + R + 62 + R + end} cy={y} r="5" />))}
-                </g>
-                {/* the lit reply: the upvoted one, in green, with a glint of light along it */}
-                {t.lit && (
-                  <g className="motion-safe:animate-[thread-breathe_8s_ease-in-out_infinite]">
-                    <path d={`M${t.x} ${t.lit - 150} V${t.lit - R} C${t.x} ${t.lit - R * 0.45} ${t.x + R * 0.45} ${t.lit} ${t.x + R} ${t.lit} H${t.x + R + t.leaves.find(([y]) => y === t.lit)![1]}`} stroke="rgb(25 231 110 / 0.5)" strokeWidth="1.6" />
-                    <path d={`M${t.x} ${t.lit - 150} V${t.lit - R} C${t.x} ${t.lit - R * 0.45} ${t.x + R * 0.45} ${t.lit} ${t.x + R} ${t.lit} H${t.x + R + t.leaves.find(([y]) => y === t.lit)![1]}`} pathLength={1000} stroke="rgb(25 231 110 / 0.5)" strokeWidth="3.4" strokeDasharray="130 870" className="motion-safe:animate-[thread-run_9s_linear_infinite] motion-reduce:hidden" />
-                    <circle cx={t.x + R + t.leaves.find(([y]) => y === t.lit)![1]} cy={t.lit} r="5" fill="rgb(25 231 110)" />
-                    <circle cx={t.x + R + t.leaves.find(([y]) => y === t.lit)![1]} cy={t.lit} r="9" fill="rgb(25 231 110 / 0.16)" />
-                  </g>
-                )}
-              </g>
+          <g mask="url(#rp-clear)" fill="none" strokeLinecap="round">
+            {/* fine arcs between the main ones, for density */}
+            {RADII.slice(0, -1).flatMap((r, k) =>
+              [1 / 3, 2 / 3].map((f) => <path key={`f${r}-${f}`} d={arc(r + (RADII[k + 1] - r) * f)} stroke={`rgb(23 44 33 / ${(0.065 - k * 0.001).toFixed(3)})`} strokeWidth="1" />),
+            )}
+            {RADII.map((r, k) => (
+              <path key={r} d={arc(r)} stroke={`rgb(23 44 33 / ${(0.125 - k * 0.0025).toFixed(3)})`} strokeWidth="1.1" />
             ))}
+            {/* lit stretches, breathing slowly, out of step */}
+            {LIT.flatMap((k, n) =>
+              [0, 1].map((side) => (
+                <path key={`${k}-${side}`} d={arc(RADII[k])} stroke={`url(#rp-lit-${n}-${side})`} strokeWidth="1.6" className="motion-safe:animate-[ripple-breathe_9s_ease-in-out_infinite]" style={{ animationDelay: `${-(n * 3 + side * 4.5)}s` }} />
+              )),
+            )}
+            {/* one soft glint of light, gliding slowly along the first lit arc */}
+            <g className="motion-reduce:hidden" style={{ animation: "ripple-run 11s linear infinite" }}>
+              <path d={arc(RADII[LIT[0]])} pathLength={1000} stroke="rgb(25 231 110 / 0.14)" strokeWidth="3.4" strokeDasharray="170 830" />
+              <path d={arc(RADII[LIT[0]])} pathLength={1000} stroke="rgb(25 231 110 / 0.34)" strokeWidth="1.5" strokeDasharray="55 945" />
+            </g>
+            {/* the communities it reaches */}
+            {NODES.flatMap(([k, yl, yr]) =>
+              [yl, yr].map((y, side) => {
+                const r = RADII[k];
+                const dx = Math.sqrt(Math.max(0, r * r - (cy - y) ** 2));
+                const x = side ? cx + dx : cx - dx;
+                if (x < 14 || x > w - 14 || Math.abs(x - cx) < HALF + 20) return null;
+                const lit = LIT.includes(k);
+                return (
+                  <g key={`${k}-${side}`}>
+                    {lit && <circle cx={x} cy={y} r="9" fill="rgb(25 231 110 / 0.14)" />}
+                    <circle cx={x} cy={y} r="4.5" fill={lit ? "rgb(25 231 110)" : "white"} stroke={lit ? "none" : "rgb(23 44 33 / 0.18)"} strokeWidth="1.1" />
+                  </g>
+                );
+              }),
+            )}
           </g>
         </svg>
       )}
