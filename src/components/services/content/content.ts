@@ -79,25 +79,33 @@ export const PROBLEM = {
     },
     { name: "Distribution", body: "Even strong content needs a path to discovery across search, AI answers, communities, and the channels developers follow." },
   ],
-  // SAMPLE: the artifact beside each failure.
-  examples: {
-    // The tell: a code sample that doesn't run.
+  // The three visuals. The copy in them comes from the content team's concept images.
+  visuals: {
+    // One article, shallow, then built up on four layers of understanding.
     depth: {
-      file: "quickstart.py",
-      pre: "client = Client(api_key=KEY)",
-      code: "result = client.parse(file, mode=\"auto\")",
-      broken: "mode=\"auto\"",
-      cmd: "python quickstart.py",
-      error: "TypeError: parse() got an unexpected keyword argument 'mode'",
+      tag: "Technical Guide",
+      shallow: { name: "Shallow content", title: "Introducing Faster Inference", layer: "Product summary" },
+      deep: { name: "Technical content", title: "How Faster Inference Affects Production Workloads" },
+      layers: [
+        { label: "Product understanding", icon: "product" },
+        { label: "API / docs", icon: "docs" },
+        { label: "Developer use cases", icon: "users" },
+        { label: "Edge cases", icon: "edge" },
+      ],
     },
-    // A busy calendar of topics nobody searches for.
-    direction: [
-      { day: "Mon", topic: "5 AI trends for 2026", searches: 30, demand: 6 },
-      { day: "Wed", topic: "Why we love our team", searches: 10, demand: 2 },
-      { day: "Fri", topic: "Our Q3 product recap", searches: 20, demand: 4 },
-    ],
-    // A good article, published to silence.
-    distribution: { title: "Deep dive: streaming inference", views: 212, days: 90, channels: ["google", "chatgpt", "reddit"] as Icon[] },
+    // Product relevance against audience / search demand. `rel` and `dem` are 1 for high and 0 for low.
+    direction: {
+      y: { name: "Product relevance", high: "High", low: "Low" },
+      x: { name: "Audience / search demand", high: "High", low: "Low" },
+      topics: [
+        { title: "Q3 product roadmap", rel: 1, dem: 0 },
+        { title: "How to reduce inference latency in production", rel: 1, dem: 1, win: true },
+        { title: "What we learned building our engineering team", rel: 0, dem: 0 },
+        { title: "Top AI infrastructure trends for 2026", rel: 0, dem: 1 },
+      ],
+    },
+    // A published article with no path to any channel.
+    distribution: { badge: "Published", channels: [{ name: "Search", icon: "search" }, { name: "AI search", icon: "ai" }, { name: "Communities", icon: "people" }] },
   },
 };
 

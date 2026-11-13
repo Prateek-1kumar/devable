@@ -18,6 +18,9 @@ const subscribe = (onChange: () => void) => {
   return () => mq.removeEventListener("change", onChange);
 };
 
+/** True when the visitor prefers reduced motion; scenes then show their finished picture. */
+export const useStill = () => useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
+
 /** 0 → 1 over `ms` once `on`, then holds. With reduced motion it is 1 straight away (the finished picture). */
 export function usePlay(on: boolean, ms: number) {
   const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
