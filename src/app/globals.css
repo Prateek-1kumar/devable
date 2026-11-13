@@ -117,6 +117,39 @@
     to { transform: rotate(var(--rock, 14deg)); }
   }
 
+  /* Search & AI "working together" cards: restrained loops. The green result climbs to the top, the answer fills and
+     cites its source, the plus disc breathes once. All rest on the finished picture (reduced motion shows it still). */
+  --animate-climb: climb 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-settle: settle 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-answer: fill-in 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-cite: cite 10s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  --animate-breathe: breathe 5s ease-in-out infinite;
+
+  @keyframes climb {
+    0%, 14% { transform: translateY(96px); }
+    32%, 86% { transform: translateY(0); }
+    96%, 100% { transform: translateY(96px); }
+  }
+  @keyframes settle {
+    0%, 14% { transform: translateY(-48px); }
+    32%, 86% { transform: translateY(0); }
+    96%, 100% { transform: translateY(-48px); }
+  }
+  @keyframes fill-in {
+    0%, 22% { transform: scaleX(0); }
+    42%, 86% { transform: scaleX(1); }
+    96%, 100% { transform: scaleX(0); }
+  }
+  @keyframes cite {
+    0%, 40% { transform: scale(0); opacity: 0; }
+    48%, 86% { transform: scale(1); opacity: 1; }
+    94%, 100% { transform: scale(0); opacity: 0; }
+  }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(25 231 110 / 0.28); }
+    50% { box-shadow: 0 0 0 9px rgb(25 231 110 / 0); }
+  }
+
   /* Soft rise-and-focus entrance for text lines. */
   --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 

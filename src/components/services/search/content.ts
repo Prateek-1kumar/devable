@@ -181,34 +181,21 @@ export const EXPANDED = {
     name: "Search Visibility",
     title: "Win the searches that matter.",
     body: "Build visibility across category, comparison, and high-intent queries tied to your product.",
-    // Position in Google before and after (rank 1 is first), and the page that ranks.
-    queries: [
-      { q: "vector database for RAG", kind: "Category", url: "/docs/vector-search-rag", from: 9, to: 4 },
-      { q: "category leader alternative", kind: "Comparison", url: "/compare/category-leader", from: 14, to: 3 },
-      { q: "hybrid search api", kind: "High-intent", url: "/api/hybrid-search", from: 21, to: 6 },
-    ],
-    pageOne: { label: "Queries on page one", from: 14, to: 31 },
   },
   ai: {
     name: "AI Visibility",
     title: "Show up in the answers that shape decisions.",
     body: "Improve how your product is mentioned, cited, and recommended across ChatGPT, Perplexity, Claude, and other AI search experiences.",
-    steps: ["Mentioned", "Cited", "Recommended"],
-    // Per engine: the three steps before and after, and its share of answers (%) before and after.
-    engines: [
-      { name: "ChatGPT", mark: "chatgpt", from: [true, false, false], to: [true, true, true], share: [12, 38] },
-      { name: "Perplexity", mark: "perplexity", from: [true, false, false], to: [true, true, true], share: [9, 33] },
-      { name: "Claude", mark: "claude", from: [false, false, false], to: [true, true, false], share: [0, 24] },
-    ] as { name: string; mark: Icon; from: boolean[]; to: boolean[]; share: number[] }[],
   },
+  together: "Search + AI, working together",
   // What feeds both.
   signals: {
     label: "Strengthening the signals that influence both",
     items: [
       { name: "Content", note: "Technical pages and docs", marks: ["docs"] },
-      { name: "Authority", note: "Links and press coverage", marks: ["news"] },
+      { name: "Authority", note: "Links and press coverage", marks: ["link"] },
       { name: "Third-party signals", note: "Reddit, reviews, comparisons", marks: ["reddit", "g2"] },
-    ] as { name: string; note: string; marks: Icon[] }[],
+    ] as { name: string; note: string; marks: ("docs" | "link" | Icon)[] }[],
   },
 };
 
