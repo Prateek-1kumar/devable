@@ -12,6 +12,7 @@ const TONES = {
   accent: { bg: "bg-accent", text: "text-white" },
   white: { bg: "bg-white", text: "text-foreground" },
   coral: { bg: "bg-coral", text: "text-foreground" },
+  brand: { bg: "bg-primary", text: "text-foreground" }, // the brand green, with ink text, for a passage that needs one or two lit phrases
 };
 
 type Props = {

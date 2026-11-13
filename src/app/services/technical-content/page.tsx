@@ -7,6 +7,7 @@ import Hero from "@/components/services/content/Hero";
 import Problem from "@/components/services/content/Problem";
 import Process from "@/components/services/content/Process";
 import Shipped from "@/components/services/content/Shipped";
+import Testimonial from "@/components/services/content/Testimonial";
 import Types from "@/components/services/content/Types";
 import Ways from "@/components/services/content/Ways";
 
@@ -30,6 +31,7 @@ export default function TechnicalContent() {
     <main className="overflow-x-clip">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <Hero />
+      <Testimonial />
       <Problem />
       <Engine />
       <Process />
