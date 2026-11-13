@@ -150,6 +150,14 @@
     50% { box-shadow: 0 0 0 9px rgb(25 231 110 / 0); }
   }
 
+  /* A page floating a few pixels, to and fro. */
+  --animate-bob: bob 5.5s ease-in-out infinite;
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
   /* Soft rise-and-focus entrance for text lines. */
   --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 

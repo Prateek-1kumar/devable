@@ -3,24 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Label, useInView } from "../kit";
 import { CANVAS, FRAME, PILL, StepChip } from "../parts";
+import { Foundation, Intelligence, Pages, ThirdParty } from "./ConceptScenes";
 import { AREAS } from "./content";
-import PagePlan from "./PagePlan";
-import Presence from "./Presence";
-import SiteFix from "./SiteFix";
-import Understand from "./Understand";
 import type { SceneProps } from "./scene";
 
-// The page's signature section, in How We Work's language: the four areas of work down the left (step chip
-// and where it sits in the sequence, title, copy, mono "includes" pills), and on the right, pinned while you
-// scroll, a How We Work card whose dotted canvas shows what that area does. The four scenes are deliberately
-// four different shapes, because the work is four different kinds of work:
-//   01 a staircase    Product understanding → Search & AI signals → Opportunity → Priority
-//   02 a mapping      Opportunity → Page → New, Refresh or Optimize
-//   03 a map          the product at the centre of the external sources, present, weak or missing
-//   04 a site graph   Diagnose → Fix → Improve discovery
-// The area crossing the middle of the screen is active and its scene plays through once; scroll to another
-// and the card crossfades to that one. Below xl the scenes sit under their own areas and play when seen.
-const SCENES: ((p: SceneProps) => React.ReactNode)[] = [Understand, PagePlan, Presence, SiteFix];
+// The page's signature section, in How We Work's language: the four areas of work down the left (step chip and where it sits in the sequence,
+// title, copy, mono "includes" pills) and on the right, pinned while you scroll, a card whose dotted canvas draws what that area does, as a
+// concept and not a dashboard (see ConceptScenes). The four pictures are four different shapes, because the work is
+// four different kinds of work:
+//   01 signals feeding "your category", and the gap that comes out of it
+//   02 four pages, each tagged new, refresh or optimize
+//   03 six outside sources around "your product", present, weak or missing
+//   04 a site tree, healthy pages ticked and the blockers named
+// The area crossing the middle of the screen is active and its picture rises in; scroll to another and the card
+// crossfades to that one. Below xl the pictures sit under their own areas and play when seen.
+const SCENES: ((p: SceneProps) => React.ReactNode)[] = [Intelligence, Pages, ThirdParty, Foundation];
 
 export default function Workbench() {
   const [active, setActive] = useState(0);
