@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, type PointerEvent, type ReactNode } from "react";
+import { useId } from "react";
 import { Label, useInView } from "../kit";
 import { PROCESS } from "./content";
+import { GREEN, INK, LINE, Layer, MOVE, Plate, SOFT, tilt, untilt } from "./PlateKit";
 
 // The workflow as six cards in a quiet 3 × 2 board, read left to right. Each card is a small illustrated tile, a
 // number, a name and one line. No scroll-driven stage: the tiles are the personality, and they are built as real
@@ -16,25 +17,6 @@ import { PROCESS } from "./content";
 //   Optimize & Publish an arrow launches off its tray and lands again while three surfaces light up
 //   Improve            the bars grow in, one after another, the last one green
 // The cards rise in once, as they scroll into view. Reduced motion: no tilt, no movement.
-
-/** Points the plate's tilt and glare at the pointer: the variables are read by the plate inside this card. */
-function tilt(e: PointerEvent<HTMLLIElement>) {
-  if (e.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const li = e.currentTarget;
-  const plate = li.querySelector("[data-plate]");
-  if (!plate) return;
-  const r = plate.getBoundingClientRect();
-  const dx = clamp((e.clientX - (r.left + r.width / 2)) / 110);
-  const dy = clamp((e.clientY - (r.top + r.height / 2)) / 90);
-  li.style.setProperty("--ry", `${dx * 24}deg`);
-  li.style.setProperty("--rx", `${-dy * 24}deg`);
-  li.style.setProperty("--mx", `${clamp((e.clientX - r.left) / r.width, 0, 1) * 100}%`);
-  li.style.setProperty("--my", `${clamp((e.clientY - r.top) / r.height, 0, 1) * 100}%`);
-}
-function untilt(e: PointerEvent<HTMLLIElement>) {
-  for (const v of ["--rx", "--ry", "--mx", "--my"]) e.currentTarget.style.removeProperty(v);
-}
-const clamp = (v: number, lo = -1, hi = 1) => Math.min(hi, Math.max(lo, v));
 
 export default function Process() {
   const [ref, seen] = useInView<HTMLUListElement>(0.15);
@@ -76,54 +58,6 @@ export default function Process() {
   );
 }
 
-// ── The tiles ────────────────────────────────────────────────────────────────────────────────────────────────
-
-const INK = "#172c21";
-const GREEN = "var(--primary)";
-const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]";
-/** A transform that eases with a little overshoot, and not at all with reduced motion. */
-const MOVE = `transition-transform duration-700 ${SPRING} motion-reduce:transition-none`;
-const SVG = "size-[3.8rem] overflow-visible";
-const LINE = { fill: "none", stroke: INK, strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
-const SOFT = { filter: "blur(1.6px)" } as const;
-
-/**
- * The tile: a plate with real thickness and a floor shadow, tilted toward the pointer. Its artwork is a stack of
- * `Layer`s at different heights; a green glare follows the cursor across the face.
- */
-function Plate({ children }: { children: ReactNode }) {
-  return (
-    <span aria-hidden="true" data-plate="" className="relative block size-[5.5rem] shrink-0 self-start [perspective:650px]">
-      <span
-        className="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-300 ease-out group-hover:[--lift:-6px] motion-reduce:transition-none"
-        style={{ transform: "translateY(var(--lift, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))" }}
-      >
-        <span className="absolute inset-x-2 bottom-0 h-7 rounded-[50%] bg-[rgb(23_44_33/0.38)] opacity-0 blur-lg transition-opacity duration-500 group-hover:opacity-100" style={{ transform: "translateZ(-46px) translateY(14px)" }} />
-        {[-1, -2, -3, -4, -5, -6, -7, -8].map((z) => (
-          <span key={z} className="absolute inset-0 rounded-[24px]" style={{ transform: `translateZ(${z}px)`, background: z > -5 ? "#e3e1d9" : "#d3d1c8" }} />
-        ))}
-        <span className="absolute inset-0 rounded-[24px] border border-line bg-[linear-gradient(150deg,#ffffff_0%,#f4f3ee_100%)] shadow-[inset_0_1px_0_#fff]">
-          <span
-            className="absolute inset-0 rounded-[24px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:hidden"
-            style={{ background: "radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgb(25 231 110 / 0.2), transparent 58%)" }}
-          />
-        </span>
-        {children}
-      </span>
-    </span>
-  );
-}
-
-/** One layer of a tile's artwork, lifted `z` px off the plate. */
-function Layer({ z, children }: { z: number; children: ReactNode }) {
-  return (
-    <span className="absolute inset-0 grid place-items-center" style={{ transform: `translateZ(${Math.round(z * 1.4)}px)` }}>
-      <svg viewBox="0 0 48 48" className={SVG}>
-        {children}
-      </svg>
-    </span>
-  );
-}
 
 /** A dot-dither fill, as on the Engine glyphs. */
 function Dots({ id, color, o = 0.55 }: { id: string; color: string; o?: number }) {

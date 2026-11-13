@@ -309,22 +309,6 @@ export const ARTIFACTS = {
   },
 };
 
-// The sentence the client moved out of the "How we improve" section into a section of its own, word for word,
-// and the visual that makes it land: the five kinds of work it names, as a share of the whole.
-export const MIX = {
-  lead: "The mix of work changes based on where the strongest opportunity is,",
-  rest: "whether that means technical fixes, new pages, content refreshes, third-party visibility, or stronger AI coverage.",
-  tag: "Strongest opportunity",
-  parts: ["Technical fixes", "New pages", "Content refreshes", "Third-party visibility", "AI coverage"],
-  // SAMPLE: the share of the work (%) in each part, in `parts` order, when each in turn is where the strongest opportunity is.
-  mixes: [
-    [44, 18, 12, 14, 12],
-    [14, 42, 14, 14, 16],
-    [12, 18, 40, 14, 16],
-    [12, 16, 12, 44, 16],
-    [10, 16, 10, 22, 42],
-  ],
-};
 
 // Copy from the client: the commitment we make when we work with a client. Text-led on purpose.
 export const COMMITMENT = {
@@ -332,8 +316,13 @@ export const COMMITMENT = {
   // "A 90-day plan prioritized by commercial impact." with its two key phrases picked out in green.
   title: { a: "A", plan: "90-day plan", b: "prioritized by", impact: "commercial impact", end: "." },
   body: "We turn the opportunities we identify into a clear 90-day plan, then break that into monthly sprints with specific performance objectives.",
-  // The three horizons, longest first, each in its own lane of a twelve-month timeline (see Commitment).
-  horizons: ["Long-term strategy.", "90-day priorities.", "Monthly execution."],
+  // The three horizons, in the order the work runs: long-term direction, then the highest-impact priorities, then monthly
+  // execution. The copy is from the content team's board.
+  horizons: [
+    { name: "Long-term strategy.", body: "Set the longer-term direction around the category, search opportunity, and commercial goals." },
+    { name: "90-day priorities.", body: "Choose the highest-impact opportunities to focus on over the next 90 days." },
+    { name: "Monthly execution.", body: "Turn those priorities into monthly sprints with clear objectives and measures." },
+  ],
 };
 
 export const MEASURE = {
