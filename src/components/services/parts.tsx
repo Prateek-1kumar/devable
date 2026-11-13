@@ -80,6 +80,17 @@ export function Mark({ name, className = "size-4" }: { name: Icon; className?: s
         </g>
       </svg>
     );
+  if (name === "gemini")
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={`shrink-0 ${className}`}>
+        <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="3" y1="21" x2="21" y2="3">
+          <stop offset="0" stopColor="#4285F4" />
+          <stop offset="0.5" stopColor="#9B72CB" />
+          <stop offset="1" stopColor="#D96570" />
+        </linearGradient>
+        <path d={MARKS.gemini} fill={`url(#${id})`} />
+      </svg>
+    );
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={`shrink-0 ${className}`} fill={MARK_COLOR[name]}>
       <path d={MARKS[name]} />

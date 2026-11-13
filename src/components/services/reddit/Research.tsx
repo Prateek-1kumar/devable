@@ -4,7 +4,7 @@ import NumberFlow from "@number-flow/react";
 import { ArrowRight, Check, Minus } from "lucide-react";
 import type { ReactNode } from "react";
 import { Mark } from "../parts";
-import { Brand } from "../search/HeroStage";
+import { Brand } from "../search/Brand";
 import { useBeats } from "../search/scene";
 import { STEPS } from "./content";
 

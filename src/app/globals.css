@@ -93,6 +93,30 @@
     from { transform: scaleY(0); }
   }
 
+  /* The Search hero: tiles lit one after another on a long loop (a lift and a glow, a thin green line along the top),
+     and the orbit rings swaying gently back and forth, each by its own amount (--rock). */
+  --animate-tile-scan: tile-scan 9s ease-in-out infinite;
+  --animate-tile-line: tile-line 9s ease-in-out infinite;
+  --animate-logo-scan: logo-scan 9s ease-in-out infinite;
+  --animate-rock: rock 60s ease-in-out infinite alternate;
+
+  @keyframes tile-scan {
+    0%, 16%, 100% { transform: translateY(0); box-shadow: 0 0 0 1px rgb(23 44 33 / 0.07), 0 1px 2px rgb(23 44 33 / 0.05), 0 14px 28px -18px rgb(23 44 33 / 0.25), inset 0 1px 0 #fff; }
+    5%, 9% { transform: translateY(-4px); box-shadow: 0 0 0 1px rgb(25 231 110 / 0.35), 0 1px 2px rgb(23 44 33 / 0.05), 0 20px 30px -16px rgb(25 231 110 / 0.5), inset 0 1px 0 #fff; }
+  }
+  @keyframes tile-line {
+    0%, 16%, 100% { opacity: 0; }
+    5%, 9% { opacity: 1; }
+  }
+  @keyframes logo-scan {
+    0%, 16%, 100% { transform: scale(1) rotate(0deg); }
+    5%, 9% { transform: scale(1.1) rotate(-4deg); }
+  }
+  @keyframes rock {
+    from { transform: rotate(calc(var(--rock, 14deg) * -1)); }
+    to { transform: rotate(var(--rock, 14deg)); }
+  }
+
   /* Soft rise-and-focus entrance for text lines. */
   --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 

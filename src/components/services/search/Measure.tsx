@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Label } from "../kit";
 import { Mark, MarkStack } from "../parts";
 import { MEASURE } from "./content";
-import { Brand } from "./HeroStage";
+import { Brand } from "./Brand";
 import { DEEP, HAIR, PANEL, show, useBeats } from "./scene";
 
 // What we measure, as a live measurement view instead of three lists. Three windows in a chain, Search → AI →
