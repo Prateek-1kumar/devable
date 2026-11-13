@@ -219,7 +219,7 @@ function Calendar() {
               fill={GREEN}
               stroke={INK}
               strokeWidth="1"
-              className="origin-center [transform-box:fill-box] group-hover:animate-grow motion-reduce:animate-none"
+              className="origin-center [transform-box:fill-box] group-hover:animate-[grow_0.7s_cubic-bezier(0.34,1.56,0.64,1)_both] motion-reduce:animate-none"
               style={{ animationDelay: `${k * 0.14}s` }}
             />
           );

@@ -5,6 +5,11 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Mark, Tick, type Icon } from "../parts";
 import { HERO } from "./content";
 
+// The hover pill rising in with a slight overshoot.
+const KEYFRAMES = `
+@keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(0.9); } }
+`;
+
 // The hero visual: one article, written in front of you, then put to work. Read left to right.
 //   Inputs  → four signals, each a pill with its brand mark. Each one sends a packet into the article.
 //   Brief   → the packets land as the four rows of a content brief (a properties list, in each input's colour).
@@ -346,8 +351,9 @@ function Article({ s, hotIn, hotOut, link }: { s: number; hotIn: number; hotOut:
 
   return (
     <div className="relative w-full">
+<style href="content-hero-stage" precedence="default">{KEYFRAMES}</style>
       {link && (
-        <span className="absolute -top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ink/[0.08] bg-white py-1.5 pr-4 pl-3 text-[0.8rem] font-medium whitespace-nowrap text-ink shadow-[0_12px_26px_-12px_rgb(23_44_33/0.4)] motion-safe:animate-pop-in">
+        <span className="absolute -top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ink/[0.08] bg-white py-1.5 pr-4 pl-3 text-[0.8rem] font-medium whitespace-nowrap text-ink shadow-[0_12px_26px_-12px_rgb(23_44_33/0.4)] motion-safe:animate-[pop-in_0.55s_cubic-bezier(0.34,1.56,0.64,1)_both]">
           <span className="size-2 rounded-full" style={{ background: link.dot, boxShadow: `0 0 0 3px color-mix(in srgb, ${link.dot} 22%, transparent)` }} />
           {link.text}
         </span>

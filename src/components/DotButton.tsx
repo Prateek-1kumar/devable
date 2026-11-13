@@ -1,6 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
+// The chevron row's brightness wave.
+const KEYFRAMES = `
+@keyframes dot-wave { 0%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+`;
+
 // White button with a green dot-matrix chevron box on the left. On hover the green fills the button
 // (leaving a thin white frame); the label stays, in ink, with a short row of chevrons pulsing after it.
 const GROW = "ease-[cubic-bezier(0.65,0,0.35,1)] duration-500 motion-reduce:duration-0";
@@ -49,10 +54,11 @@ export default function DotButton({
         <span className="absolute inset-0 flex items-center justify-center gap-4 text-ink opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100">
           <span>{children}</span>
           <span className="flex gap-2">
+<style href="dot-button" precedence="default">{KEYFRAMES}</style>
             {Array.from({ length: 3 }, (_, i) => (
               <Chevron
                 key={i}
-                className="animate-dot-wave motion-reduce:animate-none"
+                className="animate-[dot-wave_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
                 style={{ animationDelay: `${i * 0.12}s` }}
               />
             ))}

@@ -20,187 +20,57 @@
   --accent-soft: var(--secondary-soft);
   --light-green-soft: #d8f8e5;
   --sage: #8fa898; /* the one muted channel tint */
-  --hero-bg: #1db85e; /* radiant brand green container */
-  --hero-dots: #000000; /* subtle dark grid dots */
 
   /* Legacy & semantic names, mapped onto the brand so all sections follow it. */
   --background: #ffffff; /* page is pure white; off-white (#f3f1eb) is for cards and panels */
   --surface: #ebe8e0; /* soft warm panels */
   --foreground: var(--ink);
-  --ceramic: #fbfaf6;
 
   /* Pixel field tokens. */
   --pixel-light: #ebe8e0;
   --pixel-stone: #dcd8cd;
   --pixel-mist: #cfdcd3;
-  --forest: var(--primary);
   --coral: var(--secondary);
   --lime: var(--light-green-soft);
   --amber: var(--sage);
-  --deboss-ink: #1c2c23; /* green-black ink for letters pressed into the page */
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-paper: var(--paper);
   --color-primary: var(--primary);
-  --color-primary-soft: var(--primary-soft);
   --color-secondary: var(--secondary);
-  --color-secondary-soft: var(--secondary-soft);
   --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
   --color-light-green: var(--light-green);
   --color-light-green-soft: var(--light-green-soft);
-  --color-hero-bg: var(--hero-bg);
-  --color-hero-dots: var(--hero-dots);
   --color-line: var(--line);
   --color-muted: var(--muted);
   --color-card: var(--card);
-  --color-sage: var(--sage);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --color-forest: var(--forest);
-  --color-lime: var(--lime);
   --color-coral: var(--coral);
   --color-amber: var(--amber);
   --font-sans: var(--font-instrument);
   --font-heading: var(--font-instrument);
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Highlight pill entrance: color slides in from the left, text ink follows. */
-  --animate-pill-sweep: pill-sweep 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
-  --animate-pill-ink: pill-ink 0.9s cubic-bezier(0.65, 0, 0.35, 1) both;
-
+  /* Shared motion. Anything used by one component lives in that component, next to where it is used. */
+  /* Soft rise-and-focus entrance for text lines and cards. */
+  --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   /* Dotted wires marching toward their target (the dash pattern's period is 7). */
   --animate-dash-flow: dash-flow 0.7s linear infinite;
-
-  @keyframes dash-flow {
-    to { stroke-dashoffset: -7; }
-  }
-
-  /* Small playful moves for the process icons: an arrow that launches and lands again, bars that grow in. */
-  --animate-launch: launch 1s cubic-bezier(0.5, 0, 0.2, 1);
-  --animate-grow: grow 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-
-  @keyframes launch {
-    0% { transform: translateY(0); opacity: 1; }
-    40% { transform: translateY(-16px); opacity: 0; }
-    41% { transform: translateY(14px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes grow {
-    from { transform: scaleY(0); }
-  }
-
-  /* The Search hero's lit stretches of line: a slow breath, each out of step with the others. */
-  --animate-glow: glow 9s ease-in-out infinite;
-
-  @keyframes glow {
-    0%, 100% { opacity: 0.55; }
-    50% { opacity: 0.95; }
-  }
-
-  /* Search & AI "working together" cards: restrained loops. The green result climbs to the top, the answer fills and
-     cites its source, the plus disc breathes once. All rest on the finished picture (reduced motion shows it still). */
-  --animate-climb: climb 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  --animate-settle: settle 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  --animate-answer: fill-in 10s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  --animate-cite: cite 10s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
-  --animate-breathe: breathe 5s ease-in-out infinite;
-
-  @keyframes climb {
-    0%, 14% { transform: translateY(96px); }
-    32%, 86% { transform: translateY(0); }
-    96%, 100% { transform: translateY(96px); }
-  }
-  @keyframes settle {
-    0%, 14% { transform: translateY(-48px); }
-    32%, 86% { transform: translateY(0); }
-    96%, 100% { transform: translateY(-48px); }
-  }
-  @keyframes fill-in {
-    0%, 22% { transform: scaleX(0); }
-    42%, 86% { transform: scaleX(1); }
-    96%, 100% { transform: scaleX(0); }
-  }
-  @keyframes cite {
-    0%, 40% { transform: scale(0); opacity: 0; }
-    48%, 86% { transform: scale(1); opacity: 1; }
-    94%, 100% { transform: scale(0); opacity: 0; }
-  }
-  @keyframes breathe {
-    0%, 100% { box-shadow: 0 0 0 0 rgb(25 231 110 / 0.28); }
-    50% { box-shadow: 0 0 0 9px rgb(25 231 110 / 0); }
-  }
-
-  /* A page floating a few pixels, to and fro. */
-  --animate-bob: bob 5.5s ease-in-out infinite;
-
-  @keyframes bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-  }
-
-  /* The arrow joining two cards, nudging a few pixels toward the next one. */
-  --animate-nudge: nudge 2.6s ease-in-out infinite;
-
-  @keyframes nudge {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(4px); }
-  }
-
-  /* Soft rise-and-focus entrance for text lines. */
-  --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Rails (logos, posts): the track holds its list twice, so sliding by half loops seamlessly. */
+  --animate-marquee: marquee 50s linear infinite;
 
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); }
   }
-
-  /* A bar filling left to right over its (inline) duration: time left on a cycling step. */
-  --animate-fill: fill 6s linear both;
-
-  @keyframes fill {
-    from { transform: scaleX(0); }
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -7; }
   }
-
-  /* Small springy entrance for tags: rises a touch and settles with a slight overshoot. */
-  --animate-pop-in: pop-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-
-  @keyframes pop-in {
-    from { opacity: 0; transform: translateY(6px) scale(0.9); }
-  }
-  --animate-pill-reveal: pill-reveal 0.7s cubic-bezier(0.65, 0, 0.35, 1) both;
-
-  @keyframes pill-reveal {
-    from { clip-path: inset(0 100% 0 0); }
-    to { clip-path: inset(0 0 0 0); }
-  }
-  @keyframes pill-sweep {
-    from { transform: translateX(-101%); }
-    to { transform: translateX(0); }
-  }
-  @keyframes pill-ink {
-    from { color: var(--foreground); }
-  }
-
-  /* Dot-chevron row on the DotButton hover: a brightness wave marching left to right. */
-  --animate-dot-wave: dot-wave 1.4s ease-in-out infinite;
-
-  @keyframes dot-wave {
-    0%, 100% { opacity: 0.25; }
-    30% { opacity: 1; }
-  }
-
-  /* Rails (logos, posts): the track holds its list twice, so sliding by half loops seamlessly. */
-  --animate-marquee: marquee 50s linear infinite;
-  --animate-marquee-up: marquee-up 40s linear infinite;
-
   @keyframes marquee {
     to { transform: translateX(-50%); }
-  }
-  @keyframes marquee-up {
-    to { transform: translateY(-50%); }
   }
 }
 
@@ -214,70 +84,5 @@ body {
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-  }
-}
-
-/* Letters pressed into the ceramic page: solid warm ink (always legible), a
-   light lip under each stroke and a soft shade over it. */
-@utility text-deboss {
-  color: var(--deboss-ink);
-  text-shadow:
-    0 1.5px 0 rgb(255 255 255 / 0.8),
-    0 -1px 0 rgb(0 0 0 / 0.14);
-}
-
-/* The navbar's menus (components/ui/navigation-menu): a quick drop-in and fade-out. */
-/* Text typing in, character by character (pair with steps(n) for n characters). */
-@keyframes type-in {
-  from { clip-path: inset(0 100% 0 0); }
-  to { clip-path: inset(0 0 0 0); }
-}
-/* A word or result arriving: a short rise and fade. */
-@keyframes arrive {
-  from { opacity: 0; transform: translateY(3px); }
-}
-/* A block floating up into place (staggered by the caller with animation-delay): the case studies' entrance. */
-@keyframes float-in {
-  from { opacity: 0; transform: translateY(16px); }
-}
-/* A line drawing itself on (give the path pathLength="1" and stroke-dasharray: 1), and a soft fade for what follows it. */
-@keyframes draw-line {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
-}
-@keyframes soft-in {
-  from { opacity: 0; }
-}
-/* A packet running an elbow connector (a box with a left and a bottom edge): down the left edge, then along the bottom. */
-@keyframes elbow-run {
-  0% { top: 0; left: 0; opacity: 0; }
-  12% { opacity: 1; }
-  55% { top: 100%; left: 0; }
-  88% { opacity: 1; }
-  100% { top: 100%; left: 100%; opacity: 0; }
-}
-/* A packet running a straight line between two points of its box, set as percentages in --x0 --y0 --x1 --y1. */
-@keyframes line-run {
-  0% { left: var(--x0); top: var(--y0); opacity: 0; }
-  14% { opacity: 1; }
-  86% { opacity: 1; }
-  100% { left: var(--x1); top: var(--y1); opacity: 0; }
-}
-/* A band of light crossing a surface once (the What we measure bars, as they land). */
-@keyframes sheen {
-  from { transform: translateX(-130%) skewX(-18deg); }
-  to { transform: translateX(300%) skewX(-18deg); }
-}
-
-@keyframes nav-pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-}
-@keyframes nav-pop-out {
-  to {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
   }
 }

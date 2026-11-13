@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Mark, type Icon } from "../parts";
 
+// The lit stretches of line: a slow breath, each out of step with the others.
+const KEYFRAMES = `
+@keyframes glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+`;
+
 // The hero's backdrop for Search & AI Visibility: a woven ribbon of lines flowing from one side of the page to the
 // other. Twelve distinct lanes, each its own wave (a different height, depth and rhythm, so the two margins do not
 // mirror each other), run right across the page and weave past one another, with two bundles of much fainter lines
@@ -94,6 +99,7 @@ export default function HeroWave() {
 
   return (
     <div ref={box} aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 hidden overflow-hidden xl:block">
+<style href="hero-wave" precedence="default">{KEYFRAMES}</style>
       {w > 0 && (
         <>
           <svg width={w} height={h} className="absolute inset-0 overflow-visible" style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%)" }}>
@@ -135,7 +141,7 @@ export default function HeroWave() {
               ))}
               {/* the lit stretch around each logo: a soft bloom and a crisp line, fading out either side */}
               {beads.map((b) => (
-                <g key={b.i} className="motion-safe:animate-glow" style={{ animationDelay: `${-b.i * 1.7}s` }}>
+                <g key={b.i} className="motion-safe:animate-[glow_9s_ease-in-out_infinite]" style={{ animationDelay: `${-b.i * 1.7}s` }}>
                   <path d={trace(b.lane, Math.max(-20, b.x - REACH), Math.min(w + 20, b.x + REACH))} stroke={`url(#wave-glow-${b.i})`} strokeWidth="5" opacity="0.3" filter="url(#wave-bloom)" />
                   <path d={trace(b.lane, Math.max(-20, b.x - REACH), Math.min(w + 20, b.x + REACH))} stroke={`url(#wave-glow-${b.i})`} strokeWidth="1.5" />
                 </g>

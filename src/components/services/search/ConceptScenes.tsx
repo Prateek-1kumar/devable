@@ -6,6 +6,12 @@ import { Mark, type Icon } from "../parts";
 import { useStill } from "../content/play";
 import { show, type SceneProps } from "./scene";
 
+// The lit tile's slow breath and the pages floating a few pixels.
+const KEYFRAMES = `
+@keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(25 231 110 / 0.28); } 50% { box-shadow: 0 0 0 9px rgb(25 231 110 / 0); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+`;
+
 // The four pictures beside "How we improve search & AI visibility", one idea each, drawn as concept and not as a
 // dashboard: a few short labels, a lot of white space, a green line for what matters.
 //   01 Search Intelligence      four signals feed "your category"; out of it comes the high-impact gap
@@ -28,6 +34,7 @@ const delay = (s: number): CSSProperties => ({ transitionDelay: `${s}s` });
 function Stage({ children, lines }: { children: ReactNode; lines: ReactNode }) {
   return (
     <div className="w-full max-w-[40rem] [container-type:inline-size]">
+<style href="concept-scenes" precedence="default">{KEYFRAMES}</style>
       <div className="relative w-full" style={{ aspectRatio: `${W} / ${H}`, fontSize: "2.5cqw" }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 size-full overflow-visible">
           {lines}
@@ -61,7 +68,7 @@ const Tag = ({ children, icon, small = false }: { children: ReactNode; icon?: Re
 function Tile({ icon: I, mark, lit = false, glow = false }: { icon?: LucideIcon; mark?: Icon; lit?: boolean; glow?: boolean }) {
   return (
     <span
-      className={`grid size-[3.7em] place-items-center rounded-[1em] shadow-[0_0_0_1px_rgb(23_44_33/0.1),0_1px_2px_rgb(23_44_33/0.05),0_12px_20px_-12px_rgb(23_44_33/0.3),inset_0_1px_0_#fff] ${lit ? "bg-primary motion-safe:animate-breathe" : "bg-white"} ${glow ? "motion-safe:animate-breathe" : ""}`}
+      className={`grid size-[3.7em] place-items-center rounded-[1em] shadow-[0_0_0_1px_rgb(23_44_33/0.1),0_1px_2px_rgb(23_44_33/0.05),0_12px_20px_-12px_rgb(23_44_33/0.3),inset_0_1px_0_#fff] ${lit ? "bg-primary motion-safe:animate-[breathe_5s_ease-in-out_infinite]" : "bg-white"} ${glow ? "motion-safe:animate-[breathe_5s_ease-in-out_infinite]" : ""}`}
     >
       {mark ? <Mark name={mark} className="size-[1.7em]" /> : I && <I className="size-[1.7em]" strokeWidth={1.7} color={INK} />}
     </span>
@@ -238,7 +245,7 @@ export function Pages({ on }: SceneProps) {
         return (
           <div key={p.name}>
             <At x={xs[i]} y={150} on={on} d={0.15 + i * 0.1}>
-              <div className="motion-safe:animate-bob" style={{ animationDelay: `${i * -1.1}s` }}>
+              <div className="motion-safe:animate-[bob_5.5s_ease-in-out_infinite]" style={{ animationDelay: `${i * -1.1}s` }}>
                 <div className="relative">
                 <span className="absolute inset-x-[0.7em] -top-[0.55em] h-[1em] rounded-t-[0.8em] bg-white shadow-[0_0_0_1px_rgb(23_44_33/0.1)]" />
                 <span className="absolute inset-x-[1.4em] -top-[1.05em] h-[1em] rounded-t-[0.8em] bg-[#f4f3ee] shadow-[0_0_0_1px_rgb(23_44_33/0.07)]" />

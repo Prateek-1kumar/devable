@@ -6,6 +6,11 @@ import { Label, useInView } from "../kit";
 import { Mark } from "../parts";
 import { MEASURE } from "./content";
 
+// The arrow between the cards, nudging toward the next one.
+const KEYFRAMES = `
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+`;
+
 // What we measure, as one infographic with one message: better visibility becomes business impact. Two cards joined
 // by an arrow. Left, Search + AI visibility: the one number that matters, from where it started to where it is, over
 // the three things that move it (rankings, mentions, citations). Right, Business impact, the green card: the outcome
@@ -35,6 +40,7 @@ export default function Measure() {
 
   return (
     <section aria-labelledby="measure-title" className="bg-white px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+<style href="search-measure" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{MEASURE.label}</Label>
         <h2 id="measure-title" className="mt-6 max-w-[20ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
@@ -94,7 +100,7 @@ export default function Measure() {
                 <span className="absolute left-0 size-2.5 rounded-full bg-primary shadow-[0_0_0_3px_#fff,0_0_0_4.5px_rgb(25_231_110/0.3)] max-lg:top-0 max-lg:left-auto" />
               </span>
               <span className="z-10 mx-1 grid size-11 shrink-0 place-items-center rounded-full bg-primary text-ink shadow-[0_0_0_5px_#fff,0_0_0_6px_rgb(25_231_110/0.3),0_12px_22px_-10px_rgb(25_231_110/0.7)] max-lg:my-1 max-lg:rotate-90">
-                <ArrowRight className="size-5 motion-safe:animate-nudge" strokeWidth={2.4} />
+                <ArrowRight className="size-5 motion-safe:animate-[nudge_2.6s_ease-in-out_infinite]" strokeWidth={2.4} />
               </span>
               <span className="relative grid h-px w-full place-items-center max-lg:h-full max-lg:w-px lg:flex-1">
                 <span className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_8px)] max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_8px)]" />

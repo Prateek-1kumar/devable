@@ -5,6 +5,16 @@ import { Label, useInView } from "../kit";
 import { PROCESS } from "./content";
 import { GREEN, INK, LINE, Layer, MOVE, Plate, SOFT, tilt, untilt } from "./PlateKit";
 
+// The arrow that launches off its tray and lands again.
+const KEYFRAMES = `
+@keyframes launch {
+  0% { transform: translateY(0); opacity: 1; }
+  40% { transform: translateY(-16px); opacity: 0; }
+  41% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+`;
+
 // The workflow as six cards in a quiet 3 × 2 board, read left to right. Each card is a small illustrated tile, a
 // number, a name and one line. No scroll-driven stage: the tiles are the personality, and they are built as real
 // objects. Every tile is a plate with thickness and a floor shadow; its artwork is split into layers at different
@@ -23,6 +33,7 @@ export default function Process() {
   const tiles = [Understand, Prioritize, Build, Review, Publish, Improve];
   return (
     <section aria-labelledby="process-title" className="bg-[#f6f5f1] px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+<style href="content-process" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{PROCESS.label}</Label>
         <h2 id="process-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
@@ -217,7 +228,7 @@ function Review() {
 
 /** Optimize & Publish: an arrow launches off its tray and lands again, lighting three surfaces on the way. */
 function Publish() {
-  const fly = "group-hover:animate-launch motion-reduce:animate-none";
+  const fly = "group-hover:animate-[launch_1s_cubic-bezier(0.5,0,0.2,1)] motion-reduce:animate-none";
   return (
     <>
       <Layer z={6}>
@@ -247,7 +258,7 @@ const BARS = [10, 17, 24, 33];
 
 /** Improve: four bars; they grow in one after another, the last one green. */
 function Improve() {
-  const grow = "origin-bottom [transform-box:fill-box] group-hover:animate-grow motion-reduce:animate-none";
+  const grow = "origin-bottom [transform-box:fill-box] group-hover:animate-[grow_0.7s_cubic-bezier(0.34,1.56,0.64,1)_both] motion-reduce:animate-none";
   return (
     <>
       <Layer z={5}>

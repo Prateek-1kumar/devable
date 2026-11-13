@@ -1,6 +1,13 @@
 import { Label } from "../kit";
 import { COMMITMENTS, CREATORS } from "./content";
 
+// The hover motion: bars filling, the line drawing on, and what follows it fading in.
+const KEYFRAMES = `
+@keyframes bar-fill { from { transform: scaleX(0); } }
+@keyframes draw-line { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes soft-in { from { opacity: 0; } }
+`;
+
 // What we commit to: three promises, one per phrase of the headline, each a warm card. The top of each card
 // shows, small and static, the thing the client actually gets for that promise (the agreed objective and its
 // metrics; the budget split across the plan; the result read against the goal), so each one reads as
@@ -101,10 +108,11 @@ function Spend() {
         </span>
       </div>
       <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full">
+<style href="influencer-commitments" precedence="default">{KEYFRAMES}</style>
         {SPLIT.map((s, i) => (
           <span
             key={s.name}
-            className={`${s.tone} origin-left motion-safe:group-hover:animate-fill`}
+            className={`${s.tone} origin-left motion-safe:group-hover:animate-[bar-fill_6s_linear_both]`}
             style={{ width: `${s.share}%`, animationDuration: "700ms", animationDelay: `${i * 180}ms`, animationTimingFunction: "cubic-bezier(0.22,1,0.36,1)" }}
           />
         ))}
@@ -131,6 +139,7 @@ function Accountability() {
         <p className="text-[0.75rem] font-medium text-ink tabular-nums">107%</p>
       </div>
       <svg viewBox="0 0 240 86" className="mt-3 w-full overflow-visible">
+<style href="influencer-commitments" precedence="default">{KEYFRAMES}</style>
         <defs>
           <linearGradient id="commit-area" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="rgb(25 231 110)" stopOpacity="0.2" />

@@ -4,6 +4,11 @@ import { useEffect, useState, useSyncExternalStore, type PointerEvent } from "re
 import { Label, useInView } from "../kit";
 import { MEASURE } from "./content";
 
+// A band of light crossing a bar once, as it lands.
+const KEYFRAMES = `
+@keyframes sheen { from { transform: translateX(-130%) skewX(-18deg); } to { transform: translateX(300%) skewX(-18deg); } }
+`;
+
 const REDUCED = "(prefers-reduced-motion: reduce)";
 const subscribe = (onChange: () => void) => {
   const mq = window.matchMedia(REDUCED);
@@ -39,6 +44,7 @@ export default function Measure() {
 
   return (
     <section aria-labelledby="measure-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+<style href="influencer-measure" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{MEASURE.label}</Label>
         <h2 id="measure-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

@@ -6,6 +6,14 @@ import { Label, useInView } from "../kit";
 import { Mark, MarkStack, Tick } from "../parts";
 import { EXPANDED } from "./content";
 
+// The two pictures' ten-second loops: the green result climbs, the answer fills in and cites its source.
+const KEYFRAMES = `
+@keyframes climb { 0%, 14% { transform: translateY(96px); } 32%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(96px); } }
+@keyframes settle { 0%, 14% { transform: translateY(-48px); } 32%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-48px); } }
+@keyframes answer-fill { 0%, 22% { transform: scaleX(0); } 42%, 86% { transform: scaleX(1); } 96%, 100% { transform: scaleX(0); } }
+@keyframes cite { 0%, 40% { transform: scale(0); opacity: 0; } 48%, 86% { transform: scale(1); opacity: 1; } 94%, 100% { transform: scale(0); opacity: 0; } }
+`;
+
 // The core idea, as a quiet board: Search Visibility and AI Visibility side by side, joined by a plus, then a line
 // that says they work together and the three signals that feed both. Each card is a real surface (a lit edge, layered
 // shadow, a white UI panel inset in it) holding only the one picture that tells the two apart:
@@ -24,10 +32,10 @@ const BAR = "block h-[7px] rounded-full bg-ink/[0.1]";
 export default function Expanded() {
   const [ref, seen] = useInView<HTMLDivElement>(0.25);
   // Literal class names, so Tailwind can see them; the loops only start once the board is on screen.
-  const climb = seen ? "motion-safe:animate-climb" : "";
-  const settle = seen ? "motion-safe:animate-settle" : "";
-  const answer = seen ? "motion-safe:animate-answer" : "";
-  const cite = seen ? "motion-safe:animate-cite" : "";
+  const climb = seen ? "motion-safe:animate-[climb_10s_cubic-bezier(0.65,0,0.35,1)_infinite]" : "";
+  const settle = seen ? "motion-safe:animate-[settle_10s_cubic-bezier(0.65,0,0.35,1)_infinite]" : "";
+  const answer = seen ? "motion-safe:animate-[answer-fill_10s_cubic-bezier(0.65,0,0.35,1)_infinite]" : "";
+  const cite = seen ? "motion-safe:animate-[cite_10s_cubic-bezier(0.34,1.56,0.64,1)_infinite]" : "";
   const rise = seen ? "motion-safe:animate-fade-up" : "motion-safe:opacity-0";
 
   return (
@@ -37,6 +45,7 @@ export default function Expanded() {
     >
       <div className="mx-auto max-w-[76rem]">
         <Label>{EXPANDED.label}</Label>
+<style href="expanded" precedence="default">{KEYFRAMES}</style>
         <h2
           id="expanded-title"
           className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"

@@ -4,6 +4,11 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
 import { Label } from "../kit";
 import { CASES } from "./content";
 
+// The cards floating up into place (staggered by the caller with animation-delay).
+const KEYFRAMES = `
+@keyframes float-in { from { opacity: 0; transform: translateY(16px); } }
+`;
+
 const HOLD = 7000; // ms each case study stays up while the section runs by itself
 const OUT = 240; // ms the old study takes to lift away before the next floats in
 const N = CASES.cases.length;
@@ -92,6 +97,7 @@ export default function Cases() {
 
   return (
     <section id="case-studies" aria-labelledby="cases-title" className="scroll-mt-24 px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+<style href="influencer-cases" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{CASES.label}</Label>
         <h2 id="cases-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

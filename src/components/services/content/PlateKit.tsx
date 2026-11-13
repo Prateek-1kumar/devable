@@ -2,6 +2,11 @@
 
 import type { PointerEvent, ReactNode } from "react";
 
+// A bar growing up from its base: used by the Improve tile and the Monthly execution calendar.
+const KEYFRAMES = `
+@keyframes grow { from { transform: scaleY(0); } }
+`;
+
 // The 3D plate kit shared by the Process tiles and the Search page's Commitment cards. A plate has real thickness
 // and a floor shadow, tilts toward the pointer, and carries artwork split into `Layer`s at different heights, so the
 // tilt separates them in parallax. A card that holds a plate is a `group`, and passes `tilt` / `untilt` to its
@@ -44,6 +49,7 @@ export const SOFT = { filter: "blur(1.6px)" } as const;
 export function Plate({ children }: { children: ReactNode }) {
   return (
     <span aria-hidden="true" data-plate="" className="relative block size-[5.5rem] shrink-0 self-start [perspective:650px]">
+<style href="plate-kit" precedence="default">{KEYFRAMES}</style>
       <span
         className="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-300 ease-out group-hover:[--lift:-6px] motion-reduce:transition-none"
         style={{ transform: "translateY(var(--lift, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))" }}

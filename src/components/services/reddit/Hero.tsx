@@ -7,6 +7,11 @@ import { Label, useInView } from "../kit";
 import { Mark, STAMP, TAG, Tick } from "../parts";
 import { HERO, type Part, type Thread } from "./content";
 
+// A word or result arriving: a short rise and fade.
+const KEYFRAMES = `
+@keyframes arrive { from { opacity: 0; transform: translateY(3px); } }
+`;
+
 const TURN = 5200; // ms each thread holds the spotlight
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
@@ -42,6 +47,7 @@ export default function Hero() {
 
   return (
     <section className="px-4 pt-24 pb-10 sm:px-8 sm:pt-28 lg:pb-12">
+<style href="reddit-hero" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem] rounded-2xl bg-[#f9f8f4] px-4 pt-14 pb-10 sm:px-10 sm:pt-20 sm:pb-14">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center text-center">
           <Label>{HERO.label}</Label>

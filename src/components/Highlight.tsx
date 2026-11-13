@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 
+// The sweep and the ink-in, defined here so the pill's whole motion lives in this file.
+const KEYFRAMES = `
+@keyframes pill-sweep { from { transform: translateX(-101%); } to { transform: translateX(0); } }
+@keyframes pill-ink { from { color: var(--foreground); } }
+`;
+
 // Inline pill that makes a key phrase pop. On load, amber and lime sweep in
 // from the left and the tone's own color settles on top. Pass `delay` to
 // stagger several pills. The text starts in the
@@ -24,12 +30,13 @@ type Props = {
 
 export default function Highlight({ tone, delay = 0, children }: Props) {
   const { bg, text } = TONES[tone];
-  const layer = "absolute inset-0 rounded-full animate-pill-sweep";
+  const layer = "absolute inset-0 rounded-full animate-[pill-sweep_0.9s_cubic-bezier(0.65,0,0.35,1)_both]";
   const settle = { animationDelay: `${delay + SWEEP.length * STEP}s` };
 
   return (
     // No overflow-hidden here: it would move the inline-block's baseline off the text line.
     <span className="relative isolate inline-block rounded-full px-[0.3em]">
+<style href="highlight" precedence="default">{KEYFRAMES}</style>
       <span aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden rounded-full">
         {SWEEP.map((color, i) => (
           <span
@@ -40,7 +47,7 @@ export default function Highlight({ tone, delay = 0, children }: Props) {
         ))}
         <span className={`${layer} ${bg} motion-reduce:animate-none`} style={settle} />
       </span>
-      <span style={settle} className={`${text} animate-pill-ink motion-reduce:animate-none`}>
+      <span style={settle} className={`${text} animate-[pill-ink_0.9s_cubic-bezier(0.65,0,0.35,1)_both] motion-reduce:animate-none`}>
         {children}
       </span>
     </span>
