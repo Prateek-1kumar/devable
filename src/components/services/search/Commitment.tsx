@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { Fragment, useSyncExternalStore, type ReactNode } from "react";
 import { Label, useInView } from "../kit";
 import { GREEN, INK, LINE, Layer, MOVE, Plate, tilt, untilt } from "../content/PlateKit";
 import { COMMITMENT } from "./content";
@@ -59,12 +59,12 @@ export default function Commitment() {
           {COMMITMENT.body}
         </p>
 
-        <ol className="mt-16 grid w-full gap-5 text-left lg:mt-20 lg:grid-cols-3 lg:gap-6">
+        <ol className="mt-16 grid w-full text-left lg:mt-20 lg:grid-cols-[minmax(0,1fr)_4.25rem_minmax(0,1fr)_4.25rem_minmax(0,1fr)]">
           {COMMITMENT.horizons.map((h, i) => {
             const Icon = ICONS[i];
             return (
+              <Fragment key={h.name}>
               <li
-                key={h.name}
                 onPointerMove={tilt}
                 onPointerLeave={untilt}
                 style={{ transitionDelay: on ? `${1.8 + i * 0.25}s` : "0s" }}
@@ -77,19 +77,23 @@ export default function Commitment() {
                   <Icon />
                 </Plate>
                 <div>
-                  <h3 className="text-[clamp(1.5rem,2vw,1.8rem)] leading-[1.1] font-semibold tracking-[-0.035em] text-ink">{h.name}</h3>
+                  <h3 className="text-[clamp(1.4rem,1.75vw,1.7rem)] leading-[1.1] font-semibold tracking-[-0.035em] text-ink">{h.name}</h3>
                   <p className="mt-3 max-w-[24rem] text-[1.02rem] leading-relaxed text-ink/60">{h.body}</p>
                 </div>
-                {/* The link to the next stage. */}
-                {i < COMMITMENT.horizons.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-[1.15rem] left-1/2 z-10 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-primary text-ink shadow-[0_0_0_4px_#fff,0_10px_18px_-8px_rgb(25_231_110/0.6)] lg:top-[4.75rem] lg:-right-[1.65rem] lg:bottom-auto lg:left-auto lg:-translate-y-1/2 lg:translate-x-0"
-                  >
-                    <ArrowRight className="size-[1.05rem] rotate-90 lg:rotate-0" strokeWidth={2.4} />
-                  </span>
-                )}
               </li>
+              {/* The link to the next stage: a dotted line out of this card, an arrow, a dotted line into the next. */}
+              {i < COMMITMENT.horizons.length - 1 && (
+                <li aria-hidden="true" className="flex h-14 items-center justify-center lg:h-auto" style={{ transitionDelay: on ? `${2.1 + i * 0.25}s` : "0s" }}>
+                  <span className={`flex items-center transition-opacity duration-1000 max-lg:flex-col ${on ? "opacity-100" : "opacity-0"}`}>
+                    <span className="h-px w-2 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)] max-lg:h-3 max-lg:w-px max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)]" />
+                    <span className="mx-1 grid size-10 shrink-0 place-items-center rounded-full bg-primary text-ink shadow-[0_0_0_4px_#fff,0_0_0_5px_rgb(25_231_110/0.3),0_10px_18px_-8px_rgb(25_231_110/0.6)] max-lg:my-1.5 max-lg:mx-0">
+                      <ArrowRight className="size-[1.1rem] max-lg:rotate-90" strokeWidth={2.4} />
+                    </span>
+                    <span className="h-px w-2 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)] max-lg:h-3 max-lg:w-px max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)]" />
+                  </span>
+                </li>
+              )}
+              </Fragment>
             );
           })}
         </ol>

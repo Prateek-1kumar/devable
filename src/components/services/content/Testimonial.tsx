@@ -5,6 +5,7 @@ import Highlight from "../../Highlight";
 import { useInView } from "../kit";
 import { TESTIMONIAL as T } from "./content";
 import { clamp01, io3, seg, usePlay } from "./play";
+import TestimonialWeave from "./TestimonialWeave";
 
 // A standalone credibility band under the hero, in the hero's own language: a large quote framed by the same corner
 // brackets as its stage titles, and, when the quote has been read, one hairline wire with a
@@ -73,7 +74,8 @@ export default function Testimonial() {
   const ripple = clamp01((s - (W0 + 1.9)) / 1);
 
   return (
-    <section ref={ref} aria-label="Client testimonial" className="bg-white px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
+    <section ref={ref} aria-label="Client testimonial" className="relative isolate bg-white px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
+      <TestimonialWeave />
       <figure className="mx-auto max-w-[68rem]">
         <div className="relative px-6 py-14 sm:px-16 sm:py-20">
           {[

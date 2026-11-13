@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Mark, type Icon } from "../parts";
 
-// The lit stretches of line: a slow breath, each out of step with the others.
+// The lit stretches of line: a slow breath, each out of step with the others; and the light that travels along a few lanes.
 const KEYFRAMES = `
 @keyframes glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+@keyframes wave-run { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
 `;
 
 // The hero's backdrop for Search & AI Visibility: a woven ribbon of lines flowing from one side of the page to the
@@ -54,6 +55,9 @@ const LANES = [
 const BUNDLES = [{ lane: 3, sign: 1 }, { lane: 8, sign: -1 }]; // two fine bundles, following these lanes
 const BUNDLE_LINES = 9;
 const BUNDLE_GAP = 8;
+
+// Lanes a soft streak of light travels along, left to right: [lane, seconds per lap, start offset in seconds].
+const STREAKS: [number, number, number][] = [[1, 13, -2], [4, 16, -9], [6, 12, -5], [9, 15, -12], [11, 14, -7]];
 
 const STEP = 4; // px between sampled points
 const HALF = 350; // half-width of the text block, px
@@ -138,6 +142,13 @@ export default function HeroWave() {
               {/* the twelve lanes */}
               {LANES.map((_, k) => (
                 <path key={k} d={trace(k, -20, w + 20)} stroke="rgb(25 231 110 / 0.17)" strokeWidth="1" />
+              ))}
+              {/* light travelling along a few lanes: a long faint streak with a brighter head, on a long loop, out of step */}
+              {STREAKS.map(([k, secs, from]) => (
+                <g key={k} className="motion-safe:block motion-reduce:hidden" style={{ animation: `wave-run ${secs}s linear infinite`, animationDelay: `${from}s` }}>
+                  <path d={trace(k, -20, w + 20)} pathLength={1000} stroke="rgb(25 231 110 / 0.16)" strokeWidth="3.2" strokeDasharray="190 810" />
+                  <path d={trace(k, -20, w + 20)} pathLength={1000} stroke="rgb(25 231 110 / 0.34)" strokeWidth="1.5" strokeDasharray="60 940" />
+                </g>
               ))}
               {/* the lit stretch around each logo: a soft bloom and a crisp line, fading out either side */}
               {beads.map((b) => (
