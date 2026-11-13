@@ -257,8 +257,8 @@ function Stages({ beat, slot }: { beat: number; slot: 0 | 1 | 2 }) {
   );
 }
 
-const PILL = "relative isolate flex h-full items-center gap-3 rounded-2xl border border-ink/[0.08] bg-white px-3 transition-shadow duration-200";
-const PILL_REST = "0 1px 2px rgb(23 44 33 / 0.04)";
+const PILL = "relative isolate flex h-full items-center gap-3 rounded-2xl border border-ink/[0.12] bg-white px-3 transition-shadow duration-200";
+const PILL_REST = "0 1px 2px rgb(23 44 33 / 0.06), 0 8px 18px -12px rgb(23 44 33 / 0.16)";
 const PILL_HOT = (c: string) => `0 16px 30px -18px color-mix(in srgb, ${c} 75%, transparent), 0 1px 2px rgb(23 44 33 / 0.05)`;
 /** The hover wash: the pill's own colour, pooling from the side its wire meets it. No outline. */
 const WASH = (c: string, side: "left" | "right", on: boolean): CSSProperties => ({
@@ -275,16 +275,16 @@ function Glyph({ icon }: { icon: Icon }) {
 /** An input signal: a white pill with its brand mark and name; the wire leaves from a port on its right edge. Hot = washed in its colour. */
 function InputRow({ inp, a, spent, hot, compact = false }: { inp: (typeof HERO.inputs)[number]; a: number; spent: number; hot: boolean; compact?: boolean }) {
   return (
-    <div className={PILL} style={{ opacity: a * (1 - 0.4 * spent), transform: `translateX(${(a - 1) * 14}px)`, boxShadow: hot ? PILL_HOT(inp.dot) : PILL_REST }}>
+    <div className={PILL} style={{ opacity: a * (1 - 0.22 * spent), transform: `translateX(${(a - 1) * 14}px)`, boxShadow: hot ? PILL_HOT(inp.dot) : PILL_REST }}>
       <span aria-hidden className="absolute inset-0 -z-10 rounded-2xl transition-opacity duration-200" style={WASH(inp.dot, "right", hot)} />
       <span className={TILE} style={tint(inp.dot, hot)}>
         <Glyph icon={inp.mark} />
       </span>
       <span className="min-w-0 flex-1 text-[0.92rem] leading-tight font-medium text-ink">{inp.name}</span>
-      <span className={`absolute top-1/2 -right-2 size-4 -translate-y-1/2 place-items-center transition-transform duration-200 ${compact ? "hidden" : "grid"}`} style={{ transform: `translateY(-50%) scale(${hot ? 1.35 : 1})` }}>
-        <span className="size-2.5 rounded-full ring-[3px] ring-[#f9f8f4]" style={{ background: inp.dot, opacity: 1 - spent }} />
+      <span className={`absolute top-1/2 -right-2 size-4 -translate-y-1/2 place-items-center transition-[scale] duration-200 ${compact ? "hidden" : "grid"}`} style={{ scale: hot ? 1.35 : 1 }}>
+        <span className="size-2.5 rounded-full" style={{ background: inp.dot, opacity: 1 - spent, boxShadow: `0 0 0 3px #fff, 0 0 0 4.5px color-mix(in srgb, ${inp.dot} 26%, transparent)` }} />
         <span className="absolute inset-0" style={{ opacity: spent }}>
-          <Tick className="size-4 ring-[3px] ring-[#f9f8f4]" />
+          <Tick className="size-4 ring-[3px] ring-white" />
         </span>
       </span>
     </div>
@@ -294,12 +294,12 @@ function InputRow({ inp, a, spent, hot, compact = false }: { inp: (typeof HERO.i
 /** An outcome: a white pill with a port on its left edge where the wire arrives, in the outcome's colour. Once lit it rings out and takes a faint wash; hot deepens it. */
 function OutRow({ o, lit, ripple, hot, compact = false }: { o: (typeof HERO.outcomes)[number]; lit: number; ripple: number; hot: boolean; compact?: boolean }) {
   return (
-    <div className={PILL} style={{ opacity: hot ? 1 : 0.62 + 0.38 * lit, boxShadow: hot ? PILL_HOT(o.dot) : PILL_REST }}>
+    <div className={PILL} style={{ opacity: hot ? 1 : 0.88 + 0.12 * lit, boxShadow: hot ? PILL_HOT(o.dot) : PILL_REST }}>
       <span aria-hidden className="absolute inset-0 -z-10 rounded-2xl" style={{ ...WASH(o.dot, "left", true), opacity: hot ? 1 : 0.38 * lit }} />
       {!compact && (
-        <span className="absolute top-1/2 -left-[5px] size-2.5 -translate-y-1/2 transition-transform duration-200" style={{ transform: `translateY(-50%) scale(${hot ? 1.35 : 1})` }}>
+        <span className="absolute top-1/2 -left-[5px] size-2.5 -translate-y-1/2 transition-[scale] duration-200" style={{ scale: hot ? 1.35 : 1 }}>
           <span className="absolute inset-0 rounded-full border" style={{ borderColor: o.dot, opacity: (1 - ripple) * 0.6 * (ripple > 0 ? 1 : 0), transform: `scale(${1 + 2.4 * ripple})` }} />
-          <span className="absolute inset-0 rounded-full ring-[3px] ring-[#f9f8f4]" style={{ background: `color-mix(in srgb, ${o.dot} ${Math.round(22 + 78 * lit)}%, white)` }} />
+          <span className="absolute inset-0 rounded-full" style={{ background: `color-mix(in srgb, ${o.dot} ${Math.round(30 + 70 * lit)}%, white)`, boxShadow: `0 0 0 3px #fff, 0 0 0 4.5px color-mix(in srgb, ${o.dot} 26%, transparent)` }} />
         </span>
       )}
       <span className={TILE} style={tint(o.dot, hot)}>
@@ -307,7 +307,7 @@ function OutRow({ o, lit, ripple, hot, compact = false }: { o: (typeof HERO.outc
       </span>
       <span className="min-w-0">
         <span className="block text-[0.98rem] leading-tight font-medium text-ink">{o.name}</span>
-        <span className="mt-0.5 block text-[0.8rem] leading-snug text-ink/55">{o.line}</span>
+        <span className="mt-0.5 block text-[0.8rem] leading-snug text-ink/60">{o.line}</span>
       </span>
     </div>
   );

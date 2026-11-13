@@ -1,17 +1,19 @@
 import ArcButton from "../../ArcButton";
 import { Label } from "../kit";
 import { HERO } from "./content";
+import HeroBackdrop from "./HeroBackdrop";
 import HeroStage from "./HeroStage";
 
-// The first viewport, stacked like the Search hero: the claim centred on the panel (chip, headline, body, two
+// The first viewport, stacked like the Search hero: the claim centred on the page (chip, headline, body, two
 // buttons), then, with room around it, one article built, reviewed and put to work, read left to right (see
 // HeroStage). The text rises in line by line, then the stage.
 const at = (delay: number) => ({ animationDelay: `${delay}s` });
 
 export default function Hero() {
   return (
-    <section className="px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
-      <div className="mx-auto max-w-[76rem] rounded-2xl bg-[#f9f8f4] px-4 pt-14 pb-12 sm:px-10 sm:pt-20 sm:pb-16">
+    <section className="relative isolate px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
+      <HeroBackdrop />
+      <div className="mx-auto max-w-[76rem] px-4 pt-14 pb-12 sm:px-10 sm:pt-20 sm:pb-16">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center text-center">
           <div className="motion-safe:animate-fade-up">
             <Label>{HERO.label}</Label>
