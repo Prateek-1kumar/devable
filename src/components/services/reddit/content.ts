@@ -16,11 +16,11 @@ export type Thread = {
   /** The question that started the thread. */
   title: string;
   /** The thread's own score and size. */
-  meta: { score: string; comments: number };
+  meta: { score: string; comments: number; age: string };
   /** The helpful comment: useful first, the product second. `badge` is set where it earned one. */
   reply: { user: string; age: string; parts: Part[]; votes: number; from: number; badge?: "Top comment" | "OP replied" };
   /** What sits under it: a reply shown in full, or only how many replies there are. */
-  under: { user: string; text: string; op?: boolean } | { replies: number };
+  under: { user: string; age: string; text: string; op?: boolean } | { replies: number };
 };
 
 export const HERO = {
@@ -36,7 +36,7 @@ export const HERO = {
       sub: "r/LocalLLaMA",
       kind: "a recommendation thread",
       title: "Anyone here doing evals for agents before pushing to prod? Curious what you’re using.",
-      meta: { score: "312", comments: 48 },
+      meta: { score: "312", comments: 48, age: "6h" },
       reply: {
         user: "u/ml_ops_k",
         age: "4h",
@@ -51,13 +51,13 @@ export const HERO = {
         from: 168,
         badge: "Top comment",
       },
-      under: { user: "u/tensor_ish", text: "Same here. One eval set on every release is the whole point." },
+      under: { user: "u/tensor_ish", age: "3h", text: "Same here. One eval set on every release is the whole point." },
     },
     {
       sub: "r/MachineLearning",
       kind: "a problem-solving thread",
       title: "How are people handling multi-document PDFs in production?",
-      meta: { score: "1.2k", comments: 96 },
+      meta: { score: "1.2k", comments: 96, age: "2d" },
       reply: {
         user: "u/doc_nerd",
         age: "1d",
@@ -71,13 +71,13 @@ export const HERO = {
         from: 61,
         badge: "OP replied",
       },
-      under: { user: "u/pdf_pipeline", text: "Splitting first is the part we skipped. Trying this.", op: true },
+      under: { user: "u/pdf_pipeline", age: "20h", text: "Splitting first is the part we skipped. Trying this.", op: true },
     },
     {
       sub: "r/llms",
       kind: "an experience thread",
       title: "Anyone using AI observability tools in prod? Which ones are actually useful?",
-      meta: { score: "87", comments: 23 },
+      meta: { score: "87", comments: 23, age: "3d" },
       reply: {
         user: "u/agent_dev",
         age: "2d",
