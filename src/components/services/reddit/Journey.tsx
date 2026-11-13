@@ -16,15 +16,15 @@ const subscribeWide = (onChange: () => void) => {
 };
 
 // The page's signature: the three steps of the work, as three different jobs, each on its own screen, so nobody
-// mistakes them for one dashboard in three colours. The screens share one dark surface (the same dotted grid)
+// mistakes them for one dashboard in three colours. The screens share one light surface (the same dotted grid)
 // beside each step's words, so the section reads as one family:
 //   01 Find the conversations that matter     research: a console scans threads, ranks them, and opens the best
 //                                             to show why it's worth entering
-//   02 Contribute with technical context      a real Reddit conversation, in Reddit's dark theme: a useful answer,
+//   02 Contribute with technical context      a real Reddit thread: a useful answer,
 //                                             the product inside it
 //   03 Strengthen search and AI visibility    the wider footprint: Google results and an AI answer, with Reddit as
 //                                             one source among several
-// A slim rail runs down the left with the Reddit disc riding it (sticky). It is also the progress: each step has
+// A slim rail runs down the left with the Reddit disc riding it (sticky), starting on the first step's node and finishing on the last one's. It is also the progress: each step has
 // a small node on it that lights when the disc reaches that step, and a hairline of green runs out from the node
 // and fades away before the next. Nothing is ever faded: each screen starts from its first beat once at least
 // half of it is on screen, stays on, in full colour, while it is, and plays again from the start when you scroll
@@ -35,6 +35,10 @@ export default function Journey() {
   const [active, setActive] = useState(0); // the step the disc is on
   const [reached, setReached] = useState(0); // the furthest step it has reached
   const rows = useRef<(HTMLLIElement | null)[]>([]);
+  const rail = useRef<HTMLDivElement>(null);
+  // The stretch of rail the disc travels: from the middle of the first step to the middle of the last, so it starts on
+  // the first node and finishes on the last one.
+  const [span, setSpan] = useState<{ top: number; height: number } | null>(null);
 
   useEffect(() => {
     const io = new IntersectionObserver(
@@ -49,7 +53,25 @@ export default function Journey() {
       { rootMargin: "-42% 0px -42% 0px" },
     );
     rows.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
+
+    const measure = () => {
+      const first = rows.current[0];
+      const last = rows.current[STEPS.steps.length - 1];
+      if (!rail.current || !first || !last) return;
+      const base = rail.current.getBoundingClientRect().top;
+      const a = first.getBoundingClientRect();
+      const z = last.getBoundingClientRect();
+      if (!a.height) return; // below lg the rail isn't shown
+      const top = Math.round(a.top - base + a.height / 2 - 20);
+      const height = Math.round(z.top - a.top + z.height / 2 - a.height / 2 + 40);
+      setSpan((s) => (s && s.top === top && s.height === height ? s : { top, height }));
+    };
+    const ro = new ResizeObserver(measure);
+    rows.current.forEach((el) => el && ro.observe(el));
+    return () => {
+      io.disconnect();
+      ro.disconnect();
+    };
   }, []);
 
   return (
@@ -61,12 +83,16 @@ export default function Journey() {
         </h2>
 
         <div className="mt-14 lg:grid lg:grid-cols-[3.5rem_minmax(0,1fr)]">
-          {/* The rail, and the disc riding down it. */}
-          <div aria-hidden="true" className="relative hidden lg:block">
-            <span className="absolute top-8 bottom-8 left-1/2 w-px -translate-x-1/2 bg-ink/[0.09] [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]" />
-            <span className="sticky top-[calc(50vh-1.25rem)] z-20 mx-auto mt-8 mb-8 grid size-10 place-items-center rounded-full border border-line bg-white shadow-[0_1px_1.6px_rgb(15_26_20/0.05),0_8px_20px_rgb(15_26_20/0.1)]">
-              <Mark name="reddit" className="size-5" />
-            </span>
+          {/* The rail, and the disc riding down it: from the first step's node to the last one's. */}
+          <div ref={rail} aria-hidden="true" className="relative hidden lg:block">
+            {span && (
+              <div className="absolute inset-x-0" style={{ top: span.top, height: span.height }}>
+                <span className="absolute top-5 bottom-5 left-1/2 w-px -translate-x-1/2 bg-ink/[0.09]" />
+                <span className="sticky top-[calc(50vh-1.25rem)] z-20 mx-auto grid size-10 place-items-center rounded-full border border-line bg-white shadow-[0_1px_1.6px_rgb(15_26_20/0.05),0_8px_20px_rgb(15_26_20/0.1)]">
+                  <Mark name="reddit" className="size-5" />
+                </span>
+              </div>
+            )}
           </div>
           <ol className="space-y-5 lg:space-y-6">
             {STEPS.steps.map((s, i) => (
@@ -121,8 +147,8 @@ function Rail({ i, last, active, reached }: { i: number; last: number; active: n
   );
 }
 
-// The one screen all three visuals sit on: near-black with a faint dotted grid.
-const SCREEN = "bg-[#0a0c0b] bg-[radial-gradient(rgb(255_255_255/0.055)_1px,transparent_1px)] [background-size:18px_18px]";
+// The one screen all three visuals sit on: a pale warm grey with a faint dotted grid.
+const SCREEN = "bg-[#f6f7f5] bg-[radial-gradient(rgb(23_44_33/0.09)_1px,transparent_1px)] [background-size:18px_18px]";
 
 /**
  * True once at least `at` of the element is on screen, so what's inside starts from its first beat only when
@@ -154,7 +180,7 @@ function Row({ i, step: s, current }: { i: number; step: Step; current: boolean 
 
   return (
     <div
-      className={`${FRAME} grid grid-cols-1 transition-shadow duration-700 motion-reduce:transition-none lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] ${
+      className={`${FRAME} grid grid-cols-1 transition-shadow duration-700 motion-reduce:transition-none lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] ${
         current ? "shadow-[0_30px_70px_-40px_rgb(15_26_20/0.3)]" : ""
       }`}
     >

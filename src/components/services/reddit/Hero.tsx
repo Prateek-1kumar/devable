@@ -128,7 +128,7 @@ export default function Hero() {
 }
 
 /** A default Reddit avatar: the snoo on a coloured disc. */
-function Avatar({ n, className = "size-7" }: { n: number; className?: string }) {
+export function Avatar({ n, className = "size-7" }: { n: number; className?: string }) {
   const [bg, eye] = AVATAR[n % AVATAR.length];
   return (
     <svg viewBox="0 0 28 28" className={`${className} shrink-0`} aria-hidden="true">
@@ -145,10 +145,10 @@ function Avatar({ n, className = "size-7" }: { n: number; className?: string }) 
   );
 }
 
-/** "4h" the way Reddit writes it: "4 hr. ago", "1 day ago", "2 days ago". */
-const ago = (a: string) => {
+/** "4h" the way Reddit writes it: "4 min. ago", "4 hr. ago", "1 day ago", "2 days ago". */
+export const ago = (a: string) => {
   const n = parseInt(a, 10);
-  return a.endsWith("h") ? `${n} hr. ago` : `${n} ${n === 1 ? "day" : "days"} ago`;
+  return a.endsWith("m") ? `${n} min. ago` : a.endsWith("h") ? `${n} hr. ago` : `${n} ${n === 1 ? "day" : "days"} ago`;
 };
 
 /** One thread as Reddit draws it: the post (community, age, title, votes, comments), then the helpful comment with its reply under it. */

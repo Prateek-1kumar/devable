@@ -1,8 +1,8 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Label } from "../kit";
 import { CANVAS, FRAME, Mark, STAMP, Tick } from "../parts";
 import { HAIR, PANEL, show, useBeats } from "../search/scene";
@@ -13,11 +13,10 @@ import { Piece } from "./Hero";
 // does the explaining. It plays in order, so the contrast is a sequence you watch happen:
 //   1 the question
 //   2 the useful answer arrives, gets upvoted to 214 and earns "Top comment", its product mention picked out
-//   3 the plug arrives, is downvoted to −14, fades, and folds into the one-line row Reddit leaves behind
-//     (a [+], the name, "−14 points"), with no label explaining it
-// Plays when scrolled to and again on the way back. Reduced motion shows the end: the useful answer on top,
-// the plug folded away beneath it.
-const TIMES = [200, 650, 1800, 3500, 4600, 5700, 6500];
+//   3 the plug arrives, is downvoted to −14, and settles back, faded but still readable
+// Both comments stay on the page once it has played, so the contrast reads without catching the animation. Plays
+// when scrolled to and again on the way back. Reduced motion shows that finished state.
+const TIMES = [200, 650, 1800, 3500, 4600, 5700];
 
 export default function Contrast() {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +34,7 @@ export default function Contrast() {
 
   return (
     <section aria-labelledby="contrast-title" className="px-6 pt-10 pb-0 sm:px-12 lg:pt-12 xl:px-[6vw]">
-      <div className="mx-auto grid max-w-[76rem] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start lg:gap-16">
+      <div className="mx-auto grid max-w-[76rem] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center lg:gap-16">
         <div>
           <Label>{CONTRAST.label}</Label>
           <h2 id="contrast-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
@@ -86,10 +85,10 @@ export default function Contrast() {
               </div>
             </div>
 
-            {/* The plug: it arrives, is downvoted, fades, and folds into the line Reddit leaves behind. */}
+            {/* The plug: it arrives, is downvoted, and settles back, muted but still readable. */}
             <div className={`border-t ${HAIR} ${show(b >= 4)}`}>
-              <Fold open={b < 7}>
-                <div className={`flex gap-3 bg-paper/50 px-4 pt-3.5 pb-4 transition-[opacity,filter] duration-1000 motion-reduce:transition-none ${b >= 6 ? "opacity-30 blur-[0.5px]" : ""}`}>
+              <div className="bg-paper/50 px-4 pt-3.5 pb-4">
+                <div className={`flex gap-3 transition-opacity duration-1000 motion-reduce:transition-none ${b >= 6 ? "opacity-[0.7]" : ""}`}>
                   <Votes n={b >= 5 ? f.votes : f.from} state={b >= 5 ? "down" : "none"} />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 text-[11px]">
@@ -99,21 +98,7 @@ export default function Contrast() {
                     <p className="mt-1.5 text-[12.5px] leading-[1.6] text-ink/75">{f.text}</p>
                   </div>
                 </div>
-              </Fold>
-              <Fold open={b >= 7}>
-                <p className="flex items-center gap-2 bg-paper/50 px-4 py-2.5 text-[11.5px] text-ink/45">
-                  <span className="grid size-4 place-items-center rounded-[4px] border border-ink/20 text-ink/45">
-                    <Plus className="size-3" strokeWidth={2.4} />
-                  </span>
-                  <span>{f.user}</span>
-                  <span className="text-ink/25">·</span>
-                  <span>
-                    <NumberFlow value={f.votes} /> points
-                  </span>
-                  <span className="text-ink/25">·</span>
-                  <span>{f.age}</span>
-                </p>
-              </Fold>
+              </div>
             </div>
           </div>
         </div>
@@ -131,15 +116,6 @@ function Votes({ n, state }: { n: number; state: "up" | "down" | "none" }) {
         <NumberFlow value={n} />
       </span>
       <ChevronDown className={`size-4 transition-[color,translate] duration-500 ${state === "down" ? "translate-y-0.5 text-accent" : ""}`} strokeWidth={2.4} />
-    </div>
-  );
-}
-
-/** Content that folds open or shut: its height eases to nothing, so what's beneath rises into place. */
-function Fold({ open, children }: { open: boolean; children: ReactNode }) {
-  return (
-    <div className={`grid transition-[grid-template-rows,opacity] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-      <div className="overflow-hidden">{children}</div>
     </div>
   );
 }

@@ -148,34 +148,34 @@ export const STEPS = {
   // 03 the wider footprint (Reddit as one of the places a search or an AI answer draws on). Competitor marks
   // are the page's neutral ones: 1 Category Leader, 2 Competitor A.
   journey: {
+    // Both scenes below are drawn from the reference images: a Reddit window with the opportunity analysis beside it,
+    // and a thread where the product turns up in a reply. SAMPLE: every name, count and line is a placeholder.
     research: {
-      scanned: 1284,
-      opportunities: 37,
-      // In order of score. `rivals` are brand indexes; `you` is whether your product is already in the thread.
-      threads: [
-        { sub: "r/LocalLLaMA", title: "Anyone here using self-hosted vector databases in production? What are you actually happy with?", intent: "High", rivals: [1, 2], you: false, score: 92 },
-        { sub: "r/LangChain", title: "Which vector store are you using for agent memory?", intent: "High", rivals: [2], you: false, score: 78 },
-        { sub: "r/MachineLearning", title: "Best open-source options for hybrid search?", intent: "Medium", rivals: [1], you: true, score: 41 },
-        { sub: "r/devops", title: "How are you handling vector DB backups?", intent: "Low", rivals: [], you: false, score: 18 },
-      ],
+      recent: ["r/MachineLearning", "r/LocalLLaMA", "r/llms", "r/Agents"],
+      post: { sub: "r/MachineLearning", age: "1d ago", title: "How are people handling scanned PDFs with tables and mixed layouts in production?", score: "214", comments: 96 },
+      comment: {
+        user: "u/doc_nerd",
+        age: "1d ago",
+        text: "We split it into two stages — layout detection first, then run OCR + table extraction separately. Works well for complex docs.",
+        votes: 87,
+      },
+      signals: ["High intent", "Competitors mentioned", "Product missing"],
+      score: 92,
     },
     conversation: {
       sub: "r/MachineLearning",
-      post: { user: "u/prompt_drift", age: "5h", score: "842", comments: 64 },
-      question: "Has anyone figured out a reliable way to keep LLM outputs consistent across model upgrades?",
+      post: { user: "u/doc_engineer", age: "6h ago", score: "214", comments: 48, tags: ["Production", "Document AI"] },
+      question: "What’s a reliable way to handle multi-page PDFs with tables and mixed layouts in production?",
+      above: { user: "u/layout_nerd", age: "5h ago", votes: 32 },
       answer: {
-        user: "u/eval_notes",
-        age: "3h",
-        sentences: [
-          "We had the same issue.",
-          "What helped was keeping a fixed eval set and rerunning it before each model change instead of relying on spot checks.",
-          "We also started tracking regressions by prompt category, which made it much easier to see where quality was actually dropping.",
-        ],
+        user: "u/tech_ml",
+        age: "4h ago",
+        before: "We’ve been using ",
         product: "Your Product",
-        productRest: " helped us automate part of that workflow.",
-        votes: 142,
+        after: " for this. It handles layout detection well, then runs OCR and table extraction in separate steps. In our tests, it was more reliable on complex docs like invoices and checkboxes compared to the other tools we tried.",
+        votes: 87,
       },
-      reply: { user: "u/prompt_ops", text: "Same here. A fixed eval set is the only thing that held up for us." },
+      below: { user: "u/data_pipeline", age: "3h ago", votes: 14 },
     },
     discovery: {
       query: "best LLM evaluation tools for production",
