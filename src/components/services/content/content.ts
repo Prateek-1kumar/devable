@@ -114,10 +114,10 @@ export const ENGINE = {
   title: "A technical content engine built around your product.",
   body: "From research to distribution, we turn your product depth into content that developers trust, discover, and keep coming back to.",
   parts: [
-    { name: "Strategy & Research", body: "Find the right topics and angles from your product, users, and market demand." },
-    { name: "Technical Production", body: "Turn product depth into clear, accurate, and developer-friendly content." },
-    { name: "Search & AI Optimization", body: "Make your content discoverable on Google and across AI search." },
-    { name: "Distribution & Compounding", body: "Get the content in front of the right audiences and build long-term visibility." },
+    { name: "Strategy & Research", body: "What your audience needs, where the opportunities are, and what is worth creating." },
+    { name: "Technical Production", body: "Content created by people who understand the technology behind it." },
+    { name: "Search & AI Optimization", body: "Every relevant piece is structured to improve discovery across traditional and AI search." },
+    { name: "Distribution & Compounding", body: "Publishing is the beginning, not the end of the content lifecycle." },
   ],
 };
 
@@ -125,14 +125,14 @@ export const PROCESS = {
   label: "How the work gets done",
   title: "From your product to publish-ready technical content.",
   body: "A focused, end-to-end process that turns product understanding into content with real reach and impact.",
-  // The six steps, in order; the copy is from the content team's board.
+  // The six steps, in order; the descriptions are the original site copy.
   steps: [
     { name: "Understand", body: "We learn the product, audience, positioning, technical environment, and growth priorities." },
-    { name: "Prioritize", body: "We identify high-impact topics and create a focused content plan based on demand and opportunity." },
-    { name: "Build", body: "We turn product depth into clear, accurate, and developer-friendly content." },
-    { name: "Review", body: "We review for technical accuracy, clarity, and search and AI visibility." },
-    { name: "Optimize & Publish", body: "We optimize for search and AI, then publish across the right surfaces." },
-    { name: "Improve", body: "We track performance, learn from results, and keep compounding what works." },
+    { name: "Prioritize", body: "We identify the topics, formats, and opportunities most worth pursuing." },
+    { name: "Build", body: "A technical writer or engineer researches the topic, tests the product hands-on, and writes the piece." },
+    { name: "Review", body: "Technical and editorial review make sure the content is accurate, useful, and aligned with your brand." },
+    { name: "Optimize & Publish", body: "The piece is optimized for search and AI visibility, then prepared for publishing and distribution." },
+    { name: "Improve", body: "We track performance, refresh existing content, and use what we learn to shape the next cycle." },
   ],
 };
 
@@ -176,14 +176,14 @@ export const SHIPPED = {
 export const TYPES = {
   label: "Content types",
   title: "Built for every stage of developer discovery and adoption.",
-  // `tag` is the mono label on each column's header strip. The copy is from the content team's board.
+  // `tag` is the mono label on each column's header strip. The descriptions are the original site copy.
   types: [
-    { tag: "Technical Articles", name: "Technical Articles", body: "In-depth content that explains concepts, solves problems, and ranks for high-intent searches." },
-    { tag: "Tutorials & Guides", name: "Tutorials & Developer Guides", body: "Hands-on, step-by-step content that shows developers how to build and integrate." },
-    { tag: "Product-Led Content", name: "Product-Led Content", body: "Use cases and workflows that demonstrate real product value." },
-    { tag: "Comparisons", name: "Comparisons & Alternatives", body: "Objective, technical comparisons that help buyers evaluate options with confidence." },
-    { tag: "Integration Content", name: "Integration Content", body: "Implementation guides, APIs, and tutorials for popular tools and platforms." },
-    { tag: "Thought Leadership", name: "Thought Leadership", body: "Technical perspectives on market trends, new approaches, and what's next in the space." },
+    { tag: "Technical Articles", name: "Technical Articles", body: "Deep technical content around problems your audience is actively trying to solve." },
+    { tag: "Tutorials & Guides", name: "Tutorials & Developer Guides", body: "Hands-on education showing developers how to build, integrate, and solve real problems." },
+    { tag: "Product-Led Content", name: "Product-Led Content", body: "Content that teaches something useful while naturally showing where your product fits." },
+    { tag: "Comparisons", name: "Comparisons & Alternatives", body: "High-intent pages helping developers understand how products and approaches differ." },
+    { tag: "Integration Content", name: "Integration Content", body: "Practical content around the technologies, frameworks, and ecosystems your product connects with." },
+    { tag: "Thought Leadership", name: "Thought Leadership", body: "Technical perspectives, industry shifts, and ideas worth associating with your brand." },
   ],
 };
 
