@@ -79,6 +79,20 @@
     to { stroke-dashoffset: -7; }
   }
 
+  /* Small playful moves for the process icons: an arrow that launches and lands again, bars that grow in. */
+  --animate-launch: launch 1s cubic-bezier(0.5, 0, 0.2, 1);
+  --animate-grow: grow 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+  @keyframes launch {
+    0% { transform: translateY(0); opacity: 1; }
+    40% { transform: translateY(-16px); opacity: 0; }
+    41% { transform: translateY(14px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes grow {
+    from { transform: scaleY(0); }
+  }
+
   /* Soft rise-and-focus entrance for text lines. */
   --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 

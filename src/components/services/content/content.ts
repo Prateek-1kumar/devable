@@ -124,82 +124,16 @@ export const ENGINE = {
 export const PROCESS = {
   label: "How the work gets done",
   title: "From your product to publish-ready technical content.",
-  // The step that sets us apart (0-based), shown raised and expanded.
-  signature: 3,
+  body: "A focused, end-to-end process that turns product understanding into content with real reach and impact.",
+  // The six steps, in order; the copy is from the content team's board.
   steps: [
     { name: "Understand", body: "We learn the product, audience, positioning, technical environment, and growth priorities." },
-    { name: "Prioritize", body: "We identify the topics, formats, and opportunities most worth pursuing." },
-    { name: "Build", body: "A technical writer or engineer researches the topic, tests the product hands-on, and writes the piece." },
-    { name: "Review", body: "Technical and editorial review make sure the content is accurate, useful, and aligned with your brand." },
-    { name: "Optimize & Publish", body: "The piece is optimized for search and AI visibility, then prepared for publishing and distribution." },
-    { name: "Improve", body: "We track performance, refresh existing content, and use what we learn to shape the next cycle." },
+    { name: "Prioritize", body: "We identify high-impact topics and create a focused content plan based on demand and opportunity." },
+    { name: "Build", body: "We turn product depth into clear, accurate, and developer-friendly content." },
+    { name: "Review", body: "We review for technical accuracy, clarity, and search and AI visibility." },
+    { name: "Optimize & Publish", body: "We optimize for search and AI, then publish across the right surfaces." },
+    { name: "Improve", body: "We track performance, learn from results, and keep compounding what works." },
   ],
-  // SAMPLE: what the review catches on one draft.
-  review: {
-    file: "ade-split-guide.md",
-    comments: [
-      { who: "Editor", kind: "editorial", text: "Lead with the use case, then the API. Matches the LandingAI voice guide.", resolved: true },
-      { who: "Engineer", kind: "technical", text: "Ran every snippet against API v2. Updated the split() call; v1 params were removed.", resolved: true },
-      { who: "Engineer", kind: "technical", text: "Benchmark re-run on a 400-page bundle: 38s, not 52s.", resolved: true },
-    ],
-  },
-  // SAMPLE: the artifact shown for each step.
-  samples: {
-    understand: {
-      title: "Discovery · ADE Split",
-      cmd: "curl -X POST api.landing.ai/v2/split -F file=@bundle.pdf",
-      out: ['{ "documents": 3,', '  "classes": ["invoice", "id", "contract"],', '  "latency_ms": 1840 }'],
-      notes: [
-        { k: "Product", v: "Document extraction API" },
-        { k: "Audience", v: "ML and platform engineers" },
-        { k: "Positioning", v: "Agentic document intelligence" },
-        { k: "Environment", v: "Python SDK · REST · API v2" },
-        { k: "Priorities", v: "Developer adoption, AI citations" },
-      ],
-    },
-    prioritize: {
-      title: "Topic backlog",
-      rows: [
-        { topic: "ADE vs. traditional OCR APIs", format: "Comparison", score: 74 },
-        { topic: "Split multi-document PDFs by type", format: "Guide", score: 92 },
-        { topic: "Document AI glossary", format: "Reference", score: 31 },
-        { topic: "Automate KYC document parsing", format: "Use case", score: 68 },
-        { topic: "Why we built ADE", format: "Thought", score: 45 },
-        { topic: "Parse invoices in Python", format: "Tutorial", score: 81 },
-      ],
-      cut: "Q4 plan",
-    },
-    build: {
-      title: "Tested draft",
-      lines: [
-        "Bundled scans often arrive as one 400-page PDF. ADE Split classifies every page and returns each document in one API call.",
-        "Install the SDK, point it at a bundle, and ask for classes. The response lists every document it found, page ranges included.",
-      ],
-      cmd: "python split.py bundle.pdf",
-      out: ["✓ 3 documents · invoice, id, contract", "✓ 400 pages in 38s"],
-      sources: ["ADE API reference", "Split changelog"],
-    },
-    publish: {
-      title: "Publish checklist",
-      checks: ["Title and meta description", "FAQ + HowTo schema", "Internal links", "Code samples as text", "Answer-first summary"],
-      score: [58, 94],
-      scoreLabel: "Search + AI readiness",
-      url: "landing.ai/blog/splitting-multi-document-pdfs…",
-      channels: ["Newsletter", "X", "Reddit"],
-    },
-    improve: {
-      title: "Performance · last 12 weeks",
-      weeks: [4, 7, 11, 12, 11, 10, 9, 22, 31, 36, 38, 41],
-      refreshAt: 7,
-      refreshLabel: "Refreshed for API v2",
-      queue: [
-        { title: "Splitting PDFs guide", note: "Rank 9 → 3 after refresh" },
-        { title: "KYC parsing walkthrough", note: "Update for new fields" },
-        { title: "OCR vs. ADE comparison", note: "Add benchmark" },
-      ],
-      next: "Learnings go into the next brief",
-    },
-  },
 };
 
 export type Shipped = { client: string; logo: string; type: "guide" | "use-case" | "thought"; typeLabel: string; title: string; body: string; href: string };

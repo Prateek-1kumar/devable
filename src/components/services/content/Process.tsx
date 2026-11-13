@@ -1,126 +1,345 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Label } from "../kit";
-import { StepChip } from "../parts";
+import { useId, type PointerEvent, type ReactNode } from "react";
+import { Label, useInView } from "../kit";
 import { PROCESS } from "./content";
-import { clamp01, usePlay } from "./play";
-import { SCENES } from "./ProcessScenes";
 
-const N = PROCESS.steps.length;
-const LG = "(min-width: 1024px)";
-const subscribe = (onChange: () => void) => {
-  const mq = window.matchMedia(LG);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
-};
+// The workflow as six cards in a quiet 3 × 2 board, read left to right. Each card is a small illustrated tile, a
+// number, a name and one line. No scroll-driven stage: the tiles are the personality, and they are built as real
+// objects. Every tile is a plate with thickness and a floor shadow; its artwork is split into layers at different
+// heights, each with its own drop shadow. Hovering a card tilts the plate toward the pointer, the layers separate in
+// parallax and a green glare follows the cursor, while the icon acts out its verb with a springy ease:
+//   Understand         a glass lens slides over a dotted page and the dots under it turn green
+//   Prioritize         three items re-sort themselves, the long green one rising to the top
+//   Build              a pencil writes a green line onto the page
+//   Review             the comment bubble's badge fills green and draws its tick
+//   Optimize & Publish an arrow launches off its tray and lands again while three surfaces light up
+//   Improve            the bars grow in, one after another, the last one green
+// The cards rise in once, as they scroll into view. Reduced motion: no tilt, no movement.
 
-// The workflow as one stage you scroll through. A full-width rail of the six steps sits on top, each step's
-// hairline filling continuously with scroll and the active one in ink (the signature step carries a coral dot);
-// below it the active step on the left and, on the right, the artifact that step produces, played once when it
-// becomes active. The stage pins while you scroll the steps (clicking the rail jumps to one). Phones don't pin:
-// the rail scrolls sideways and a tap changes the step.
+/** Points the plate's tilt and glare at the pointer: the variables are read by the plate inside this card. */
+function tilt(e: PointerEvent<HTMLLIElement>) {
+  if (e.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const li = e.currentTarget;
+  const plate = li.querySelector("[data-plate]");
+  if (!plate) return;
+  const r = plate.getBoundingClientRect();
+  const dx = clamp((e.clientX - (r.left + r.width / 2)) / 110);
+  const dy = clamp((e.clientY - (r.top + r.height / 2)) / 90);
+  li.style.setProperty("--ry", `${dx * 24}deg`);
+  li.style.setProperty("--rx", `${-dy * 24}deg`);
+  li.style.setProperty("--mx", `${clamp((e.clientX - r.left) / r.width, 0, 1) * 100}%`);
+  li.style.setProperty("--my", `${clamp((e.clientY - r.top) / r.height, 0, 1) * 100}%`);
+}
+function untilt(e: PointerEvent<HTMLLIElement>) {
+  for (const v of ["--rx", "--ry", "--mx", "--my"]) e.currentTarget.style.removeProperty(v);
+}
+const clamp = (v: number, lo = -1, hi = 1) => Math.min(hi, Math.max(lo, v));
+
 export default function Process() {
-  const track = useRef<HTMLDivElement>(null);
-  const wide = useSyncExternalStore(subscribe, () => window.matchMedia(LG).matches, () => false);
-  const [p, setP] = useState(0); // scroll progress through the stage (wide screens)
-  const [tapped, setTapped] = useState(0); // the step on narrow screens
-
-  useEffect(() => {
-    const el = track.current;
-    if (!el || !wide) return;
-    const update = () => setP(clamp01(-el.getBoundingClientRect().top / (el.offsetHeight - window.innerHeight)));
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [wide]);
-
-  const active = wide ? Math.min(N - 1, Math.floor(p * N)) : tapped;
-  // The pill follows the active step, not the raw scroll: its leading edge moves first and the trailing edge a beat
-  // later (whichever way you are going), so it stretches and settles instead of tracking every scroll tick.
-  const [prev, setPrev] = useState({ at: active, dir: 1 });
-  if (prev.at !== active) setPrev({ at: active, dir: active > prev.at ? 1 : -1 });
-  const lead = "560ms cubic-bezier(0.22,1,0.36,1)";
-  const trail = "560ms cubic-bezier(0.22,1,0.36,1) 120ms";
-
-  const go = (i: number) => {
-    const el = track.current;
-    if (!wide || !el) return setTapped(i);
-    const top = window.scrollY + el.getBoundingClientRect().top;
-    window.scrollTo({ top: top + ((i + 0.5) / N) * (el.offsetHeight - window.innerHeight), behavior: "smooth" });
-  };
-
-  const step = PROCESS.steps[active];
+  const [ref, seen] = useInView<HTMLUListElement>(0.15);
+  const tiles = [Understand, Prioritize, Build, Review, Publish, Improve];
   return (
-    <section aria-labelledby="process-title" className="bg-[#f6f5f1]">
-      <div ref={track} className="px-6 py-20 sm:px-12 lg:h-[560svh] lg:py-0 xl:px-[6vw]">
-        <div className="lg:sticky lg:top-0 lg:flex lg:h-svh lg:flex-col lg:justify-center lg:pt-20 lg:pb-6">
-          <div className="mx-auto w-full max-w-[76rem]">
-            <Label>{PROCESS.label}</Label>
-            <h2 id="process-title" className="mt-5 text-[clamp(1.8rem,3vw,2.6rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
-              {PROCESS.title}
-            </h2>
+    <section aria-labelledby="process-title" className="bg-[#f6f5f1] px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+      <div className="mx-auto max-w-[76rem]">
+        <Label>{PROCESS.label}</Label>
+        <h2 id="process-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
+          {PROCESS.title}
+        </h2>
+        <p className="mt-5 max-w-[40rem] text-[1.05rem] leading-relaxed text-ink/65">{PROCESS.body}</p>
 
-            {/* The track: one capsule, with an ink indicator that slides to the active step. */}
-            <div className="-mx-6 mt-8 overflow-x-auto px-6 pb-2 sm:-mx-12 sm:px-12 lg:mx-0 lg:overflow-visible lg:px-0 lg:pb-0">
-              <div className="relative min-w-[44rem] rounded-full border border-black/[0.06] bg-white/80 p-1.5 shadow-[0_1px_2px_rgb(23_44_33/0.04),0_12px_28px_-16px_rgb(23_44_33/0.18)] lg:min-w-0">
-                <span
-                  aria-hidden="true"
-                  className="absolute top-1.5 bottom-1.5 rounded-full bg-primary shadow-[0_6px_14px_-8px_rgb(23_44_33/0.45)]"
-                  style={{
-                    left: `calc(0.375rem + (100% - 0.75rem) / ${N} * ${active})`,
-                    right: `calc(0.375rem + (100% - 0.75rem) / ${N} * ${N - 1 - active})`,
-                    transition: `left ${prev.dir === 1 ? trail : lead}, right ${prev.dir === 1 ? lead : trail}`,
-                  }}
-                />
-                <ol className="relative grid" style={{ gridTemplateColumns: `repeat(${N}, minmax(0, 1fr))` }}>
-                  {PROCESS.steps.map((s, i) => {
-                    const on = i === active;
-                    return (
-                      <li key={s.name}>
-                        <button
-                          type="button"
-                          onClick={() => go(i)}
-                          aria-current={on ? "step" : undefined}
-                          className={`flex w-full items-center justify-center gap-2 rounded-full px-2 py-3 text-[0.88rem] whitespace-nowrap transition-colors duration-500 ${
-                            on ? "text-ink" : "text-ink/45 hover:text-ink"
-                          }`}
-                        >
-                          <span className="font-mono text-[0.68rem] opacity-60">0{i + 1}</span>
-                          {s.name}
-                          {i === PROCESS.signature && <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
-            </div>
-
-            <div className="mt-8 grid items-center gap-8 lg:mt-9 lg:grid-cols-[minmax(0,0.34fr)_minmax(0,0.66fr)] lg:gap-14">
-              <div key={active} style={{ animation: "arrive 600ms cubic-bezier(0.22,1,0.36,1) both" }}>
-                <StepChip n={active + 1} />
-                <h3 className="mt-5 text-[clamp(1.7rem,2.6vw,2.4rem)] leading-[1.08] font-medium tracking-[-0.035em] text-ink">{step.name}</h3>
-                <p className="mt-4 max-w-[26rem] text-[1.02rem] leading-relaxed text-ink/65">{step.body}</p>
-              </div>
-              <div aria-hidden="true">
-                <Stage key={active} i={active} />
-              </div>
-            </div>
-          </div>
-        </div>
+        <ul ref={ref} className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:mt-14 lg:grid-cols-3">
+          {PROCESS.steps.map((step, i) => {
+            const Tile = tiles[i];
+            return (
+              <li
+                key={step.name}
+                onPointerMove={tilt}
+                onPointerLeave={untilt}
+                className={`group relative flex flex-col gap-6 bg-white p-7 sm:p-8 ${seen ? "motion-safe:animate-fade-up" : "motion-safe:opacity-0"}`}
+                style={{ animationDelay: `${(i % 3) * 0.08 + Math.floor(i / 3) * 0.12}s` }}
+              >
+                <span className="absolute top-7 right-8 font-mono text-[0.72rem] tracking-[0.08em] text-ink/25 transition-colors duration-300 group-hover:text-ink/70">0{i + 1}</span>
+                <Plate>
+                  <Tile />
+                </Plate>
+                <div className="min-w-0">
+                  <h3 className="text-[1.3rem] leading-[1.15] font-medium tracking-[-0.03em] text-ink">{step.name}</h3>
+                  <p className="mt-2.5 max-w-[22rem] text-[0.97rem] leading-relaxed text-ink/60">{step.body}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );
 }
 
-/** The active step's artifact, remounted per step so it plays from the start. */
-function Stage({ i }: { i: number }) {
-  const { Scene, ms } = SCENES[i];
-  const p = usePlay(true, ms);
-  return <Scene p={p} />;
+// ── The tiles ────────────────────────────────────────────────────────────────────────────────────────────────
+
+const INK = "#172c21";
+const GREEN = "var(--primary)";
+const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]";
+/** A transform that eases with a little overshoot, and not at all with reduced motion. */
+const MOVE = `transition-transform duration-700 ${SPRING} motion-reduce:transition-none`;
+const SVG = "size-[3.8rem] overflow-visible";
+const LINE = { fill: "none", stroke: INK, strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+const SOFT = { filter: "blur(1.6px)" } as const;
+
+/**
+ * The tile: a plate with real thickness and a floor shadow, tilted toward the pointer. Its artwork is a stack of
+ * `Layer`s at different heights; a green glare follows the cursor across the face.
+ */
+function Plate({ children }: { children: ReactNode }) {
+  return (
+    <span aria-hidden="true" data-plate="" className="relative block size-[5.5rem] shrink-0 self-start [perspective:650px]">
+      <span
+        className="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-300 ease-out group-hover:[--lift:-6px] motion-reduce:transition-none"
+        style={{ transform: "translateY(var(--lift, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))" }}
+      >
+        <span className="absolute inset-x-2 bottom-0 h-7 rounded-[50%] bg-[rgb(23_44_33/0.38)] opacity-0 blur-lg transition-opacity duration-500 group-hover:opacity-100" style={{ transform: "translateZ(-46px) translateY(14px)" }} />
+        {[-1, -2, -3, -4, -5, -6, -7, -8].map((z) => (
+          <span key={z} className="absolute inset-0 rounded-[24px]" style={{ transform: `translateZ(${z}px)`, background: z > -5 ? "#e3e1d9" : "#d3d1c8" }} />
+        ))}
+        <span className="absolute inset-0 rounded-[24px] border border-line bg-[linear-gradient(150deg,#ffffff_0%,#f4f3ee_100%)] shadow-[inset_0_1px_0_#fff]">
+          <span
+            className="absolute inset-0 rounded-[24px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:hidden"
+            style={{ background: "radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgb(25 231 110 / 0.2), transparent 58%)" }}
+          />
+        </span>
+        {children}
+      </span>
+    </span>
+  );
+}
+
+/** One layer of a tile's artwork, lifted `z` px off the plate. */
+function Layer({ z, children }: { z: number; children: ReactNode }) {
+  return (
+    <span className="absolute inset-0 grid place-items-center" style={{ transform: `translateZ(${Math.round(z * 1.4)}px)` }}>
+      <svg viewBox="0 0 48 48" className={SVG}>
+        {children}
+      </svg>
+    </span>
+  );
+}
+
+/** A dot-dither fill, as on the Engine glyphs. */
+function Dots({ id, color, o = 0.55 }: { id: string; color: string; o?: number }) {
+  return (
+    <pattern id={id} width="4" height="4" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.7" fill={color} fillOpacity={o} />
+      <circle cx="3" cy="3" r="0.7" fill={color} fillOpacity={o} />
+    </pattern>
+  );
+}
+
+/** Understand: a glass lens over a dotted page; sliding it across turns the dots it covers green. */
+function Understand() {
+  const id = useId();
+  const slide = `${MOVE} group-hover:translate-x-[-7px] group-hover:translate-y-[9px]`;
+  return (
+    <>
+      <Layer z={6}>
+        <defs>
+          <Dots id={`${id}i`} color={INK} o={0.5} />
+        </defs>
+        <rect x="6" y="10" width="26" height="31" rx="4" fill={`url(#${id}i)`} stroke={INK} strokeOpacity="0.5" strokeWidth="1.5" />
+      </Layer>
+      <Layer z={10}>
+        <g className={slide}>
+          <circle cx="31" cy="22" r="9" fill={INK} fillOpacity="0.26" style={SOFT} />
+        </g>
+      </Layer>
+      <Layer z={26}>
+        <defs>
+          <Dots id={`${id}g`} color={GREEN} o={1} />
+        </defs>
+        <g className={slide}>
+          <circle cx="29" cy="18" r="9" fill="#fff" fillOpacity="0.88" stroke={INK} strokeWidth="1.8" />
+          <circle cx="29" cy="18" r="6.6" fill={`url(#${id}g)`} />
+          <path d="M26 14 a5 5 0 0 1 4 -2" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M35.6 24.6 L42 31" {...LINE} strokeWidth="2.4" />
+        </g>
+      </Layer>
+    </>
+  );
+}
+
+const ROWS = [
+  { w: 18, from: 0 }, // medium: moves down a place
+  { w: 11, from: 10 }, // short: moves down a place
+  { w: 28, from: 20, hot: true }, // long and green: rises to the top
+];
+
+/** One row of the priority list. */
+function Row({ w, from, hot, shadow = false }: { w: number; from: number; hot?: boolean; shadow?: boolean }) {
+  return (
+    <g transform={`translate(0 ${from + 13})`}>
+      {shadow ? (
+        <rect x="16" y="3.5" width={w} height="7" rx="3.5" fill={INK} fillOpacity="0.3" style={SOFT} />
+      ) : (
+        <>
+          <circle cx="9" cy="5" r="2.3" fill={hot ? GREEN : "#fff"} stroke={hot ? GREEN : INK} strokeOpacity={hot ? 1 : 0.5} strokeWidth="1.5" />
+          <rect x="15" y="1.5" width={w} height="7" rx="3.5" fill={hot ? GREEN : INK} fillOpacity={hot ? 0.4 : 0.1} stroke={hot ? GREEN : INK} strokeOpacity={hot ? 1 : 0.5} strokeWidth="1.5" />
+        </>
+      )}
+    </g>
+  );
+}
+
+/** Prioritize: three items out of order; they re-sort, and the long green one comes to the top. */
+function Prioritize() {
+  const up = `${MOVE} group-hover:-translate-y-5`;
+  const down = `${MOVE} group-hover:translate-y-2.5`;
+  return (
+    <>
+      <Layer z={5}>
+        {ROWS.map((r) => (
+          <rect key={r.from} x="6" y={r.from + 11} width="36" height="11" rx="5.5" fill="none" stroke={INK} strokeOpacity="0.16" strokeWidth="1.2" strokeDasharray="2 3" />
+        ))}
+      </Layer>
+      <Layer z={11}>
+        <g className={down}>
+          <Row {...ROWS[0]} />
+        </g>
+        <g className={down}>
+          <Row {...ROWS[1]} />
+        </g>
+      </Layer>
+      <Layer z={13}>
+        <g className={up}>
+          <Row {...ROWS[2]} shadow />
+        </g>
+      </Layer>
+      <Layer z={25}>
+        <g className={up}>
+          <Row {...ROWS[2]} />
+        </g>
+      </Layer>
+    </>
+  );
+}
+
+/** Build: a page, and a pencil that writes a green line onto it. */
+function Build() {
+  const write = `${MOVE} group-hover:-translate-x-4`;
+  return (
+    <>
+      <Layer z={6}>
+        <rect x="7" y="7" width="29" height="35" rx="4.5" fill="#fff" stroke={INK} strokeWidth="1.7" />
+      </Layer>
+      <Layer z={9}>
+        <path d="M13 16 H30 M13 23 H25" {...LINE} strokeOpacity="0.55" />
+        <path d="M13 31 H30" fill="none" stroke={GREEN} strokeWidth="2.4" strokeLinecap="round" pathLength="1" className="[stroke-dasharray:1] [stroke-dashoffset:1] transition-[stroke-dashoffset] duration-700 ease-out group-hover:[stroke-dashoffset:0] motion-reduce:transition-none" />
+      </Layer>
+      <Layer z={12}>
+        <g className={write}>
+          <g transform="rotate(40 39 33)">
+            <rect x="36" y="16" width="6.5" height="21" rx="1.6" fill={INK} fillOpacity="0.3" style={SOFT} />
+          </g>
+        </g>
+      </Layer>
+      <Layer z={28}>
+        <g className={write}>
+          <g transform="rotate(40 38 31)">
+            <rect x="35" y="14" width="6.5" height="21" rx="1.6" fill="#fff" stroke={INK} strokeWidth="1.7" />
+            <path d="M35 35 L38.25 41.5 L41.5 35 Z" fill={INK} />
+            <path d="M35 20 H41.5" stroke={INK} strokeWidth="1.5" />
+          </g>
+        </g>
+      </Layer>
+    </>
+  );
+}
+
+/** Review: a comment bubble whose badge fills green and draws its tick. */
+function Review() {
+  const pop = `${MOVE} origin-center [transform-box:fill-box] group-hover:scale-110`;
+  return (
+    <>
+      <Layer z={6}>
+        <path d="M10 8 H34 a5 5 0 0 1 5 5 V25 a5 5 0 0 1 -5 5 H22 L14 37 V30 H10 a5 5 0 0 1 -5 -5 V13 a5 5 0 0 1 5 -5 Z" fill="#fff" stroke={INK} strokeWidth="1.7" strokeLinejoin="round" />
+      </Layer>
+      <Layer z={9}>
+        <path d="M11 16 H29 M11 22.5 H22" {...LINE} strokeOpacity="0.55" />
+      </Layer>
+      <Layer z={14}>
+        <g className={pop}>
+          <circle cx="38" cy="37" r="8" fill={INK} fillOpacity="0.28" style={SOFT} />
+        </g>
+      </Layer>
+      <Layer z={28}>
+        <g className={pop}>
+          <circle cx="37" cy="34" r="8" className="fill-white stroke-ink/30 transition-[fill,stroke] duration-500 group-hover:fill-[var(--primary)] group-hover:stroke-[var(--primary)] motion-reduce:transition-none" strokeWidth="1.7" />
+          <path d="M33 34.2 L36 37.2 L41.2 31.4" fill="none" stroke={INK} strokeOpacity="0.22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M33 34.2 L36 37.2 L41.2 31.4" fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" pathLength="1" className="[stroke-dasharray:1] [stroke-dashoffset:1] transition-[stroke-dashoffset] delay-150 duration-500 group-hover:[stroke-dashoffset:0] motion-reduce:transition-none" />
+        </g>
+      </Layer>
+    </>
+  );
+}
+
+/** Optimize & Publish: an arrow launches off its tray and lands again, lighting three surfaces on the way. */
+function Publish() {
+  const fly = "group-hover:animate-launch motion-reduce:animate-none";
+  return (
+    <>
+      <Layer z={6}>
+        <path d="M9 30 V38 a3.5 3.5 0 0 0 3.5 3.5 H35.5 A3.5 3.5 0 0 0 39 38 V30" {...LINE} />
+      </Layer>
+      <Layer z={16}>
+        {[14, 24, 34].map((x, k) => (
+          <circle key={x} cx={x} cy="8" r="2.6" className="fill-ink/15 transition-colors duration-300 group-hover:fill-[var(--primary)] motion-reduce:transition-none" style={{ transitionDelay: `${0.28 + k * 0.1}s` }} />
+        ))}
+      </Layer>
+      <Layer z={12}>
+        <g className={fly}>
+          <path d="M25.5 36 V17 M18 24 L25.5 16.5 L33 24" fill="none" stroke={INK} strokeOpacity="0.3" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={SOFT} />
+        </g>
+      </Layer>
+      <Layer z={28}>
+        <g className={fly}>
+          <path d="M24 33 V14" {...LINE} strokeWidth="2" />
+          <path d="M16.5 21 L24 13.5 L31.5 21" {...LINE} strokeWidth="2" />
+        </g>
+      </Layer>
+    </>
+  );
+}
+
+const BARS = [10, 17, 24, 33];
+
+/** Improve: four bars; they grow in one after another, the last one green. */
+function Improve() {
+  const grow = "origin-bottom [transform-box:fill-box] group-hover:animate-grow motion-reduce:animate-none";
+  return (
+    <>
+      <Layer z={5}>
+        <path d="M6 41 H42" {...LINE} strokeOpacity="0.4" />
+        {BARS.map((h, k) => (
+          <rect key={h} x={12 + k * 9} y={42 - h} width="6.5" height={h} rx="2" fill={INK} fillOpacity="0.25" className={grow} style={{ animationDelay: `${k * 0.09}s`, ...SOFT }} />
+        ))}
+      </Layer>
+      {BARS.map((h, k) => (
+        <Layer key={h} z={8 + k * 6}>
+          <rect
+            x={9 + k * 9}
+            y={40 - h}
+            width="6.5"
+            height={h}
+            rx="2"
+            fill={k === 3 ? GREEN : "#fff"}
+            fillOpacity={k === 3 ? 0.5 : 1}
+            stroke={k === 3 ? GREEN : INK}
+            strokeOpacity={k === 3 ? 1 : 0.6}
+            strokeWidth="1.6"
+            className={grow}
+            style={{ animationDelay: `${k * 0.09}s` }}
+          />
+        </Layer>
+      ))}
+    </>
+  );
 }
