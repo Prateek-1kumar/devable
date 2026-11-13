@@ -14,28 +14,29 @@ export const HERO = {
   secondary: "See Our Work",
   // The four beats of the hero's animation, from the client's brief.
   beats: ["Inputs", "Brief", "Build & review", "Published"],
-  // SAMPLE: one article (a real LandingAI guide we shipped) built from four inputs. `dot` ties each input to the
-  // brief field it becomes.
+  // SAMPLE: a neutral example, built from four inputs. `dot` ties each input to the brief field it becomes.
   inputs: [
-    { name: "Product context", detail: "POST /v2/split", mark: "github", dot: "#1f9e8f" },
-    { name: "Developer pain points", detail: "“Bundled PDFs break our parser”", mark: "stackoverflow", dot: "#3e6fd8" },
-    { name: "Search + AI opportunities", detail: "split pdf api · 2.4k / mo", mark: "google", dot: "#7a5af5" },
-    { name: "Technical research", detail: "ADE Split changelog", mark: "docs", dot: "#e8833a" },
-  ] as { name: string; detail: string; mark: Icon; dot: string }[],
+    { name: "Product / feature context", mark: "github", dot: "#1f9e8f" },
+    { name: "Developer pain points", mark: "stackoverflow", dot: "#3e6fd8" },
+    { name: "Search + AI opportunities", mark: "google", dot: "#7a5af5" },
+    { name: "Technical research", mark: "docs", dot: "#e8833a" },
+  ] as { name: string; mark: Icon; dot: string }[],
   // In the order the inputs send them, so the brief fills top to bottom.
   brief: [
-    { field: "Product relevance", value: "ADE Split endpoint", input: 0 },
-    { field: "Topic / angle", value: "Splitting bundled PDFs", input: 1 },
-    { field: "Search intent", value: "how to split a pdf by type", input: 2 },
-    { field: "Key technical points", value: "split() · classify=True", input: 3 },
+    { field: "Product relevance", value: "Agent evaluation tooling", input: 0 },
+    { field: "Topic / angle", value: "Evaluating agents pre-launch", input: 1 },
+    { field: "Search intent", value: "how to evaluate ai agents", input: 2 },
+    { field: "Key technical points", value: "Test sets · traces · scoring", input: 3 },
   ],
   // The review layers added to the draft, in order.
   reviews: [
-    { name: "Writer + developer input", short: "Writer + dev", note: "A technical writer and a developer draft it from the brief." },
-    { name: "SME / engineering review", short: "Engineering", note: "An engineer runs every snippet against the product." },
-    { name: "Editorial review", short: "Editorial", note: "An editor sharpens the structure, voice and claims." },
-    { name: "Search + AI optimization", short: "Search + AI", note: "Structured to rank in search and be cited in AI answers." },
+    { name: "Writer + developer input", short: "Writing" },
+    { name: "SME / engineering review", short: "Engineering" },
+    { name: "Editorial review", short: "Editorial" },
+    { name: "Search + AI optimization", short: "Search + AI" },
   ],
+  // The article the hero builds: a tag, a title and placeholder lines, nothing heavier.
+  guide: { blog: "Company blog", tag: "Technical Guide", title: "How to Evaluate AI Agents Before Production" },
   article: {
     client: "LandingAI",
     title: "Splitting Multi-Document PDFs at Scale with ADE Split",
@@ -44,12 +45,12 @@ export const HERO = {
     tested: "Tested against API v2",
     url: "landing.ai/blog/splitting-multi-document-pdfs…",
   },
-  // Where the published article starts creating value (`proof` is SAMPLE).
+  // Where the published article starts creating value.
   outcomes: [
-    { name: "Developers", icon: "docs", line: "read it, run the code", proof: "✓ 3 documents · split.py" },
-    { name: "Google", icon: "google", line: "ranks it for the query", proof: "#1 · split multi-document pdf" },
-    { name: "AI tools", icon: "chatgpt", line: "cite it as the source", proof: "Cited · landing.ai" },
-  ] as { name: string; icon: Icon; line: string; proof: string }[],
+    { name: "Developers", icon: "docs", line: "Discovering and reading it", dot: "#1f9e8f" },
+    { name: "Google", icon: "google", line: "Ranking it for relevant searches", dot: "#3e6fd8" },
+    { name: "AI search", icon: "chatgpt", line: "Citing or surfacing it in answers", dot: "#7a5af5" },
+  ] as { name: string; icon: Icon; line: string; dot: string }[],
 };
 
 export const PROBLEM = {
