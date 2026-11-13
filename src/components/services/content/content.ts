@@ -176,13 +176,14 @@ export const SHIPPED = {
 export const TYPES = {
   label: "Content types",
   title: "Built for every stage of developer discovery and adoption.",
+  // `tag` is the mono label on each column's header strip. The copy is from the content team's board.
   types: [
-    { name: "Technical Articles", body: "Deep technical content around problems your audience is actively trying to solve." },
-    { name: "Tutorials & Developer Guides", body: "Hands-on education showing developers how to build, integrate, and solve real problems." },
-    { name: "Product-Led Content", body: "Content that teaches something useful while naturally showing where your product fits." },
-    { name: "Comparisons & Alternatives", body: "High-intent pages helping developers understand how products and approaches differ." },
-    { name: "Integration Content", body: "Practical content around the technologies, frameworks, and ecosystems your product connects with." },
-    { name: "Thought Leadership", body: "Technical perspectives, industry shifts, and ideas worth associating with your brand." },
+    { tag: "Technical Articles", name: "Technical Articles", body: "In-depth content that explains concepts, solves problems, and ranks for high-intent searches." },
+    { tag: "Tutorials & Guides", name: "Tutorials & Developer Guides", body: "Hands-on, step-by-step content that shows developers how to build and integrate." },
+    { tag: "Product-Led Content", name: "Product-Led Content", body: "Use cases and workflows that demonstrate real product value." },
+    { tag: "Comparisons", name: "Comparisons & Alternatives", body: "Objective, technical comparisons that help buyers evaluate options with confidence." },
+    { tag: "Integration Content", name: "Integration Content", body: "Implementation guides, APIs, and tutorials for popular tools and platforms." },
+    { tag: "Thought Leadership", name: "Thought Leadership", body: "Technical perspectives on market trends, new approaches, and what's next in the space." },
   ],
 };
 
