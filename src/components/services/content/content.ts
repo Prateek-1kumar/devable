@@ -112,41 +112,13 @@ export const PROBLEM = {
 export const ENGINE = {
   label: "What we build",
   title: "A technical content engine built around your product.",
-  body: "From strategy and research to technical production, optimization, and distribution, we run the content workflow end to end.",
+  body: "From research to distribution, we turn your product depth into content that developers trust, discover, and keep coming back to.",
   parts: [
-    { name: "Strategy & Research", body: "What your audience needs, where the opportunities are, and what is worth creating." },
-    { name: "Technical Production", body: "Content created by people who understand the technology behind it." },
-    { name: "Search & AI Optimization", body: "Every relevant piece is structured to improve discovery across traditional and AI search." },
-    { name: "Distribution & Compounding", body: "Publishing is the beginning, not the end of the content lifecycle." },
+    { name: "Strategy & Research", body: "Find the right topics and angles from your product, users, and market demand." },
+    { name: "Technical Production", body: "Turn product depth into clear, accurate, and developer-friendly content." },
+    { name: "Search & AI Optimization", body: "Make your content discoverable on Google and across AI search." },
+    { name: "Distribution & Compounding", body: "Get the content in front of the right audiences and build long-term visibility." },
   ],
-  loopNote: "Feeds the next cycle",
-  // SAMPLE: the artifact shown for each stage (LandingAI topics).
-  samples: {
-    topics: {
-      caption: "Topic priorities",
-      rows: [
-        { topic: "Split multi-document PDFs by type", score: 92, tag: "Gap" },
-        { topic: "ADE vs. traditional OCR APIs", score: 74 },
-        { topic: "Automate KYC document parsing", score: 68 },
-      ],
-    },
-    doc: { title: "Splitting multi-document PDFs with ADE Split", code: "client.split(\"bundle.pdf\", classify=True)", check: "Run against API v2" },
-    serp: {
-      url: "landing.ai › blog",
-      title: "Splitting Multi-Document PDFs at Scale with ADE Split",
-      snippet: "Separate a bundled PDF into classified documents with one API call.",
-      ai: "Use ADE Split to separate a bundled PDF into classified documents.",
-      cite: "landing.ai",
-    },
-    channels: {
-      rows: [
-        { name: "Search", value: "3.1k", w: 82, mark: "google" },
-        { name: "AI answers", value: "412", w: 46, mark: "chatgpt" },
-        { name: "Reddit", value: "1.2k", w: 64, mark: "reddit" },
-      ] as { name: string; value: string; w: number; mark: Icon }[],
-      refresh: "Top performer refreshed · next brief updated",
-    },
-  },
 };
 
 export const PROCESS = {

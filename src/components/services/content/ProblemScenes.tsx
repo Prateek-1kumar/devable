@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ArrowUp, Box, Check, FileText, Search, Sparkles, TriangleAlert, Users, X } from "lucide-react";
+import { Box, Check, FileText, Search, Sparkles, TriangleAlert, Users, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { PROBLEM } from "./content";
 import { clamp01, io3, linear, seg, useStill } from "./play";
@@ -156,11 +156,13 @@ export function Depth({ t }: { t: number }) {
 /** A pulse that rises and falls between `a` and `a + 0.55`. */
 const bump = (t: number, a: number) => seg(t, a, a + 0.2) * (1 - seg(t, a + 0.2, a + 0.55));
 const AXIS = "font-mono text-[0.64rem] tracking-[0.08em] uppercase";
+const AXIS_LINE = "rgb(255 255 255 / 0.42)";
 
 export function Direction({ t }: { t: number }) {
   const { x, y, topics } = PROBLEM.visuals.direction;
   const [hot, setHot] = useState(-1);
-  const axes = seg(t, 0.1, 0.9);
+  const axes = seg(t, 0.1, 1);
+  const head = seg(t, 0.9, 1.3);
   // Grid order is top-left, top-right, bottom-left, bottom-right; the scan visits the three that miss.
   const cell = [0, 1, 2, 3].map((i) => topics.find((q) => q.rel === (i < 2 ? 1 : 0) && q.dem === (i % 2 === 0 ? 0 : 1))!);
   const scanAt = [2.2, 0, 2.55, 2.9];
@@ -170,73 +172,91 @@ export function Direction({ t }: { t: number }) {
   const tick = (on: boolean): CSSProperties => ({ color: on ? "#fff" : "rgb(255 255 255 / 0.38)", transition: "color 150ms" });
 
   return (
-    <div className="absolute inset-0 grid grid-cols-[2.1rem_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] gap-x-2 gap-y-2.5 px-5 pt-4 pb-4">
-      <span />
-      <p className="flex items-center gap-1.5 text-[0.78rem] font-medium text-white/75" style={rise(axes, 4)}>
-        <ArrowUp className="size-3 text-white/45" strokeWidth={2} />
-        {y.name}
-      </p>
-
-      <div className={`flex flex-col justify-between py-2.5 text-right ${AXIS}`}>
-        <span style={tick(rel === 1)}>{y.high}</span>
-        <span style={tick(rel === 0)}>{y.low}</span>
+    <div className="absolute inset-0 grid grid-cols-[3.7rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-y-2 px-5 pt-5 pb-4 @min-[22rem]:grid-cols-[4.6rem_minmax(0,1fr)]">
+      {/* The up axis: High at the top, Low at the bottom, and what it measures between them. */}
+      <div className="flex flex-col items-end justify-between py-2.5 pr-2.5 text-right @min-[22rem]:pr-3.5">
+        <span className={AXIS} style={tick(rel === 1)}>
+          {y.high}
+        </span>
+        <span className="text-[0.74rem] leading-[1.25] font-medium text-white/80 @min-[22rem]:text-[0.8rem]" style={{ opacity: axes }}>
+          {y.name.split(" ").map((w) => (
+            <span key={w} className="block">
+              {w}
+            </span>
+          ))}
+        </span>
+        <span className={AXIS} style={tick(rel === 0)}>
+          {y.low}
+        </span>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#0f0f0f]">
-        {/* the cross, and the zone we are after */}
-        <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-px origin-top bg-white/[0.09]" style={{ transform: `scaleY(${axes})` }} />
-        <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px origin-left bg-white/[0.09]" style={{ transform: `scaleX(${axes})` }} />
-        <span aria-hidden="true" className="absolute top-0 right-0 size-1/2" style={{ opacity: verdict, background: "radial-gradient(circle at 75% 25%, rgb(25 231 110 / 0.11), transparent 70%)" }} />
-        {/* the hero's corner brackets, closing around the target quadrant (top right) */}
-        {[
-          "top-2 left-[calc(50%+8px)] border-t-[1.5px] border-l-[1.5px]",
-          "top-2 right-2 border-t-[1.5px] border-r-[1.5px]",
-          "bottom-[calc(50%+8px)] left-[calc(50%+8px)] border-b-[1.5px] border-l-[1.5px]",
-          "right-2 bottom-[calc(50%+8px)] border-r-[1.5px] border-b-[1.5px]",
-        ].map((c) => (
-          <span key={c} aria-hidden="true" className={`absolute size-3 ${c}`} style={{ opacity: verdict, borderColor: "rgb(25 231 110 / 0.75)", transform: `scale(${1.5 - 0.5 * verdict})` }} />
-        ))}
+      {/* The plot: the axes run along its left and bottom, meeting at the origin, each ending in an arrowhead. */}
+      <div className="relative pb-2.5 pl-2.5">
+        <span aria-hidden="true" className="absolute top-0 bottom-0 left-0 w-[1.5px] origin-bottom rounded-full" style={{ background: AXIS_LINE, transform: `scaleY(${axes})` }} />
+        <span aria-hidden="true" className="absolute right-0 bottom-0 left-0 h-[1.5px] origin-left rounded-full" style={{ background: AXIS_LINE, transform: `scaleX(${axes})` }} />
+        <span aria-hidden="true" className="absolute -top-px -left-[3.5px] size-2 rotate-45 border-t-[1.5px] border-l-[1.5px]" style={{ borderColor: AXIS_LINE, opacity: head }} />
+        <span aria-hidden="true" className="absolute -right-px -bottom-[3.5px] size-2 rotate-45 border-t-[1.5px] border-r-[1.5px]" style={{ borderColor: AXIS_LINE, opacity: head }} />
 
-        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
-          {cell.map((q, i) => {
-            const win = !!q.win;
-            const land = seg(t, 0.7 + 0.18 * i, 1.4 + 0.18 * i);
-            const scan = win ? 0 : bump(t, scanAt[i]);
-            const dim = win ? 0 : verdict;
-            const green = win && verdict > 0.5;
-            return (
-              <div key={q.title} className="grid place-items-center p-2" onPointerEnter={() => setHot(i)} onPointerLeave={() => setHot(-1)}>
-                <div className="relative max-w-full" style={rise(land, 8)}>
-                  <p
-                    className="rounded-[10px] border px-2.5 py-2 text-center text-[0.8rem] leading-[1.25] font-medium tracking-[-0.01em] text-balance transition-[background-color,border-color] duration-200"
-                    style={{
-                      color: `rgb(255 255 255 / ${0.92 - 0.42 * dim})`,
-                      borderColor: green ? "rgb(25 231 110 / 0.6)" : hot === i ? "rgb(255 255 255 / 0.45)" : `rgb(255 255 255 / ${0.1 + 0.32 * scan})`,
-                      backgroundColor: green ? "rgb(25 231 110 / 0.12)" : hot === i ? "#232323" : `rgb(${24 + 20 * scan} ${24 + 20 * scan} ${24 + 20 * scan})`,
-                    }}
-                  >
-                    {q.title}
-                  </p>
-                  {win && (
-                    <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full ring-2 ring-[#13211a]" style={{ background: GREEN, opacity: verdict, transform: `scale(${0.4 + 0.6 * seg(verdict, 0, 1, (v) => 1 - (1 - v) ** 3 * Math.cos(v * 6))})` }}>
-                      <Check className="size-3 text-black" strokeWidth={3.2} />
-                    </span>
-                  )}
+        <div className="relative h-full overflow-hidden rounded-xl border border-white/10 bg-[#121212]" style={{ opacity: 0.4 + 0.6 * axes }}>
+          {/* the cross, and the zone we are after */}
+          <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-px origin-top bg-white/10" style={{ transform: `scaleY(${axes})` }} />
+          <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px origin-left bg-white/10" style={{ transform: `scaleX(${axes})` }} />
+          <span aria-hidden="true" className="absolute top-0 right-0 size-1/2" style={{ opacity: verdict, background: "radial-gradient(circle at 75% 25%, rgb(25 231 110 / 0.11), transparent 70%)" }} />
+          {/* the hero's corner brackets, closing around the target quadrant (top right) */}
+          {[
+            "top-2 left-[calc(50%+8px)] border-t-[1.5px] border-l-[1.5px]",
+            "top-2 right-2 border-t-[1.5px] border-r-[1.5px]",
+            "bottom-[calc(50%+8px)] left-[calc(50%+8px)] border-b-[1.5px] border-l-[1.5px]",
+            "right-2 bottom-[calc(50%+8px)] border-r-[1.5px] border-b-[1.5px]",
+          ].map((c) => (
+            <span key={c} aria-hidden="true" className={`absolute size-3 ${c}`} style={{ opacity: verdict, borderColor: "rgb(25 231 110 / 0.75)", transform: `scale(${1.5 - 0.5 * verdict})` }} />
+          ))}
+
+          <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
+            {cell.map((q, i) => {
+              const win = !!q.win;
+              const land = seg(t, 0.8 + 0.18 * i, 1.5 + 0.18 * i);
+              const scan = win ? 0 : bump(t, scanAt[i]);
+              const dim = win ? 0 : verdict;
+              const green = win && verdict > 0.5;
+              return (
+                <div key={q.title} className="grid place-items-center p-2" onPointerEnter={() => setHot(i)} onPointerLeave={() => setHot(-1)}>
+                  <div className="relative max-w-full" style={rise(land, 8)}>
+                    <p
+                      className="rounded-[10px] border px-2 py-1.5 text-center text-[0.72rem] leading-[1.25] font-medium tracking-[-0.01em] text-balance transition-[background-color,border-color] duration-200 @min-[22rem]:px-2.5 @min-[22rem]:py-2 @min-[22rem]:text-[0.8rem]"
+                      style={{
+                        color: `rgb(255 255 255 / ${0.92 - 0.42 * dim})`,
+                        borderColor: green ? "rgb(25 231 110 / 0.6)" : hot === i ? "rgb(255 255 255 / 0.45)" : `rgb(255 255 255 / ${0.1 + 0.32 * scan})`,
+                        backgroundColor: green ? "rgb(25 231 110 / 0.12)" : hot === i ? "#232323" : `rgb(${24 + 20 * scan} ${24 + 20 * scan} ${24 + 20 * scan})`,
+                      }}
+                    >
+                      {q.title}
+                    </p>
+                    {win && (
+                      <span className="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full ring-2 ring-[#13211a]" style={{ background: GREEN, opacity: verdict, transform: `scale(${0.4 + 0.6 * seg(verdict, 0, 1, (v) => 1 - (1 - v) ** 3 * Math.cos(v * 6))})` }}>
+                        <Check className="size-3 text-black" strokeWidth={3.2} />
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      {/* The across axis: Low at the left, High at the right, and what it measures between them. */}
       <span />
-      <div className={`flex items-center justify-between ${AXIS}`}>
-        <span style={tick(dem === 0)}>{x.low}</span>
-        <span className="flex items-center gap-1.5 font-sans text-[0.78rem] font-medium tracking-normal text-white/75 normal-case" style={rise(axes, 4)}>
-          {x.name}
-          <ArrowRight className="size-3 text-white/45" strokeWidth={2} />
+      <div className="flex items-center justify-between pl-2.5">
+        <span className={AXIS} style={tick(dem === 0)}>
+          {x.low}
         </span>
-        <span style={tick(dem === 1)}>{x.high}</span>
+        <span className="text-[0.72rem] font-medium whitespace-nowrap text-white/80 @min-[22rem]:text-[0.8rem]" style={{ opacity: axes }}>
+          {x.name}
+        </span>
+        <span className={AXIS} style={tick(dem === 1)}>
+          {x.high}
+        </span>
       </div>
     </div>
   );

@@ -33,7 +33,7 @@ function Card({ n, name, body, scene }: { n: number; name: string; body: string;
   return (
     <li ref={ref} className="flex flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#0f0f0f] shadow-[0_30px_60px_-40px_rgb(0_0_0/0.9)]">
       {/* The visual: a soft light from above on near-black, with the scene on top. */}
-      <div aria-hidden="true" className="relative h-[22rem] shrink-0 overflow-hidden border-b border-white/[0.08] bg-[linear-gradient(180deg,#131313_0%,#0c0c0c_100%)]">
+      <div aria-hidden="true" className="@container relative h-[22rem] shrink-0 overflow-hidden border-b border-white/[0.08] bg-[linear-gradient(180deg,#131313_0%,#0c0c0c_100%)]">
         <div className="absolute inset-0 bg-[radial-gradient(90%_55%_at_50%_0%,rgb(255_255_255/0.06),transparent_70%)]" />
         {scene(t, still)}
       </div>

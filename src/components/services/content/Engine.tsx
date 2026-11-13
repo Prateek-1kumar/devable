@@ -1,304 +1,226 @@
 "use client";
 
-import { FileText } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Label } from "../kit";
-import { Mark, Tick } from "../parts";
+import { Mail } from "lucide-react";
+import { useId, type ReactNode } from "react";
+import { Label, PATHS, PLATFORM_COLOR, useInView } from "../kit";
+import { Mark } from "../parts";
 import { ENGINE } from "./content";
-import { clamp01, io3 } from "./play";
 
-const { topics, doc, serp, channels } = ENGINE.samples;
-const N = ENGINE.parts.length;
-const DWELL = 3.6; // s the article rests at each stage
-const MOVE = 1.4; // s between stages
-const R = 38; // the ring's radius, as a share of the diagram's width
-const CORAL = "var(--accent)";
+// The engine as four cards in a 2×2 board: a title, one short line, and a small glyph that says the same thing
+// without words, drawn in the landing page's dot-dither style (ink dots, a brand-green top layer, dotted green
+// wires). Each glyph has a quiet hover: layers pull apart, pages fan out, the dotted wires start to march and the
+// channel pills take a green edge. The cards rise in once, as they scroll into view.
+//   Strategy & Research        a stack of layers, the top one lit: the right angle found among the rest
+//   Technical Production       a stack of finished pages, the front one with its image and text
+//   Search & AI Optimization   one page sending a dotted wire to Google, ChatGPT and Perplexity
+//   Distribution & Compounding the layers again, sending wires to Reddit, LinkedIn, X and email
 
-const REDUCED = "(prefers-reduced-motion: reduce)";
-const subscribe = (onChange: () => void) => {
-  const mq = window.matchMedia(REDUCED);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
-};
+const GREEN = "var(--primary)";
+const INK = "#172c21";
 
-/**
- * Where the article is on the loop, as a float 0–4 (stage k at k; 3→4 is the return to stage 0). It rests at each stage,
- * then eases to the next, forever while on screen. `pin(k)` sends it to stage k and holds it there (hover, focus or
- * tap on the list); `unpin()` lets it carry on. Reduced motion jumps straight to the stage and never moves by itself.
- */
-function useLoop(on: boolean) {
-  const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
-  const [pos, setPos] = useState(0);
-  const st = useRef({ at: 0, next: -1, u: 0, dwell: DWELL, pin: -1 });
-
-  useEffect(() => {
-    if (!on || still) return;
-    let raf = 0;
-    let last = 0;
-    const tick = (now: number) => {
-      const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
-      last = now;
-      const s = st.current;
-      if (s.next >= 0) {
-        s.u += dt / (s.pin >= 0 ? MOVE * 0.7 : MOVE);
-        if (s.u >= 1) {
-          s.at = s.next;
-          s.next = -1;
-          s.u = 0;
-          s.dwell = DWELL;
-        }
-      } else if (s.pin >= 0) {
-        if (s.pin !== s.at) s.next = (s.at + 1) % N;
-      } else {
-        s.dwell -= dt;
-        if (s.dwell <= 0) s.next = (s.at + 1) % N;
-      }
-      setPos(s.next >= 0 ? s.at + io3(s.u) : s.at);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [on, still]);
-
-  const pin = (k: number) => {
-    st.current.pin = k;
-    if (still) setPos(k);
-  };
-  const unpin = () => {
-    st.current.pin = -1;
-    st.current.dwell = 2;
-  };
-  return { pos, pin, unpin };
-}
-
-// The idea is an engine, so the section draws one: four stages on a ring, an article riding round it, and a
-// return arc that closes the loop, because each cycle's results shape the next. The card in the middle shows
-// what the current stage actually produces (a prioritised topic list, a tested doc, a search result with an AI
-// citation, channel results). On the left the four parts as a list, the active one opened; hovering or tapping
-// one sends the article there. Phones keep the list and the card and drop the ring.
 export default function Engine() {
-  const box = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.2 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  const { pos, pin, unpin } = useLoop(visible);
-
-  const active = Math.round(pos) % N;
-  // How much of each stage's card shows: the loop is circular, so 3.9 is close to stage 0.
-  const w = Array.from({ length: N }, (_, k) => {
-    const d = Math.abs(pos - k);
-    return clamp01(2 - 4 * Math.min(d, N - d)); // one face at a time: the card clears briefly between stages
-  });
-  const angle = ((-90 + pos * 90) * Math.PI) / 180;
-  const tx = 50 + R * Math.cos(angle);
-  const ty = 50 + R * Math.sin(angle);
-  // The ring's ink arc follows the article from stage 0 to 3; the coral return arc draws on the way home.
-  const reset = 1 - clamp01((pos - 3.7) / 0.3);
-  const arc = Math.min(pos, 3) / 4;
-  const back = clamp01(pos - 3);
-
+  const glyphs = [Layers, Pages, Search, Distribute];
   return (
-    <section aria-labelledby="engine-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
-      <div className="mx-auto grid max-w-[76rem] items-center gap-14 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
-        <div>
-          <Label>{ENGINE.label}</Label>
-          <h2 id="engine-title" className="mt-6 max-w-[20ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
-            {ENGINE.title}
-          </h2>
-          <p className="mt-5 max-w-[34rem] text-[1.05rem] leading-relaxed text-ink/65">{ENGINE.body}</p>
+    <section aria-labelledby="engine-title" className="bg-white px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+      <div className="mx-auto max-w-[76rem]">
+        <Label>{ENGINE.label}</Label>
+        <h2 id="engine-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
+          {ENGINE.title}
+        </h2>
+        <p className="mt-5 max-w-[40rem] text-[1.05rem] leading-relaxed text-ink/65">{ENGINE.body}</p>
 
-          <ol className="mt-10 border-t border-line" onPointerLeave={unpin}>
-            {ENGINE.parts.map((part, i) => {
-              const on = i === active;
-              return (
-                <li key={part.name} className="border-b border-line">
-                  <button
-                    type="button"
-                    onPointerEnter={() => pin(i)}
-                    onFocus={() => pin(i)}
-                    onBlur={unpin}
-                    onClick={() => pin(i)}
-                    aria-current={on ? "step" : undefined}
-                    className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-2 py-5 text-left"
-                  >
-                    <span className={`pt-1.5 font-mono text-[0.75rem] tracking-[0.08em] transition-colors duration-500 ${on ? "text-ink" : "text-ink/30"}`}>0{i + 1}</span>
-                    <span>
-                      <span className={`block text-[1.25rem] leading-snug font-medium tracking-[-0.025em] transition-colors duration-500 ${on ? "text-ink" : "text-ink/40"}`}>{part.name}</span>
-                      <span
-                        className="grid transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                        style={{ gridTemplateRows: on ? "1fr" : "0fr", opacity: on ? 1 : 0 }}
-                      >
-                        <span className="overflow-hidden">
-                          <span className="block max-w-[30rem] pt-2 text-[0.98rem] leading-relaxed text-ink/65">{part.body}</span>
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-
-        {/* The loop. Below lg only the card shows. */}
-        <div ref={box} aria-hidden="true" className="relative mx-auto w-full max-w-[40rem] lg:aspect-square">
-          <svg viewBox="0 0 100 100" className="absolute inset-0 hidden h-full w-full overflow-visible lg:block">
-            <circle cx="50" cy="50" r={R} fill="none" stroke="var(--ink)" strokeOpacity={0.1} strokeWidth={0.3} />
-            <circle
-              cx="50"
-              cy="50"
-              r={R}
-              transform="rotate(-90 50 50)"
-              pathLength={1}
-              fill="none"
-              stroke="var(--ink)"
-              strokeOpacity={0.7 * reset}
-              strokeWidth={0.4}
-              strokeLinecap="round"
-              strokeDasharray={`${arc} 1`}
-            />
-            <path d={`M${50 - R} 50 A${R} ${R} 0 0 1 50 ${50 - R}`} pathLength={1} fill="none" stroke={CORAL} strokeOpacity={reset} strokeWidth={0.45} strokeLinecap="round" strokeDasharray="1 1" strokeDashoffset={1 - back} />
-          </svg>
-
-          {/* Stations and their numbers. */}
-          {ENGINE.parts.map((_, k) => {
-            const a = ((-90 + k * 90) * Math.PI) / 180;
-            const done = k < pos - 0.05 && pos <= 3.7 ? true : false;
+        <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:mt-14">
+          {ENGINE.parts.map((part, i) => {
+            const Glyph = glyphs[i];
             return (
-              <span key={k} className="absolute hidden lg:block" style={{ left: `${50 + R * Math.cos(a)}%`, top: `${50 + R * Math.sin(a)}%` }}>
-                <span className={`absolute size-3 -translate-1/2 rounded-full border-[1.5px] bg-white transition-colors duration-500 ${done || k === active ? "border-ink" : "border-ink/25"}`} />
-                <span
-                  className={`absolute font-mono text-[0.7rem] tracking-[0.08em] transition-colors duration-500 ${k === active ? "text-ink" : "text-ink/35"}`}
-                  style={{ left: `${Math.cos(a) * 30}px`, top: `${Math.sin(a) * 30}px`, transform: "translate(-50%,-50%)" }}
-                >
-                  0{k + 1}
-                </span>
-              </span>
+              <Card key={part.name} i={i} {...part}>
+                <Glyph />
+              </Card>
             );
           })}
-
-          {/* The return arc's note, top left. */}
-          <p className="absolute top-[8%] left-[2%] hidden items-center gap-1.5 font-mono text-[0.68rem] tracking-[0.08em] uppercase lg:flex" style={{ color: CORAL, opacity: 0.45 + 0.55 * back }}>
-            <span aria-hidden="true">↺</span>
-            {ENGINE.loopNote}
-          </p>
-
-          {/* The article riding the loop. */}
-          <span
-            className="absolute hidden size-9 -translate-1/2 place-items-center rounded-[10px] border border-black/[0.07] bg-white shadow-[0_1px_2px_rgb(23_44_33/0.06),0_10px_22px_-8px_rgb(23_44_33/0.35)] lg:grid"
-            style={{ left: `${tx}%`, top: `${ty}%` }}
-          >
-            <FileText className="size-[17px] text-ink/70" strokeWidth={1.7} />
-          </span>
-
-          {/* The card: what the current stage produces. */}
-          <div className="w-full lg:absolute lg:top-1/2 lg:left-1/2 lg:w-[56%] lg:-translate-x-1/2 lg:-translate-y-1/2">
-            <Card active={active} w={w} />
-          </div>
-        </div>
+        </ul>
       </div>
     </section>
   );
 }
 
-const fade = (v: number) => ({ opacity: v, transform: `translateY(${(1 - v) * 8}px)`, pointerEvents: "none" as const });
-
-/** One card whose four faces cross-fade as the article moves. */
-function Card({ active, w }: { active: number; w: number[] }) {
+function Card({ i, name, body, children }: { i: number; name: string; body: string; children: ReactNode }) {
+  const [ref, seen] = useInView<HTMLLIElement>(0.2);
   return (
-    <div className="overflow-hidden rounded-2xl border border-black/[0.07] bg-white shadow-[0_1px_2px_rgb(23_44_33/0.05),0_30px_60px_-30px_rgb(23_44_33/0.4)]">
-      <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-[0.76rem]">
-        <span className="text-ink/80">{ENGINE.parts[active].name}</span>
-        <span className="font-mono text-[0.68rem] text-ink/35">0{active + 1} / 04</span>
+    <li
+      ref={ref}
+      className={`group flex flex-col gap-7 rounded-2xl border border-line bg-[#f9f8f4] p-7 min-[1360px]:flex-row min-[1360px]:items-center min-[1360px]:justify-between min-[1360px]:gap-6 min-[1360px]:p-9 ${seen ? "motion-safe:animate-fade-up" : "motion-safe:opacity-0"}`}
+      style={{ animationDelay: `${(i % 2) * 0.1 + Math.floor(i / 2) * 0.15}s` }}
+    >
+      <div className="max-w-[16.5rem]">
+        <h3 className="text-[1.5rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">{name}</h3>
+        <p className="mt-3 text-[1rem] leading-relaxed text-ink/60">{body}</p>
       </div>
-      <div className="relative h-[12.75rem]">
-        <Face v={w[0]}>
-          <p className="text-[0.68rem] tracking-[0.08em] text-ink/40 uppercase">{topics.caption}</p>
-          <ul className="mt-2.5 space-y-3">
-            {topics.rows.map((r, i) => (
-              <li key={r.topic}>
-                <p className="flex items-center justify-between gap-3 text-[0.82rem] text-ink">
-                  <span className="truncate">{r.topic}</span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    {r.tag && <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,white)] px-1.5 py-px text-[0.64rem] text-[color-mix(in_srgb,var(--accent)_85%,var(--ink))]">{r.tag}</span>}
-                    <span className="font-mono text-[0.74rem] text-ink/55 tabular-nums">{Math.round(r.score * clamp01(w[0] * 1.3 - i * 0.1))}</span>
-                  </span>
-                </p>
-                <span className="mt-1.5 block h-[3px] overflow-hidden rounded-full bg-ink/[0.07]">
-                  <span className="block h-full rounded-full" style={{ width: `${r.score * clamp01(w[0] * 1.3 - i * 0.1)}%`, background: i === 0 ? CORAL : "var(--ink)", opacity: i === 0 ? 1 : 0.55 }} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Face>
-
-        <Face v={w[1]}>
-          <p className="text-[0.88rem] leading-snug font-semibold tracking-[-0.01em] text-ink">{doc.title}</p>
-          <span className="mt-3 block space-y-[7px]">
-            {[100, 90, 62].map((x) => (
-              <span key={x} style={{ width: `${x}%` }} className="block h-[4.5px] rounded-full bg-ink/[0.12]" />
-            ))}
-          </span>
-          <p className="mt-3 rounded-lg bg-paper px-3 py-2.5 font-mono text-[0.68rem] leading-relaxed [overflow-wrap:anywhere] text-ink/75">{doc.code}</p>
-          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--primary)_40%,var(--line))] bg-[color-mix(in_srgb,var(--light-green-soft)_75%,white)] px-2.5 py-1 text-[0.7rem] text-[#1a7f47]">
-            <Tick className="size-3.5" />
-            {doc.check}
-          </span>
-        </Face>
-
-        <Face v={w[2]}>
-          <div className="flex items-center gap-2 text-[0.72rem] text-ink/50">
-            <Mark name="google" className="size-3.5" />
-            {serp.url}
-          </div>
-          <p className="mt-1 text-[0.9rem] leading-snug text-[#1a4fb0]">{serp.title}</p>
-          <p className="mt-1 text-[0.76rem] leading-snug text-ink/60">{serp.snippet}</p>
-          <div className="mt-3.5 border-t border-line pt-3">
-            <p className="flex items-center gap-2 text-[0.72rem] text-ink/50">
-              <Mark name="chatgpt" className="size-3.5" />
-              AI answer
-            </p>
-            <p className="mt-1 text-[0.78rem] leading-snug text-ink/80">
-              {serp.ai}{" "}
-              <span className="inline-flex translate-y-[-1px] items-center rounded-full border border-line bg-paper px-1.5 text-[0.66rem] text-ink/60">{serp.cite}</span>
-            </p>
-          </div>
-        </Face>
-
-        <Face v={w[3]}>
-          <ul className="space-y-3.5">
-            {channels.rows.map((c, i) => (
-              <li key={c.name} className="grid grid-cols-[5.2rem_minmax(0,1fr)_2.4rem] items-center gap-3 text-[0.78rem]">
-                <span className="flex items-center gap-2 text-ink/80">
-                  <Mark name={c.mark} className="size-3.5" />
-                  {c.name}
-                </span>
-                <span className="h-[5px] overflow-hidden rounded-full bg-ink/[0.07]">
-                  <span className="block h-full rounded-full bg-ink/70" style={{ width: `${c.w * clamp01(w[3] * 1.3 - i * 0.12)}%` }} />
-                </span>
-                <span className="text-right font-mono text-[0.72rem] text-ink/60 tabular-nums">{c.value}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-5 flex items-center gap-2 rounded-lg px-3 py-2 text-[0.76rem] text-ink/75" style={{ background: "color-mix(in srgb, var(--accent) 8%, white)" }}>
-            <span aria-hidden="true" style={{ color: CORAL }}>↺</span>
-            {channels.refresh}
-          </p>
-        </Face>
+      <div aria-hidden="true" className="shrink-0 self-center">
+        {children}
       </div>
+    </li>
+  );
+}
+
+// ── The glyph kit ────────────────────────────────────────────────────────────────────────────────────────────
+
+/** A dither fill: dots on a diagonal lattice, the way the landing page prints its surfaces. */
+function Dots({ id, color, o = 1 }: { id: string; color: string; o?: number }) {
+  return (
+    <pattern id={id} width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="1.25" cy="1.25" r="0.85" fill={color} fillOpacity={o} />
+      <circle cx="3.75" cy="3.75" r="0.85" fill={color} fillOpacity={o} />
+    </pattern>
+  );
+}
+
+/** One isometric sheet, drawn flat: a dotted top and a thin front edge. `y` is its vertical place. */
+function Sheet({ y, fill, edge, stroke }: { y: number; fill: string; edge: string; stroke: string }) {
+  return (
+    <g transform={`translate(0 ${y})`}>
+      <path d="M14 49 L14 55 L100 98 L186 55 L186 49 L100 92 Z" fill={edge} />
+      <path d="M100 6 L186 49 L100 92 L14 49 Z" fill="#f9f8f4" />
+      <path d="M100 6 L186 49 L100 92 L14 49 Z" fill={fill} stroke={stroke} strokeWidth="1.4" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+/** Three sheets, the top one lit. They pull apart on hover. */
+function LayerStack({ className = "", viewBox = "0 0 200 170" }: { className?: string; viewBox?: string }) {
+  const id = useId();
+  return (
+    <svg viewBox={viewBox} className={`overflow-visible ${className}`}>
+      <defs>
+        <Dots id={`${id}i`} color={INK} o={0.5} />
+        <Dots id={`${id}g`} color={GREEN} />
+      </defs>
+      <g className="transition-transform duration-500 ease-out group-hover:translate-y-2.5 motion-reduce:transition-none">
+        <Sheet y={62} fill={`url(#${id}i)`} edge="rgb(23 44 33 / 0.18)" stroke="rgb(23 44 33 / 0.55)" />
+      </g>
+      <Sheet y={31} fill={`url(#${id}i)`} edge="rgb(23 44 33 / 0.18)" stroke="rgb(23 44 33 / 0.55)" />
+      <g className="transition-transform duration-500 ease-out group-hover:-translate-y-2.5 motion-reduce:transition-none">
+        <Sheet y={0} fill={`url(#${id}g)`} edge="rgb(25 231 110 / 0.4)" stroke={GREEN} />
+      </g>
+    </svg>
+  );
+}
+
+function Layers() {
+  return <LayerStack className="h-44 w-[15.5rem]" viewBox="-60 0 248 170" />;
+}
+
+/** Pages: a stack of finished articles; the front one carries an image and text. They fan out on hover. */
+function Pages() {
+  const id = useId();
+  return (
+    <svg viewBox="-68 0 248 170" className="h-44 w-[15.5rem] overflow-visible">
+      <defs>
+        <Dots id={id} color={INK} o={0.4} />
+      </defs>
+      <g className="transition-transform duration-500 ease-out group-hover:translate-x-2.5 group-hover:-translate-y-2.5 motion-reduce:transition-none">
+        <rect x="74" y="12" width="104" height="108" rx="8" fill={`url(#${id})`} stroke="rgb(23 44 33 / 0.55)" strokeWidth="1.4" />
+      </g>
+      <g className="transition-transform duration-500 ease-out group-hover:translate-x-1.5 group-hover:-translate-y-1.5 motion-reduce:transition-none">
+        <rect x="55" y="30" width="104" height="108" rx="8" fill="#f9f8f4" stroke="rgb(23 44 33 / 0.55)" strokeWidth="1.4" />
+        <rect x="55" y="30" width="104" height="108" rx="8" fill={`url(#${id})`} />
+      </g>
+      <rect x="24" y="48" width="112" height="108" rx="8" fill="#fff" stroke={INK} strokeWidth="1.6" />
+      <rect x="36" y="62" width="36" height="30" rx="3" fill="none" stroke={INK} strokeWidth="1.4" />
+      <path d="M38 88 L50 74 L58 82 L64 76 L70 88" fill="none" stroke={INK} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx="63" cy="69" r="2" fill={INK} />
+      <g stroke={INK} strokeWidth="1.6" strokeLinecap="round">
+        <path d="M82 66 H124 M82 76 H124 M82 86 H114" />
+        <path d="M36 106 H124 M36 116 H124 M36 126 H124 M36 136 H100" />
+      </g>
+    </svg>
+  );
+}
+
+const WIRE = "[stroke-dasharray:1_6] group-hover:animate-dash-flow motion-reduce:animate-none";
+
+/** A dotted green wire from one point to another, with a dot at each end. It starts to march on hover. */
+function Wire({ x0, y0, x1, y1 }: { x0: number; y0: number; x1: number; y1: number }) {
+  const mx = (x0 + x1) / 2;
+  return (
+    <>
+      <path d={`M${x0} ${y0} C${mx} ${y0} ${mx} ${y1} ${x1} ${y1}`} fill="none" stroke={GREEN} strokeWidth="1.8" strokeLinecap="round" className={WIRE} />
+      <circle cx={x1} cy={y1} r="2.6" fill={GREEN} />
+    </>
+  );
+}
+
+const PILL = "absolute flex items-center rounded-lg border border-line bg-white shadow-[0_1px_2px_rgb(23_44_33/0.05)] transition-[border-color,transform] duration-300 group-hover:border-[color-mix(in_srgb,var(--primary)_65%,transparent)] group-hover:translate-x-0.5 motion-reduce:transition-none";
+
+/** A page of text, outlined. */
+function Page({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 64 88" className={`overflow-visible ${className}`}>
+      <rect x="1.5" y="1.5" width="61" height="85" rx="6" fill="#fff" stroke={INK} strokeWidth="1.6" />
+      <g stroke={INK} strokeWidth="1.6" strokeLinecap="round">
+        <path d="M12 20 H52 M12 30 H52 M12 40 H52 M12 50 H52 M12 60 H34" />
+      </g>
+    </svg>
+  );
+}
+
+/** Search & AI: one page, three surfaces. */
+function Search() {
+  const rows = [
+    { name: "Google", mark: "google" as const, y: 26 },
+    { name: "ChatGPT", mark: "chatgpt" as const, y: 88 },
+    { name: "Perplexity", mark: "perplexity" as const, y: 150 },
+  ];
+  return (
+    <div className="relative h-44 w-[15.5rem]">
+      <Page className="absolute top-[44px] left-0 h-[88px] w-16" />
+      <svg viewBox="0 0 84 176" className="absolute top-0 left-16 h-44 w-[84px] overflow-visible">
+        <circle cx="0" cy="88" r="2.6" fill={GREEN} />
+        {rows.map((r) => (
+          <Wire key={r.name} x0={0} y0={88} x1={84} y1={r.y} />
+        ))}
+      </svg>
+      {rows.map((r) => (
+        <span key={r.name} className={`${PILL} left-[148px] h-8 w-[100px] -translate-y-1/2 gap-1.5 pl-2.5 text-[0.72rem] font-medium text-ink`} style={{ top: r.y }}>
+          <Mark name={r.mark} className="size-3.5" />
+          {r.name}
+        </span>
+      ))}
     </div>
   );
 }
 
-function Face({ v, children }: { v: number; children: React.ReactNode }) {
+const CHANNELS = [
+  { name: "Reddit", node: <Mark name="reddit" className="size-4" /> },
+  {
+    name: "LinkedIn",
+    node: (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill={PLATFORM_COLOR.linkedin}>
+        {PATHS.linkedin}
+      </svg>
+    ),
+  },
+  { name: "X", node: <Mark name="x" className="size-3.5" /> },
+  { name: "Email", node: <Mail aria-hidden="true" className="size-4 text-ink/70" strokeWidth={1.8} /> },
+];
+
+/** Distribution & Compounding: the layers, and four channels they reach. */
+function Distribute() {
+  const ys = [22, 66, 110, 154];
   return (
-    <div className="absolute inset-0 px-4 pt-4" style={fade(v)}>
-      {children}
+    <div className="relative h-44 w-[15.5rem]">
+      <LayerStack className="absolute top-[44px] left-[16px] h-[88px] w-[104px]" />
+      <svg viewBox="0 0 88 176" className="absolute top-0 left-[124px] h-44 w-[88px] overflow-visible">
+        <circle cx="0" cy="88" r="2.6" fill={GREEN} />
+        {ys.map((y) => (
+          <Wire key={y} x0={0} y0={88} x1={88} y1={y} />
+        ))}
+      </svg>
+      {CHANNELS.map((c, k) => (
+        <span key={c.name} title={c.name} className={`${PILL} left-[212px] size-9 -translate-y-1/2 justify-center`} style={{ top: ys[k] }}>
+          {c.node}
+        </span>
+      ))}
     </div>
   );
 }
