@@ -15,7 +15,7 @@ const ICONS: LucideIcon[][] = [
 // Karma is not the KPI, shown literally. On the left the vanity number: it appears in full first, then a line
 // is drawn through it and it goes quiet. That is the only motion on the page section; the metrics we do report
 // on are static. On the right they run Community → Discovery → Business as three cards with arrows between,
-// each with its own icons and platform marks, and Business, the outcome the other two feed, raised and in green.
+// each with its own icons and platform marks, and Business, the outcome the other two feed, on the same card as the others: set apart only by a larger title, firmer text, and the green wire that lands on its edge.
 // Reduced motion: Karma already struck out.
 export default function Measure() {
   const [ref, seen] = useInView<HTMLDivElement>(0.4);
@@ -74,12 +74,15 @@ export default function Measure() {
               return (
                 <li
                   key={g.name}
-                  className={`relative rounded-2xl p-6 ${
-                    outcome
-                      ? "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--light-green-soft)_60%,white),white_70%)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_26%,var(--line)),0_1px_2px_rgb(15_26_20/0.04),0_30px_60px_-34px_rgb(15_26_20/0.3)] md:-my-2 md:py-8"
-                      : "border border-line bg-card"
-                  }`}
+                  className="relative rounded-2xl border border-line bg-card p-6"
                 >
+                  {/* Where the wire from Discovery lands: a green port on the card's edge, level with its header. */}
+                  {outcome && (
+                    <>
+                      <span aria-hidden="true" className="absolute top-[2.6rem] -left-[4.5px] hidden size-[9px] -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_1px_var(--primary),0_0_0_4px_color-mix(in_srgb,var(--primary)_16%,transparent)] md:block" />
+                      <span aria-hidden="true" className="absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--primary)_70%,transparent),transparent)]" />
+                    </>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex h-9 items-center">
                       {g.marks.length > 0 ? (
@@ -92,13 +95,13 @@ export default function Measure() {
                     </span>
                     {outcome ? <span className={STAMP}>The outcome</span> : <span className="font-mono text-[11px] tracking-[0.06em] text-ink/35">0{i + 1}</span>}
                   </div>
-                  <h3 className="mt-5 text-[1.3rem] leading-none font-medium tracking-[-0.03em] text-ink">{g.name}</h3>
+                  <h3 className={`mt-5 leading-none tracking-[-0.035em] text-ink ${outcome ? "text-[1.65rem] font-semibold" : "text-[1.3rem] font-medium"}`}>{g.name}</h3>
                   <ul className="mt-5">
                     {g.items.map((item, j) => {
                       const Glyph = Glyphs[j];
                       return (
-                        <li key={item} className={`flex items-center gap-3 py-3 text-[0.93rem] leading-snug ${outcome ? "text-ink" : "text-ink/70"} ${j ? (outcome ? "border-t border-ink/[0.06]" : "border-t border-ink/[0.06]") : ""}`}>
-                          <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${outcome ? "bg-white text-[#1a7f47] shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_22%,transparent)]" : "bg-ink/[0.045] text-ink/55"}`}>
+                        <li key={item} className={`flex items-center gap-3 py-3 text-[0.93rem] leading-snug ${outcome ? "font-medium text-ink" : "text-ink/70"} ${j ? "border-t border-ink/[0.06]" : ""}`}>
+                          <span className={`grid size-7 shrink-0 place-items-center rounded-lg bg-ink/[0.045] ${outcome ? "text-[#1a7f47]" : "text-ink/55"}`}>
                             <Glyph aria-hidden="true" strokeWidth={1.9} className="size-3.5" />
                           </span>
                           {item}
@@ -107,7 +110,8 @@ export default function Measure() {
                     })}
                   </ul>
                   {/* The hand-off to the next bucket: centred in the gap, level with the icon row. */}
-                  {!outcome && <ArrowRight aria-hidden="true" strokeWidth={1.8} className="absolute top-[1.9rem] -right-8 hidden size-6 text-ink/30 md:block" />}
+                  {!outcome && i < last - 1 && <ArrowRight aria-hidden="true" strokeWidth={1.8} className="absolute top-[1.9rem] -right-8 hidden size-6 text-ink/30 md:block" />}
+                  {i === last - 1 && <span aria-hidden="true" className="absolute top-[2.6rem] -right-10 hidden h-px w-10 bg-[linear-gradient(90deg,rgb(15_26_20/0.14),var(--primary))] md:block" />}
                 </li>
               );
             })}
