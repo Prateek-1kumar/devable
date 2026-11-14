@@ -95,6 +95,14 @@ export const HERO_LAUNCH = {
   ] as LaunchPost[],
 };
 
+// The real creators from the hero's launch (their photos live in /services/creators/webai, named by X handle), in the
+// order the "How we run it" scenes pick them (by index), so those scenes show real faces, not the stock ones in CREATORS.
+export const PROCESS_CREATORS: Creator[] = ["svpino", "rohanpaul_ai", "hasantoxr", "omarsar0", "DataChaz", "BenGeskin", "ai_for_success", "kimmonismus"].map((handle) => ({
+  name: HERO_LAUNCH.posts.find((p) => p.handle === handle)?.name ?? handle,
+  handle: `@${handle}`,
+  photo: `/services/creators/webai/${handle}.jpg`,
+}));
+
 export const LOGOS = [
   { src: "/clients/glean.svg", alt: "Glean", h: 30 },
   { src: "/clients/webai.svg", alt: "webAI", h: 24 },
@@ -133,6 +141,28 @@ export const MODES = {
       fits: ["Product adoption", "Category awareness", "Product education", "Reaching new audiences", "Ongoing GTM"],
     },
   ],
+};
+
+// Launch Amplification's illustration. SAMPLE: the faces are the hero launch's creators (photos in
+// /services/creators/webai, named by X handle); platforms and view counts are placeholders. The first hour's six
+// posts and the two later ones add up to the launch's total.
+export const AMPLIFY = {
+  pill: "First hour \u00b7 6 posts",
+  window: "24h window",
+  product: { name: "Your product", text: "We\u2019re excited to introduce our new open-source module.", label: "Launch views", views: 716_000 },
+  first: [
+    { who: "svpino", platform: "x", views: 140_000 },
+    { who: "rohanpaul_ai", platform: "linkedin", views: 92_000 },
+    { who: "hasantoxr", platform: "x", views: 116_000 },
+    { who: "omarsar0", platform: "linkedin", views: 85_000 },
+    { who: "DataChaz", platform: "x", views: 88_000 },
+    { who: "BenGeskin", platform: "x", views: 78_000 },
+  ] as { who: string; platform: Platform; views: number }[],
+  // Posts later in the day, pinned to the dial at their hour.
+  later: [
+    { who: "kimmonismus", platform: "linkedin", views: 54_000, hour: 18 },
+    { who: "ai_for_success", platform: "x", views: 63_000, hour: 6 },
+  ] as { who: string; platform: Platform; views: number; hour: number }[],
 };
 
 export type Case = {

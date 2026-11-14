@@ -5,9 +5,9 @@ import { useSyncExternalStore } from "react";
 import ArcButton from "../../ArcButton";
 import { Label, useInView } from "../kit";
 import { MODES } from "./content";
+import LaunchAmplification from "./LaunchAmplification";
 
-// The 3D scenes load once the section is near, after the page (see TwoWaysScenes).
-const LaunchDialScene = dynamic(() => import("./TwoWaysScenes").then((m) => m.LaunchDialScene), { ssr: false });
+// The campaign scene loads once the section is near, after the page (see TwoWaysScenes); the launch one is plain HTML.
 const CampaignLanesScene = dynamic(() => import("./TwoWaysScenes").then((m) => m.CampaignLanesScene), { ssr: false });
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
@@ -36,7 +36,7 @@ export default function TwoWays() {
           {MODES.modes.map((m, i) => (
             <article key={m.name} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-white">
               <div aria-hidden="true" className="relative aspect-[5/4] border-b border-line bg-[#f1f0eb] sm:aspect-[16/10]">
-                {seen && (i === 0 ? <LaunchDialScene still={still} /> : <CampaignLanesScene still={still} />)}
+                {i === 0 ? <LaunchAmplification seen={seen} /> : seen && <CampaignLanesScene still={still} />}
               </div>
               <div className="flex flex-1 flex-col p-7 sm:p-9">
                 <span className="font-mono text-[0.7rem] tracking-[0.1em] text-muted">0{i + 1}</span>

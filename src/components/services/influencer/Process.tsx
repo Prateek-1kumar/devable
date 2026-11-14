@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react
 import ArcButton from "../../ArcButton";
 import { At, Billboard, Box, Flag, IsoScene, Panel, Tile } from "../iso";
 import { Label, PlatformIcon, type Platform } from "../kit";
-import { CREATORS, LAUNCH, PROCESS } from "./content";
+import { LAUNCH, PROCESS, PROCESS_CREATORS } from "./content";
 
 const SCENES = [FindScene, NarrativeScene, RunScene, GoalScene];
 const STEPS = PROCESS.steps.length;
@@ -160,7 +160,7 @@ function Pool({ x, y, size }: { x: number; y: number; size: number }) {
 }
 
 // 01 · Six creators on the floor; the right two lift out and light up, each flagged with the signal behind
-// the pick, so it reads as a reasoned choice, not a random highlight. SAMPLE photos until the real ones land.
+// the pick, so it reads as a reasoned choice, not a random highlight. The faces are the hero's real creators.
 const POOL = [
   { c: 0, x: 120, y: 170 },
   { c: 1, x: 250, y: 170, pick: "Audience fit · 94%" },
@@ -189,8 +189,8 @@ function FindScene({ active }: SceneProps) {
             p.pick && picked ? `border-primary bg-[#262523] ${GLOW}` : "border-white/15 bg-[#262523]"
           }`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-          <img src={CREATORS[p.c].photo} alt="" className={`size-9 rounded-full object-cover ${p.pick && picked ? "" : "grayscale"}`} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+          <img src={PROCESS_CREATORS[p.c].photo} alt="" className={`size-9 rounded-full object-cover ${p.pick && picked ? "" : "grayscale"}`} />
           <span className="flex flex-1 flex-col gap-1.5">
             <span className="h-1.5 w-full rounded-full bg-white/25" />
             <span className="h-1.5 w-2/3 rounded-full bg-white/12" />
@@ -259,8 +259,8 @@ function NarrativeScene({ active }: SceneProps) {
         return (
           <Fragment key={a.angle}>
             <Panel x={a.x} y={a.y} z={up ? 0 : -20} w={110} h={130} style={fade(up)} className={`flex flex-col gap-2 p-3 ${SLAB}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
-              <img src={CREATORS[a.c].photo} alt="" className="size-8 rounded-full object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+              <img src={PROCESS_CREATORS[a.c].photo} alt="" className="size-8 rounded-full object-cover" />
               <AngleBody kind={a.kind} />
             </Panel>
             <Flag x={a.x} y={a.y} z={142} style={fade(up, 200)}>
@@ -286,7 +286,7 @@ function Chip({ title, detail, photo, live = false }: { title: string; detail: R
         live ? "border-primary bg-[#1f2a22]" : "border-white/14 bg-[#232220]"
       }`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- sample creator photos */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
       {photo && <img src={photo} alt="" className="size-6 max-w-none rounded-full object-cover" />}
       <span className="leading-tight">
         <span className="block text-[11.5px] font-medium text-white">{title}</span>
@@ -371,7 +371,7 @@ function RunScene({ active }: SceneProps) {
             <Billboard x={cx} y={cy} z={lift + 22 + (1 - shown) * 30} center style={{ ...still, opacity: shown }}>
               <Chip
                 title={r.format}
-                photo={CREATORS[r.c].photo}
+                photo={PROCESS_CREATORS[r.c].photo}
                 live={live}
                 detail={
                   <>
