@@ -60,8 +60,11 @@ function band(L: Layout, from: number, to: number) {
   return `M${ring.map((p) => `${p[0]} ${p[1]}`).join("L")}Z`;
 }
 
-/** Seconds into the loop while the scene is on screen, and the box's measured size (null until measured). */
-function useScene(seen: boolean) {
+/**
+ * Seconds into a `cycle`-second loop while the scene is on screen (`settled`, the finished picture, with reduced
+ * motion), and the box's measured size (null until measured). Shared with the campaign scene beside this one.
+ */
+export function useScene(seen: boolean, cycle: number, settled: number) {
   const [t, setT] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const still = useStill();
@@ -83,7 +86,7 @@ function useScene(seen: boolean) {
     io.observe(el);
     const tick = (now: number) => {
       origin ||= now;
-      if (visible) setT(((now - origin) / 1000) % CYCLE);
+      if (visible) setT(((now - origin) / 1000) % cycle);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -91,11 +94,11 @@ function useScene(seen: boolean) {
       cancelAnimationFrame(raf);
       io.disconnect();
     };
-  }, [seen, still]);
-  return { box, t: still ? SWEEP[1] + 1 : t, still, size };
+  }, [seen, still, cycle]);
+  return { box, t: still ? settled : t, still, size };
 }
 
-const RING = "shadow-[0_0_0_1px_rgb(15_26_20/0.08),0_8px_16px_-8px_rgb(15_26_20/0.3)]";
+export const RING = "shadow-[0_0_0_1px_rgb(15_26_20/0.08),0_8px_16px_-8px_rgb(15_26_20/0.3)]";
 
 /** One creator's post: photo with its platform, and the views it brought. `stack` puts the number under the photo. */
 function Post({ who, platform, views, shown, size }: { who: string; platform: Platform; views: number; shown: number; size: "lg" | "sm" | "stack" }) {
@@ -117,7 +120,7 @@ function Post({ who, platform, views, shown, size }: { who: string; platform: Pl
 }
 
 export default function LaunchAmplification({ seen }: { seen: boolean }) {
-  const { box, t, still, size } = useScene(seen);
+  const { box, t, still, size } = useScene(seen, CYCLE, SWEEP[1] + 1);
   const phone = !!size && size.h / size.w > 0.7;
   const L = phone ? PHONE : WIDE;
   const u = clamp01((t - SWEEP[0]) / (SWEEP[1] - SWEEP[0]));

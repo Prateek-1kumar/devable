@@ -1,29 +1,17 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useSyncExternalStore } from "react";
 import ArcButton from "../../ArcButton";
 import { Label, useInView } from "../kit";
+import CampaignLanes from "./CampaignLanes";
 import { MODES } from "./content";
 import LaunchAmplification from "./LaunchAmplification";
 
-// The campaign scene loads once the section is near, after the page (see TwoWaysScenes); the launch one is plain HTML.
-const CampaignLanesScene = dynamic(() => import("./TwoWaysScenes").then((m) => m.CampaignLanesScene), { ssr: false });
-
-const REDUCED = "(prefers-reduced-motion: reduce)";
-const subscribe = (onChange: () => void) => {
-  const mq = window.matchMedia(REDUCED);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
-};
-
-// The two engagement models side by side, each opening on a small 3D scene of its shape: a launch is one
+// The two engagement models side by side, each opening on a drawn scene of its shape: a launch is one
 // fixed post with creators' different angles converging on it inside a 48-hour window; a campaign is many
 // creators and formats across four channels, week after week, feeding one objective. Both start once the
 // section scrolls into view. A soft CTA follows for anyone unsure which fits.
 export default function TwoWays() {
   const [ref, seen] = useInView<HTMLDivElement>(0.3);
-  const still = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
   return (
     <section aria-labelledby="modes-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
@@ -36,7 +24,7 @@ export default function TwoWays() {
           {MODES.modes.map((m, i) => (
             <article key={m.name} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-white">
               <div aria-hidden="true" className="relative aspect-[5/4] border-b border-line bg-[#f1f0eb] sm:aspect-[16/10]">
-                {i === 0 ? <LaunchAmplification seen={seen} /> : seen && <CampaignLanesScene still={still} />}
+                {i === 0 ? <LaunchAmplification seen={seen} /> : <CampaignLanes seen={seen} />}
               </div>
               <div className="flex flex-1 flex-col p-7 sm:p-9">
                 <span className="font-mono text-[0.7rem] tracking-[0.1em] text-muted">0{i + 1}</span>
