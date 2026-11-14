@@ -1,4 +1,5 @@
 import type { Platform } from "../kit";
+import type { TestimonialData } from "../content/content";
 
 // Copy for the Influencer Marketing service page, from the copy doc.
 //
@@ -16,6 +17,19 @@ export const HERO = {
     { value: "30+", label: "campaigns" },
   ],
   channels: ["x", "linkedin", "youtube", "newsletter"] as Platform[],
+};
+
+// The client quote under the hero (shown with the shared Testimonial band). Sierra's photo is not in the repo yet:
+// add it at the path below and it replaces the initials. SAMPLE-free: the quote and attribution are the client's.
+export const TESTIMONIAL: TestimonialData = {
+  quote:
+    "Devable has been incredibly proactive and organized \u2014 keeping campaigns moving, communicating clearly throughout each engagement, and taking the time to understand what we\u2019re trying to accomplish rather than simply matching us with creators. They\u2019ve become an extension of our team as we build out the program.",
+  name: "Sierra Dowling",
+  initials: "SD",
+  role: "Director, Communications; Head of PR",
+  company: "Glean",
+  logo: "/clients/glean.svg",
+  photo: "/clients/people/glean-sierra-dowling.jpg",
 };
 
 export type Creator = { name: string; handle: string; photo: string };

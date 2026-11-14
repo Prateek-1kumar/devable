@@ -4,8 +4,8 @@ import { LAUNCHES, LOGOS, type LaunchPost } from "./content";
 // Fade a rail out at both edges.
 const EDGES = "[mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,transparent)]";
 
-// Proof first: the clients drift right to left on one slow rail (like Baseten's), and under them a rail of
-// the creator posts from those launches, each with its view count. Both repeat their list once so the
+// Proof first: the clients drift right to left on one slow rail (like Baseten's), and under them, running the
+// other way (left to right), a rail of the creator posts from those launches, each with its view count. Both repeat their list once so the
 // −50% loop is seamless (the copy is hidden from screen readers); hovering a rail pauses it.
 export default function Launches() {
   return (
@@ -34,7 +34,7 @@ export default function Launches() {
       </div>
 
       <div className={`group mt-10 flex overflow-hidden py-4 ${EDGES}`}>
-        <ul className="flex w-max shrink-0 animate-marquee gap-4 pr-4 [animation-duration:80s] group-hover:[animation-play-state:paused] motion-reduce:animate-none">
+        <ul className="flex w-max shrink-0 animate-marquee gap-4 pr-4 [animation-direction:reverse] [animation-duration:80s] group-hover:[animation-play-state:paused] motion-reduce:animate-none">
           {[...LAUNCHES.posts, ...LAUNCHES.posts].map((post, i) => (
             <PostCard key={i} post={post} copy={i >= LAUNCHES.posts.length} />
           ))}

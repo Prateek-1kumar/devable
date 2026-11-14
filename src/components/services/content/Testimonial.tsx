@@ -1,117 +1,66 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import Highlight from "../../Highlight";
+import { useMemo, type CSSProperties } from "react";
 import { useInView } from "../kit";
-import { TESTIMONIAL as T } from "./content";
+import { TESTIMONIAL, type TestimonialData } from "./content";
 import { clamp01, io3, seg, usePlay } from "./play";
-import TestimonialWeave from "./TestimonialWeave";
+import TestimonialBars from "./TestimonialBars";
 
-// A standalone credibility band under the hero, in the hero's own language: a large quote framed by the same corner
-// brackets as its stage titles, and, when the quote has been read, one hairline wire with a
-// coral packet running down from it into the attribution pill, arriving at a port that rings out, like the outcomes
-// in the hero.
-//   1. The brackets close in around the quote while it rises in word by word, with a soft blur. The quote sits in a
-//      soft grey-green; two phrases stay inked.
-//   2. The two phrases are then lit in turn with the site's own Highlight sweep, settling on the brand green.
-//   3. The wire draws down; the attribution pill (photo, name, role, logo) settles in at its end.
-//   4. A packet travels the wire and reaches the port on the pill's top edge, which rings out once.
-// Plays once, when scrolled into view (the Highlight sweeps are held until then). Reduced motion: the finished picture.
+// A standalone credibility band under the hero: the quote, large and centred in solid ink, with the thin ledger bars
+// along its top and bottom edges (see TestimonialBars) and, when the quote has been read, one hairline wire with a
+// coral packet running down from it into the attribution pill, arriving at a port that rings out.
+//   1. The quote rises in word by word, with a soft blur.
+//   2. The wire draws down; the attribution pill (photo, name, role, logo) settles in at its end.
+//   3. A packet travels the wire and reaches the port on the pill's top edge, which rings out once.
+// Plays once, when scrolled into view. Reduced motion: the finished picture.
 
-const STEP = 0.028; // seconds between words
-const HOLD = 0.45; // seconds between one phrase's highlight and the next
+const STEP = 0.024; // seconds between words
 const WIRE = 64; // px, the wire's length
 
-// The quote as words and highlighted phrases. A phrase is one unit, and whatever punctuation follows it travels with
-// it, so a full stop can never wrap onto a line of its own. `at` is when a unit starts to rise in.
-type Node = { kind: "word"; text: string; at: number } | { kind: "space" } | { kind: "lit"; text: string; tail: string; at: number; k: number };
-const NODES: Node[] = (() => {
+// The quote as words, each with the time it starts to rise in; the quotation marks sit on the first and last.
+type Node = { kind: "word"; text: string; at: number } | { kind: "space" };
+function buildNodes(quote: string): Node[] {
   const nodes: Node[] = [];
   let n = 0;
-  let k = 0;
-  let tail = ""; // punctuation owed to the phrase just before
-  T.quote.split(new RegExp(`(${T.lit.join("|")})`)).forEach((part) => {
-    if (T.lit.includes(part)) {
-      nodes.push({ kind: "lit", text: part, tail: "", at: 0.2 + n * STEP, k: k++ });
-      n += part.split(" ").length;
-      tail = "lit";
-      return;
-    }
-    part.split(/(\s+)/).forEach((tok) => {
-      if (!tok) return;
-      if (/^\s+$/.test(tok)) return void nodes.push({ kind: "space" });
-      const prev = nodes[nodes.length - 1];
-      if (tail === "lit" && prev?.kind === "lit") prev.tail = tok;
-      else nodes.push({ kind: "word", text: tok, at: 0.2 + n * STEP });
-      tail = "";
-      n++;
-    });
+  quote.split(/(\s+)/).forEach((tok) => {
+    if (!tok) return;
+    if (/^\s+$/.test(tok)) return void nodes.push({ kind: "space" });
+    nodes.push({ kind: "word", text: tok, at: 0.2 + n++ * STEP });
   });
-  // The quotation marks sit on the first and last units.
-  const first = nodes.find((x) => x.kind === "word");
-  if (first?.kind === "word") first.text = `\u201C${first.text}`;
-  const last = nodes[nodes.length - 1];
-  if (last.kind === "lit") last.tail += "\u201D";
-  else if (last.kind === "word") last.text += "\u201D";
+  const words = nodes.filter((x): x is Extract<Node, { kind: "word" }> => x.kind === "word");
+  words[0].text = `\u201C${words[0].text}`;
+  words[words.length - 1].text += "\u201D";
   return nodes;
-})();
-const WORDS = NODES.reduce((m, x) => (x.kind === "space" ? m : Math.max(m, x.at)), 0) + STEP; // when the last unit starts
-const HL0 = WORDS + 0.5; // the first highlight sweeps once the quote has been read
-const W0 = HL0 + HOLD * (T.lit.length - 1) + 0.9; // the wire starts as the last highlight lands
-const TOTAL = W0 + 3.2; // seconds
+}
 
 const fadeIn = (v: number, rise = 8): CSSProperties => ({ opacity: v, transform: `translateY(${(1 - v) * rise}px)` });
 
-export default function Testimonial() {
+// Used by the Technical Content and Influencer Marketing pages, each with its own client's quote.
+export default function Testimonial({ data: T = TESTIMONIAL }: { data?: TestimonialData }) {
+  const NODES = useMemo(() => buildNodes(T.quote), [T]);
+  const W0 = useMemo(() => NODES.reduce((m, x) => (x.kind === "word" ? Math.max(m, x.at) : m), 0) + STEP + 0.6, [NODES]); // the wire starts once the quote has been read
+  const TOTAL = W0 + 3.2; // seconds
   const [ref, seen] = useInView<HTMLElement>(0.3);
   const s = usePlay(seen, TOTAL * 1000) * TOTAL;
   const hide = seen ? "motion-safe:animate-fade-up" : "motion-safe:opacity-0";
 
-  const frame = seg(s, 0, 1);
   const draw = seg(s, W0, W0 + 0.8);
   const pill = seg(s, W0 + 0.3, W0 + 1);
   const go = seg(s, W0 + 0.9, W0 + 1.9, io3);
   const ripple = clamp01((s - (W0 + 1.9)) / 1);
 
   return (
-    <section ref={ref} aria-label="Client testimonial" className="relative isolate bg-white px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
-      <TestimonialWeave />
+    <section ref={ref} aria-label="Client testimonial" className="relative isolate bg-white px-6 pt-32 pb-36 sm:pt-44 sm:pb-48">
+      <TestimonialBars seen={seen} />
       <figure className="mx-auto max-w-[68rem]">
-        <div className="relative px-6 py-14 sm:px-16 sm:py-20">
-          {[
-            ["top-0 left-0 border-t-2 border-l-2", -1, -1],
-            ["top-0 right-0 border-t-2 border-r-2", 1, -1],
-            ["bottom-0 left-0 border-b-2 border-l-2", -1, 1],
-            ["right-0 bottom-0 border-r-2 border-b-2", 1, 1],
-          ].map(([cls, dx, dy]) => (
-            <span
-              key={cls as string}
-              aria-hidden="true"
-              className={`absolute size-9 border-ink/55 ${cls}`}
-              style={{ opacity: frame, transform: `translate(${(dx as number) * 18 * (1 - frame)}px, ${(dy as number) * 18 * (1 - frame)}px)` }}
-            />
-          ))}
-
-          <blockquote className={`mx-auto max-w-[56rem] text-center text-[clamp(1.4rem,2.55vw,2.4rem)] leading-[1.3] font-normal tracking-[-0.03em] text-balance text-ink/60 ${seen ? "" : "[&_*]:[animation-play-state:paused]"}`}>
+        <div className="px-2 pb-14 sm:px-10 sm:pb-16">
+          <blockquote className="mx-auto max-w-[56rem] text-center text-[clamp(1.4rem,2.55vw,2.4rem)] leading-[1.3] font-normal tracking-[-0.03em] text-balance text-ink">
             {NODES.map((n, i) =>
               n.kind === "space" ? (
                 " "
-              ) : n.kind === "word" ? (
+              ) : (
                 <span key={i} className={`inline-block ${hide}`} style={{ animationDelay: `${n.at}s` }}>
                   {n.text}
-                </span>
-              ) : (
-                <span key={i} className="whitespace-nowrap">
-                  <span className={`inline-block ${hide}`} style={{ animationDelay: `${n.at}s` }}>
-                    <Highlight tone="brand" delay={HL0 + HOLD * n.k}>
-                      {n.text}
-                    </Highlight>
-                  </span>
-                  {n.tail && (
-                    <span className={`inline-block ${hide}`} style={{ animationDelay: `${n.at}s`, marginLeft: "-0.3em" }}>
-                      {n.tail}
-                    </span>
-                  )}
                 </span>
               ),
             )}
@@ -138,7 +87,7 @@ export default function Testimonial() {
               <span className="absolute inset-0 rounded-full bg-accent ring-[3px] ring-white" style={{ opacity: 0.35 + 0.65 * seg(go, 0.9, 1) }} />
             </span>
             <span className="flex items-center gap-3.5">
-              <Avatar />
+              <Avatar t={T} />
               <span className="text-left">
                 <span className="block text-[1rem] leading-tight font-medium tracking-[-0.01em] text-ink">{T.name}</span>
                 <span className="mt-1 block text-[0.88rem] leading-tight text-ink/55">{T.role}</span>
@@ -154,8 +103,8 @@ export default function Testimonial() {
   );
 }
 
-/** The client's photo in a circle; their initials sit underneath and show until a photo exists at `T.photo`. */
-function Avatar() {
+/** The client's photo in a circle; their initials sit underneath and show until a photo exists at `t.photo`. */
+function Avatar({ t: T }: { t: TestimonialData }) {
   const hideIfMissing = (img: HTMLImageElement | null) => {
     if (img?.complete && img.naturalWidth === 0) img.style.display = "none";
   };

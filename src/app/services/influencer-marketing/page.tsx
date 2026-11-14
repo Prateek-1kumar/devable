@@ -3,7 +3,8 @@ import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
 import Cases from "@/components/services/influencer/Cases";
 import Commitments from "@/components/services/influencer/Commitments";
-import { CTA, HERO } from "@/components/services/influencer/content";
+import Testimonial from "@/components/services/content/Testimonial";
+import { CTA, HERO, TESTIMONIAL } from "@/components/services/influencer/content";
 import Hero from "@/components/services/influencer/Hero";
 import Launches from "@/components/services/influencer/Launches";
 import Measure from "@/components/services/influencer/Measure";
@@ -19,6 +20,7 @@ export default function InfluencerMarketing() {
   return (
     <main className="overflow-x-clip">
       <Hero />
+      <Testimonial data={TESTIMONIAL} />
       <Launches />
       <TwoWays />
       <Cases />

@@ -55,11 +55,12 @@ export const HERO = {
 
 // The client quote under the hero, from the content team. The photo is a PLACEHOLDER until the real one is added at
 // `photo`; until then an initials avatar shows.
-export const TESTIMONIAL = {
+/** A client quote for the testimonial band. */
+export type TestimonialData = { quote: string; name: string; initials: string; role: string; company: string; logo: string; photo: string };
+
+export const TESTIMONIAL: TestimonialData = {
   quote:
     "Working with Sumanth and the Devable team was a real pleasure. The content was technically sharp and written for exactly the developer audience we wanted to reach, and it drove strong, engaged traffic around our launch. Thoughtful, reliable, and easy to collaborate with, we\u2019d gladly work together again.",
-  // The phrases that stay inked and get the highlight sweep; the rest of the quote sits softer. In reading order.
-  lit: ["technically sharp", "strong, engaged traffic"],
   name: "Anahit Hovelyan",
   initials: "AH",
   role: "Growth Marketer",
