@@ -1,18 +1,18 @@
-import { Label } from "../kit";
-import { COMMITMENTS, CREATORS } from "./content";
+import { CircleCheck, Coins, Layers, Mail, Users } from "lucide-react";
+import { Label, PlatformIcon, type Platform } from "../kit";
+import { COMMITMENTS, PROCESS_CREATORS } from "./content";
 
-// The hover motion: bars filling, the line drawing on, and what follows it fading in.
+// The hover motion: the line drawing on, and what follows it fading in.
 const KEYFRAMES = `
-@keyframes bar-fill { from { transform: scaleX(0); } }
 @keyframes draw-line { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes soft-in { from { opacity: 0; } }
 `;
 
 // What we commit to: three promises, one per phrase of the headline, each a warm card. The top of each card
 // shows, small and static, the thing the client actually gets for that promise (the agreed objective and its
-// metrics; the budget split across the plan; the result read against the goal), so each one reads as
+// metrics; the campaign summary approved before spend, with who is involved, where it runs and the budget; the result read against the goal), so each one reads as
 // something you can check rather than a claim. At rest it is still; on hover each card comes a little alive (a light colour
-// shift, then its own example plays: the metric chips light one by one, the budget segments fill in from the left, the line
+// shift, then its own example plays: the metric chips light one by one, the summary's icons light in turn and its status turns green, the line
 // draws up to the goal), in CSS only and off for reduced motion. SAMPLE figures in the examples.
 export default function Commitments() {
   return (
@@ -88,41 +88,55 @@ function Goals() {
   );
 }
 
-const SPLIT = [
-  { name: "Creators", share: 62, tone: "bg-ink" },
-  { name: "Content production", share: 24, tone: "bg-ink/40" },
-  { name: "Amplification", share: 14, tone: "bg-primary" },
-];
+// SAMPLE: illustrative values for a campaign summary, not a standard package. The point is what the client sees
+// settled before anything goes live: who is involved, where it runs, what is approved.
+const PLAN = { creators: 12, shown: 3, budget: "$25,000 total approved", channels: ["x", "linkedin", "newsletter"] as Platform[] };
 
-/** 02 · The plan: the budget split, and the creator mix it pays for. */
+/** 02 · The plan: a campaign summary the client signs off before spend starts: the creators, where it runs, the budget, and its approval. */
 function Spend() {
-  return (
-    <div className={SHEET}>
-      <div className="flex items-center justify-between">
-        <p className={CAPTION}>Budget allocation</p>
-        <span className="flex -space-x-1.5">
-          {CREATORS.slice(0, 4).map((c) => (
-            // eslint-disable-next-line @next/next/no-img-element -- sample creator photos
-            <img key={c.photo} src={c.photo} alt="" className="size-5 rounded-full object-cover ring-2 ring-white" />
+  const rows = [
+    { Icon: Users, label: "Creator mix", value: <span>{PLAN.creators} creators selected</span> },
+    {
+      Icon: Layers,
+      label: "Campaign plan",
+      value: (
+        <span className="flex items-center gap-1.5">
+          {PLAN.channels.map((p, i) => (
+            <span key={p} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-ink/40">·</span>}
+              {p === "newsletter" ? <Mail aria-hidden="true" strokeWidth={1.8} className="size-4 text-ink" /> : <PlatformIcon platform={p} className={`size-[0.95rem] ${p === "linkedin" ? "text-[#0a66c2]" : "text-ink"}`} />}
+            </span>
           ))}
         </span>
+      ),
+    },
+    { Icon: Coins, label: "Budget", value: <span>{PLAN.budget}</span> },
+    {
+      Icon: CircleCheck,
+      label: "Status",
+      value: (
+        <span className="rounded-full bg-ink/[0.06] px-2.5 py-1 text-ink/75 transition-colors duration-500 group-hover:bg-[color-mix(in_srgb,var(--primary)_22%,white)] group-hover:text-[#14653a] group-hover:delay-[700ms]">Approved before launch</span>
+      ),
+    },
+  ];
+  return (
+    <div className={SHEET}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center -space-x-2 transition-[gap] duration-500 group-hover:-space-x-1">
+          {PROCESS_CREATORS.slice(0, PLAN.shown).map((c) => (
+            // eslint-disable-next-line @next/next/no-img-element -- creator photos
+            <img key={c.photo} src={c.photo} alt="" className="size-7 rounded-full object-cover ring-2 ring-white transition-[margin] duration-500" />
+          ))}
+          <span className="grid size-7 place-items-center rounded-full bg-ink/[0.07] text-[0.72rem] font-medium text-ink/70 ring-2 ring-white">+{PLAN.creators - PLAN.shown}</span>
+        </span>
+        <span className="rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,white)] px-2.5 py-1 text-[0.72rem] font-medium text-[#14653a]">Campaign plan</span>
       </div>
-      <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full">
-<style href="influencer-commitments" precedence="default">{KEYFRAMES}</style>
-        {SPLIT.map((s, i) => (
-          <span
-            key={s.name}
-            className={`${s.tone} origin-left motion-safe:group-hover:animate-[bar-fill_6s_linear_both]`}
-            style={{ width: `${s.share}%`, animationDuration: "700ms", animationDelay: `${i * 180}ms`, animationTimingFunction: "cubic-bezier(0.22,1,0.36,1)" }}
-          />
-        ))}
-      </div>
-      <ul className="mt-3.5 space-y-1.5">
-        {SPLIT.map((s) => (
-          <li key={s.name} className="flex items-center gap-2 text-[0.75rem] text-ink/75">
-            <span className={`size-2 rounded-[2px] ${s.tone}`} />
-            <span className="flex-1">{s.name}</span>
-            <span className="font-medium text-ink tabular-nums">{s.share}%</span>
+      <ul className="mt-2.5 border-t border-line">
+        {rows.map(({ Icon, label, value }, i) => (
+          <li key={label} className={`flex items-center gap-2 py-2 text-[0.78rem] ${i ? "border-t border-line" : ""}`}>
+            <Icon aria-hidden="true" strokeWidth={1.8} style={{ ["--d" as string]: `${i * 170}ms` }} className="size-4 shrink-0 text-ink/50 transition-colors duration-300 group-hover:text-[#1a9a55] group-hover:delay-(--d)" />
+            <span className="flex-1 text-ink/65">{label}</span>
+            <span className="font-medium text-ink">{value}</span>
           </li>
         ))}
       </ul>
