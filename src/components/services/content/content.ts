@@ -142,7 +142,8 @@ export type Shipped = { client: string; logo: string; type: "guide" | "use-case"
 // Real articles. Add a card by adding an entry; `type` picks the card's cover.
 export const SHIPPED = {
   label: "Content we've shipped",
-  title: "Technical content in production.",
+  title: "Technical content across formats for a leading AI platform.",
+  body: "A look at the type and depth of content we create for technical AI products, from hands-on guides to use cases and broader technical perspectives.",
   articles: [
     {
       client: "LandingAI",

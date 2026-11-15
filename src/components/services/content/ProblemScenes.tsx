@@ -317,13 +317,18 @@ export function Distribution({ t, still }: { t: number; still: boolean }) {
             ROWS.map((y, k) => {
               const { live, p, born, gone } = packet(t, k);
               if (!live) return null;
-              const d = `M0 ${MID} C50 ${MID} 50 ${y} 100 ${y}`;
               const tail = Math.max(0, p - TAIL);
+              // Each piece of the tail is its own short polyline along the wire (sampled from the curve), so it is drawn in
+              // screen pixels, round-capped, and brighter toward the head.
               return Array.from({ length: 6 }, (_, i) => {
-                const a = tail + ((p - tail) * i) / 6;
-                const b = tail + ((p - tail) * (i + 1)) / 6;
-                const o = ((i + 1) / 6) ** 2 * 0.55 * born * (1 - gone);
-                return <path key={`${k}-${i}`} d={d} pathLength={1} fill="none" stroke="white" strokeOpacity={o} strokeWidth={1.6 + i * 0.25} strokeLinecap="round" strokeDasharray={`${Math.max(0, b - a)} 2`} strokeDashoffset={-a} className="[vector-effect:non-scaling-stroke]" />;
+                const u0 = tail + ((p - tail) * i) / 6;
+                const u1 = tail + ((p - tail) * (i + 1)) / 6;
+                const d = Array.from({ length: 5 }, (_, j) => {
+                  const [bx, by] = bez(y, u0 + ((u1 - u0) * j) / 4);
+                  return `${j ? "L" : "M"}${(bx * 100).toFixed(2)} ${by.toFixed(2)}`;
+                }).join("");
+                const o = ((i + 1) / 6) ** 2 * 0.6 * born * (1 - gone);
+                return <path key={`${k}-${i}`} d={d} fill="none" stroke="white" strokeOpacity={o} strokeWidth={1.5 + i * 0.3} strokeLinecap="round" strokeLinejoin="round" className="[vector-effect:non-scaling-stroke]" />;
               });
             })}
         </svg>
@@ -358,7 +363,7 @@ export function Distribution({ t, still }: { t: number; still: boolean }) {
               </span>
               <span aria-hidden="true" className="absolute top-1/2 -left-[11px] size-[22px] -translate-y-1/2">
                 <span className="absolute inset-0 rounded-full border" style={{ borderColor: CORAL, opacity: flash * 0.7, transform: `scale(${1 + 0.9 * (1 - flash)})` }} />
-                <span className="absolute inset-0 grid place-items-center rounded-full border ring-[3px] ring-[#0e0e0e]" style={{ background: mix("rgb(217 101 67 / 0.2)", "#1d1d1d", blocked * (0.55 + 0.45 * flash)), borderColor: mix("rgb(217 101 67 / 0.7)", "rgb(255 255 255 / 0.18)", blocked) }}>
+                <span className="absolute inset-0 grid place-items-center rounded-full border ring-[3px] ring-[#0e0e0e]" style={{ backgroundColor: "#161616", backgroundImage: `linear-gradient(${mix("rgb(217 101 67 / 0.28)", "rgb(255 255 255 / 0.06)", blocked * (0.55 + 0.45 * flash))}, ${mix("rgb(217 101 67 / 0.28)", "rgb(255 255 255 / 0.06)", blocked * (0.55 + 0.45 * flash))})`, borderColor: mix("rgb(217 101 67 / 0.7)", "rgb(255 255 255 / 0.18)", blocked) }}>
                   <X className="size-3" strokeWidth={2.6} style={{ color: mix("rgb(217 101 67)", "rgb(255 255 255 / 0.5)", blocked) }} />
                 </span>
               </span>
