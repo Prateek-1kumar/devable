@@ -31,11 +31,13 @@ export default function Problem() {
 function Card({ n, name, body, scene }: { n: number; name: string; body: string; scene: (t: number, still: boolean) => ReactNode }) {
   const [ref, t, still] = useScene();
   return (
-    <li ref={ref} className="flex flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#0f0f0f] shadow-[0_30px_60px_-40px_rgb(0_0_0/0.9)]">
+    <li ref={ref} className="group flex flex-col overflow-hidden rounded-[22px] bg-[linear-gradient(180deg,#141414,#0e0e0e)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07),inset_0_1px_0_rgb(255_255_255/0.09),0_30px_60px_-40px_rgb(0_0_0/0.9)] transition-shadow duration-500 hover:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1),inset_0_1px_0_rgb(255_255_255/0.12),0_36px_70px_-38px_rgb(0_0_0/1)]">
       {/* The visual: a soft light from above on near-black, with the scene on top. */}
-      <div aria-hidden="true" className="@container relative h-[22rem] shrink-0 overflow-hidden border-b border-white/[0.08] bg-[linear-gradient(180deg,#131313_0%,#0c0c0c_100%)]">
-        <div className="absolute inset-0 bg-[radial-gradient(90%_55%_at_50%_0%,rgb(255_255_255/0.06),transparent_70%)]" />
+      <div aria-hidden="true" className="@container relative h-[22rem] shrink-0 overflow-hidden bg-[linear-gradient(180deg,#151515_0%,#0c0c0c_100%)]">
+        <div className="absolute inset-0 bg-[radial-gradient(90%_55%_at_50%_0%,rgb(255_255_255/0.06),transparent_70%)] transition-opacity duration-500 group-hover:opacity-100" />
         {scene(t, still)}
+        {/* the hairline under the visual: it fades out toward both edges */}
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgb(255_255_255/0.13)_20%,rgb(255_255_255/0.13)_80%,transparent)]" />
       </div>
       <div className="flex flex-1 flex-col p-6 pb-7">
         <p className="font-mono text-[0.74rem] tracking-[0.1em] text-white/35">0{n} / 03</p>
