@@ -349,7 +349,7 @@ export const CASES = {
     quote: "Client quote if available",
   },
   cases: [
-    { client: "LandingAI", logo: "/clients/landingai.png", services: ["Search & AI Visibility"], href: "#" },
+    { client: "LandingAI", logo: "/clients/landingai-mono.svg", services: ["Search & AI Visibility"], href: "#" },
     { client: "Orq.ai", services: ["Search & AI Visibility", "Reddit"], href: "#" },
     { client: "Superlinked", services: ["Search & AI Visibility"], href: "#" },
   ] as Case[],

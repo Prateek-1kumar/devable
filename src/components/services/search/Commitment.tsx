@@ -83,8 +83,12 @@ export default function Commitment() {
               </li>
               {/* The link to the next stage: a dotted line out of this card, an arrow, a dotted line into the next. */}
               {i < COMMITMENT.horizons.length - 1 && (
-                <li aria-hidden="true" className="flex h-14 items-center justify-center lg:h-auto" style={{ transitionDelay: on ? `${2.1 + i * 0.25}s` : "0s" }}>
-                  <span className={`flex items-center transition-opacity duration-1000 max-lg:flex-col ${on ? "opacity-100" : "opacity-0"}`}>
+                <li aria-hidden="true" className="flex h-14 items-center justify-center lg:h-auto">
+                  {/* It appears once both cards it joins are in place: after the next card has landed. */}
+                  <span
+                    style={{ transitionDelay: on ? `${2.3 + (i + 1) * 0.25}s` : "0s" }}
+                    className={`flex items-center transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-lg:flex-col ${on ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
+                  >
                     <span className="h-px w-2 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)] max-lg:h-3 max-lg:w-px max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)]" />
                     <span className="mx-1 grid size-10 shrink-0 place-items-center rounded-full bg-primary text-ink shadow-[0_0_0_4px_#fff,0_0_0_5px_rgb(25_231_110/0.3),0_10px_18px_-8px_rgb(25_231_110/0.6)] max-lg:my-1.5 max-lg:mx-0">
                       <ArrowRight className="size-[1.1rem] max-lg:rotate-90" strokeWidth={2.4} />
