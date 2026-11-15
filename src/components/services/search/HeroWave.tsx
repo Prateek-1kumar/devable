@@ -62,11 +62,12 @@ const STREAKS: [number, number, number][] = [[1, 13, -2], [4, 16, -9], [6, 12, -
 const STEP = 4; // px between sampled points
 const HALF = 350; // half-width of the text block, px
 const REACH = 85; // px either side of a logo that its lane glows
+const UP = 90; // px the whole ribbon is lifted, so it sits level with the headline rather than the button and the tiles
 
 /** Lane `k`'s height at x. */
 const laneY = (k: number, x: number) => {
   const L = LANES[k];
-  return L.cy + L.a * Math.sin((2 * Math.PI * x) / L.l + L.p) + 0.25 * L.a * Math.sin((2 * Math.PI * x) / (L.l * 0.62) + L.q);
+  return L.cy - UP + L.a * Math.sin((2 * Math.PI * x) / L.l + L.p) + 0.25 * L.a * Math.sin((2 * Math.PI * x) / (L.l * 0.62) + L.q);
 };
 
 /** A lane as a polyline from `x0` to `x1`, shifted down by `dy`. */
