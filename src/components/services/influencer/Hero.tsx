@@ -11,13 +11,13 @@ import HeroStage from "./HeroStage";
 // through creators and the platforms over its first 24 hours (see HeroStage).
 export default function Hero() {
   return (
-    <section className="px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
+    <section className="px-4 pt-24 pb-14 sm:px-8 sm:pt-28 lg:pb-20">
       <div className="relative isolate mx-auto grid max-w-[76rem] items-center gap-14 overflow-hidden rounded-2xl bg-[#f9f8f4] px-6 py-14 sm:px-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:py-20">
         {/* The homepage hero's pixel field, eased back behind the copy so the text stays clean. */}
         <SignalGrid className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_55%_75%_at_22%_50%,transparent_35%,rgb(0_0_0_/_0.35)_65%,black_100%)]" />
         <div>
           <Label>{HERO.label}</Label>
-          <h1 className="mt-7 text-[clamp(2.5rem,5vw,4.5rem)] leading-[0.98] font-medium tracking-[-0.05em] text-ink">
+          <h1 className="mt-7 text-[clamp(2.3rem,4.6vw,4.1rem)] leading-[1.02] font-medium tracking-[-0.05em] text-balance text-ink">
             {HERO.title}
           </h1>
           <p className="mt-6 max-w-[32rem] text-lg leading-relaxed tracking-[-0.01em] text-ink/70 sm:text-xl">{HERO.body}</p>

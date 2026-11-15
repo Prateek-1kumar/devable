@@ -11,7 +11,7 @@ const OPERATORS = ["landingai", "glean", "webai", "orqai", "langwatch"];
 // so the eye reads three blocks rather than a stack of parts.
 export default function Hero() {
   return (
-    <section className="px-4 pt-24 pb-20 sm:px-8 sm:pt-28 lg:pb-28">
+    <section className="px-4 pt-24 pb-14 sm:px-8 sm:pt-28 lg:pb-20">
       {/* The first viewport as one framed panel: warm off-white, set apart from the white page, over a quiet
           field of squares where green glows spread like compounding reach, eased back behind the copy. */}
       <div className="relative isolate mx-auto max-w-[76rem] overflow-hidden rounded-2xl bg-[#f9f8f4] px-6 pt-20 pb-12 sm:px-12 sm:pt-24 sm:pb-14">

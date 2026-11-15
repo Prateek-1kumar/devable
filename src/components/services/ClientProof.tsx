@@ -97,7 +97,7 @@ export default function ClientProof({ label, title, slots, cases }: { label: str
   const lift: CSSProperties = { opacity: leaving ? 0 : 1, transform: leaving ? "translateY(-10px)" : "none", transition: leaving ? `opacity ${OUT}ms ease-in, transform ${OUT}ms ease-in` : "none" };
 
   return (
-    <section id="case-studies" aria-labelledby="cases-title" className="scroll-mt-24 px-6 pb-20 sm:px-12 lg:pb-28 xl:px-[6vw]">
+    <section id="case-studies" aria-labelledby="cases-title" className="scroll-mt-24 px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <style href="client-proof" precedence="default">
         {KEYFRAMES}
       </style>

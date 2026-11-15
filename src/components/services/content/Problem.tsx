@@ -11,10 +11,10 @@ import { Depth, Direction, Distribution, useScene } from "./ProblemScenes";
 // in Distribution keep trying, quietly). Below 1100px the cards stack.
 export default function Problem() {
   return (
-    <section aria-labelledby="problem-title" className="bg-[#0b0b0b] px-6 py-14 sm:px-12 lg:py-16 xl:px-[6vw]">
+    <section aria-labelledby="problem-title" className="bg-[#0b0b0b] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label dark>{PROBLEM.label}</Label>
-        <h2 id="problem-title" className="mt-6 max-w-[24ch] text-[clamp(1.9rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white">
+        <h2 id="problem-title" className="mt-6 max-w-[24ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white">
           {PROBLEM.title}
         </h2>
 

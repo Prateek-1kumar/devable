@@ -10,7 +10,7 @@ function Key({ children }: { children: string }) {
 
 export default function WhoWeAre() {
   return (
-    <section aria-labelledby="who-we-are-title" className="@container px-6 py-28 sm:px-12 sm:py-36 xl:px-[6vw]">
+    <section aria-labelledby="who-we-are-title" className="@container px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto grid max-w-[76rem] gap-y-8 lg:grid-cols-12 lg:gap-y-10">
         <p className={`self-start justify-self-start ${EDGE} rounded-[4px] bg-ink/[0.06] px-2.5 py-1 text-[0.8rem] tracking-[0.04em] text-ink/80 uppercase lg:col-span-12`}>
           Who we are
@@ -18,7 +18,7 @@ export default function WhoWeAre() {
 
         <h2
           id="who-we-are-title"
-          className={`${EDGE} text-[clamp(2.2rem,4vw,3.75rem)] leading-[1.02] font-medium tracking-[-0.05em] text-ink lg:col-span-12`}
+          className={`${EDGE} text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink lg:col-span-12`}
         >
           <span className="block">Builders first,</span>
           <span className="block">marketers second.</span>

@@ -9,7 +9,7 @@ import HeroSurfaces from "./HeroSurfaces";
 // point, and one streamline carries the page's idea from one side to the other (see HeroWave).
 export default function Hero() {
   return (
-    <section className="relative isolate px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
+    <section className="relative isolate px-4 pt-24 pb-14 sm:px-8 sm:pt-28 lg:pb-20">
       <HeroWave />
       <div className="mx-auto max-w-[76rem] px-3 pt-14 sm:px-8 sm:pt-20">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center px-3 text-center sm:px-4">

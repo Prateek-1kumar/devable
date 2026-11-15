@@ -19,7 +19,7 @@ function Key({ children }: { children: ReactNode }) {
 
 export function CareersHero() {
   return (
-    <section className={`${PAD} pt-40 pb-20 sm:pt-48 sm:pb-24`}>
+    <section className={`${PAD} pt-40 pb-14 sm:pt-48 sm:pb-20`}>
       <div className="mx-auto flex max-w-[76rem] flex-col items-center text-center">
         <div style={{ animationDelay: "0ms" }} className={RISE}>
           <Label>Careers</Label>
@@ -88,14 +88,14 @@ export function TrustedStrip() {
 /** The About page's "Who we are" layout: label, claim, then the story stepped in under the claim's right side. */
 export function WhyDevable() {
   return (
-    <section aria-labelledby="why-devable-title" className={`${PAD} py-28 sm:py-36`}>
+    <section aria-labelledby="why-devable-title" className={`${PAD} py-14 lg:py-20`}>
       <div className="mx-auto grid max-w-[76rem] gap-y-8 lg:grid-cols-12 lg:gap-y-10">
         <div className="lg:col-span-12">
           <Label>Why Devable</Label>
         </div>
         <h2
           id="why-devable-title"
-          className="max-w-[14ch] text-[clamp(2.2rem,4vw,3.75rem)] leading-[1.02] font-medium tracking-[-0.05em] text-ink lg:col-span-12"
+          className="max-w-[14ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink lg:col-span-12"
         >
           Work close to where AI is moving.
         </h2>
@@ -130,12 +130,12 @@ export function StandFor() {
   return (
     <section
       aria-labelledby="stand-for-title"
-      className="mx-[2.5vw] rounded-[1.25rem] bg-[#1a1918] px-6 py-24 text-white sm:px-12 sm:py-32 xl:px-[6vw]"
+      className="mx-[2.5vw] rounded-[1.25rem] bg-[#1a1918] px-6 py-14 text-white sm:px-12 lg:py-20 xl:px-[6vw]"
     >
       <div className="mx-auto grid max-w-[76rem] gap-14 lg:grid-cols-12 lg:gap-x-10">
         <header className="lg:sticky lg:top-32 lg:col-span-4 lg:self-start">
           <Label dark>What we stand for</Label>
-          <h2 id="stand-for-title" className="mt-6 text-[clamp(2.2rem,4vw,3.5rem)] leading-[1.02] font-medium tracking-[-0.05em]">
+          <h2 id="stand-for-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em]">
             The things we care about.
           </h2>
           <p className="mt-6 max-w-[22rem] text-lg leading-snug tracking-[-0.01em] text-white/50">
@@ -164,7 +164,7 @@ export function StandFor() {
 /** Statements only, no cards: three two-tone paragraphs beside the label. */
 export function HowWeWork() {
   return (
-    <section aria-label="How we work" className={`${PAD} py-28 sm:py-36`}>
+    <section aria-label="How we work" className={`${PAD} py-14 lg:py-20`}>
       <div className="mx-auto grid max-w-[76rem] gap-y-10 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <Label>How we work</Label>
@@ -191,9 +191,9 @@ export function HowWeWork() {
 /** Rows from ROLES: title, one line, and the link. The count beside the heading updates with the list. */
 export function OpenRoles() {
   return (
-    <section id="open-roles" aria-labelledby="open-roles-title" className={`${PAD} scroll-mt-24 pb-28 sm:pb-36`}>
+    <section id="open-roles" aria-labelledby="open-roles-title" className={`${PAD} scroll-mt-24 py-14 lg:py-20`}>
       <div className="mx-auto max-w-[76rem]">
-        <h2 id="open-roles-title" className="flex items-start gap-3 text-[clamp(2.2rem,4vw,3.75rem)] leading-[1.02] font-medium tracking-[-0.05em] text-ink">
+        <h2 id="open-roles-title" className="flex items-start gap-3 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
           Open roles
           <span className="mt-1 rounded-[4px] bg-primary px-2 py-0.5 font-mono text-sm tracking-normal text-ink">{ROLES.length}</span>
         </h2>
@@ -230,10 +230,10 @@ export function OpenRoles() {
 /** The closing band, in FinalCta's near-black: an open door for people the list doesn't fit. */
 export function NoRole() {
   return (
-    <section aria-labelledby="no-role-title" className={`${PAD} flex min-h-[45svh] items-center bg-[#0b0b0b] py-20`}>
+    <section aria-labelledby="no-role-title" className={`${PAD} flex min-h-[45svh] items-center bg-[#0b0b0b] py-14 lg:py-20`}>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] lg:gap-16">
         <div>
-          <h2 id="no-role-title" className="text-[clamp(1.75rem,2.5vw,2.25rem)] leading-[1.1] font-medium tracking-[-0.035em] text-white">
+          <h2 id="no-role-title" className="text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white">
             Don&rsquo;t see the right role?
           </h2>
           <p className="mt-6 max-w-[36rem] text-[1.02rem] leading-[1.65] text-white/60">

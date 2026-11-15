@@ -13,7 +13,7 @@ import LaunchAmplification from "./LaunchAmplification";
 export default function TwoWays() {
   const [ref, seen] = useInView<HTMLDivElement>(0.3);
   return (
-    <section aria-labelledby="modes-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+    <section aria-labelledby="modes-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{MODES.label}</Label>
         <h2 id="modes-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

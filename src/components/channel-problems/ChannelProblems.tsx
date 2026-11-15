@@ -37,10 +37,10 @@ const subscribe = (onChange: () => void) => {
 
 export default function ChannelProblems() {
   return (
-    <section aria-labelledby="channel-problems-title" className="bg-[#0b0b0b] px-6 py-16 sm:px-12 lg:py-20 xl:px-[6vw]">
+    <section aria-labelledby="channel-problems-title" className="bg-[#0b0b0b] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <h2
         id="channel-problems-title"
-        className="max-w-[60ch] text-[clamp(1.6rem,2.4vw,2.25rem)] leading-[1.14] font-normal tracking-[-0.03em] text-white"
+        className="max-w-[60ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white"
       >
         {TITLE} <span className="block text-white/45">{SUBTITLE}</span>
       </h2>

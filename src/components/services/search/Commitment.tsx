@@ -32,11 +32,11 @@ export default function Commitment() {
   const t = COMMITMENT.title;
 
   return (
-    <section aria-labelledby="commitment-title" className="px-6 py-24 sm:px-12 lg:py-32 xl:px-[6vw]">
+    <section aria-labelledby="commitment-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div ref={ref} className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <Label>{COMMITMENT.label}</Label>
 
-        <h2 id="commitment-title" className="mt-8 max-w-[19ch] text-[clamp(2.4rem,5.4vw,4.5rem)] leading-[1.08] font-medium tracking-[-0.05em] text-balance text-ink">
+        <h2 id="commitment-title" className="mt-8 max-w-[19ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance text-ink">
           <Ink on={on} wait={0.1}>
             {t.a}
           </Ink>{" "}

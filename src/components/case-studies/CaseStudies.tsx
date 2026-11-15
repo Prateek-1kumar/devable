@@ -29,12 +29,12 @@ function placement(i: number, count: number): { size: Size; span: string } {
 export default function CaseStudies() {
   const count = CASE_STUDIES.length;
   return (
-    <section id="case-studies" aria-labelledby="case-studies-title" className="scroll-mt-24 px-6 py-20 sm:px-12 lg:py-24 xl:px-[6vw]">
+    <section id="case-studies" aria-labelledby="case-studies-title" className="scroll-mt-24 px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <header className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
         <div className="max-w-[44rem]">
           <h2
             id="case-studies-title"
-            className="text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.14] font-normal tracking-[-0.03em] text-ink"
+            className="text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"
           >
             {TITLE}
           </h2>

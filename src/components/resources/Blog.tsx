@@ -94,10 +94,10 @@ export function Browse({ topics, all, list, active }: { topics: Topic[]; all: Po
   const filters = [{ slug: undefined, title: "All", dot: undefined }, ...topics.map((t) => ({ slug: t.slug, title: t.title, dot: toneDot(t.tone) }))];
 
   return (
-    <section id="topics" aria-labelledby="browse-title" className={`${PAD} scroll-mt-28 py-24 sm:py-32`}>
+    <section id="topics" aria-labelledby="browse-title" className={`${PAD} scroll-mt-28 py-14 lg:py-20`}>
       <div className={WRAP}>
         <div className="flex flex-col gap-6 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <h2 id="browse-title" className="text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.1] font-medium tracking-[-0.04em] text-ink">
+          <h2 id="browse-title" className="text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
             {active ? active.title : "Latest articles"}
           </h2>
           <nav aria-label="Topics" className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">

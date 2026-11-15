@@ -37,14 +37,14 @@ export function GuidesHeader({ count }: { count: number }) {
 
 export function FeaturedGuide({ guide }: { guide: Guide }) {
   return (
-    <section aria-labelledby="featured-guide-title" className="mx-[2.5vw] rounded-[1.25rem] bg-[#1a1918] px-6 py-14 text-white sm:px-12 sm:py-20 xl:px-[6vw]">
+    <section aria-labelledby="featured-guide-title" className="mx-[2.5vw] rounded-[1.25rem] bg-[#1a1918] px-6 py-14 text-white sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-x-10`}>
         <div className="lg:col-span-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-[4px] bg-primary px-2 py-1 font-mono text-[0.62rem] tracking-[0.14em] text-ink uppercase">Featured {guide.format}</span>
             <TopicChip item={guide} dark />
           </div>
-          <h2 id="featured-guide-title" className="mt-6 text-[clamp(2.2rem,4vw,3.5rem)] leading-[1.02] font-medium tracking-[-0.05em]">
+          <h2 id="featured-guide-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em]">
             {guide.title}
           </h2>
           <p className="mt-5 max-w-[30rem] text-[1.05rem] leading-relaxed text-white/60 sm:text-lg">{guide.excerpt}</p>
@@ -81,10 +81,10 @@ export function FeaturedGuide({ guide }: { guide: Guide }) {
 export function GuideGrid({ guides }: { guides: Guide[] }) {
   if (!guides.length) return null;
   return (
-    <section aria-labelledby="all-guides-title" className={`${PAD} py-24 sm:py-32`}>
+    <section aria-labelledby="all-guides-title" className={`${PAD} py-14 lg:py-20`}>
       <div className={WRAP}>
         <div className="flex items-end justify-between gap-6 border-b border-line pb-6">
-          <h2 id="all-guides-title" className="text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.1] font-medium tracking-[-0.04em] text-ink">
+          <h2 id="all-guides-title" className="text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">
             More guides &amp; playbooks
           </h2>
           <span className="font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase">{guides.length} more</span>

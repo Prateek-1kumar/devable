@@ -54,14 +54,14 @@ export default function FinalCta({
       ref={section}
       id="contact"
       aria-labelledby="final-cta-title"
-      className="flex min-h-[50svh] scroll-mt-24 items-center bg-[#0b0b0b] px-6 py-20 sm:px-12 xl:px-[6vw]"
+      className="flex min-h-[50svh] scroll-mt-24 items-center bg-[#0b0b0b] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]"
     >
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] lg:gap-16">
         <div>
           <h2
             id="final-cta-title"
             style={{ animationDelay: "0ms" }}
-            className={`text-[clamp(1.75rem,2.5vw,2.25rem)] leading-[1.1] font-medium tracking-[-0.035em] text-white ${reveal}`}
+            className={`text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white ${reveal}`}
           >
             <span className={subtitle ? "lg:whitespace-nowrap" : "block max-w-[24ch]"}>{title}</span>
             {subtitle && <span className="block text-white/45">{subtitle}</span>}

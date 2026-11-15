@@ -11,7 +11,7 @@ const at = (delay: number) => ({ animationDelay: `${delay}s` });
 
 export default function Hero() {
   return (
-    <section className="relative isolate px-4 pt-24 pb-16 sm:px-8 sm:pt-28 lg:pb-24">
+    <section className="relative isolate px-4 pt-24 pb-14 sm:px-8 sm:pt-28 lg:pb-20">
       <HeroBackdrop />
       <div className="mx-auto max-w-[76rem] px-4 pt-14 pb-12 sm:px-10 sm:pt-20 sm:pb-16">
         <div className="mx-auto flex max-w-[50rem] flex-col items-center text-center">

@@ -77,12 +77,12 @@ export default function HowWeWork() {
   };
 
   return (
-    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-24 pb-20 sm:px-12 lg:pt-32 lg:pb-24 xl:px-[6vw]">
+    <section id="how-we-work" aria-labelledby="how-we-work-title" className="relative px-6 pt-14 pb-14 sm:px-12 lg:pt-20 lg:pb-20 xl:px-[6vw]">
       {/* Headline and subtitle stacked on one left edge so they read as a single thought. */}
       <header className="max-w-[44rem]">
         <h2
           id="how-we-work-title"
-          className="max-w-[18ch] text-[clamp(1.75rem,2.5vw,2.35rem)] leading-[1.14] font-normal tracking-[-0.03em] text-ink"
+          className="max-w-[18ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"
         >
           {TITLE}
         </h2>

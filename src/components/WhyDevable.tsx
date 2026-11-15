@@ -103,13 +103,13 @@ export default function WhyDevable() {
   return (
     <section
       aria-labelledby="why-devable-title"
-      className="px-6 pt-8 pb-28 sm:px-12 lg:pb-36 xl:px-[6vw]"
+      className="px-6 pt-8 pb-14 sm:px-12 lg:pb-20 xl:px-[6vw]"
     >
       {/* Centered: "Why Devable" as the title, the two-tone claim beneath it. */}
       <header className="mx-auto max-w-[60rem] text-center">
         <h2
           id="why-devable-title"
-          className="text-[clamp(2.25rem,3.6vw,3.25rem)] leading-[1.05] font-medium tracking-[-0.04em] text-ink"
+          className="text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink"
         >
           Why <span className="text-primary">Devable</span>
         </h2>

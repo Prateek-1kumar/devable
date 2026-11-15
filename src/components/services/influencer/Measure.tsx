@@ -43,7 +43,7 @@ export default function Measure() {
   const reduced = useSyncExternalStore(subscribe, () => window.matchMedia(REDUCED).matches, () => false);
 
   return (
-    <section aria-labelledby="measure-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+    <section aria-labelledby="measure-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
 <style href="influencer-measure" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{MEASURE.label}</Label>

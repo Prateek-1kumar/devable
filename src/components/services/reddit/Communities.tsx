@@ -12,7 +12,7 @@ import { COMMUNITIES } from "./content";
 export default function Communities() {
   const [ref, seen] = useInView<HTMLDivElement>(0.25);
   return (
-    <section aria-labelledby="communities-title" className="bg-[#0b0b0b] px-6 py-20 sm:px-12 lg:py-24 xl:px-[6vw]">
+    <section aria-labelledby="communities-title" className="bg-[#0b0b0b] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label dark>{COMMUNITIES.label}</Label>
         <h2 id="communities-title" className="mt-6 max-w-[24ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-white">

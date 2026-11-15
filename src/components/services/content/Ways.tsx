@@ -21,7 +21,7 @@ export default function Ways() {
   const row = (i: number) => ({ className: seen ? "motion-safe:animate-fade-up" : "motion-safe:opacity-0", style: { animationDelay: `${i * 0.05}s` } });
 
   return (
-    <section aria-labelledby="ways-title" className="bg-[#f6f5f1] px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+    <section aria-labelledby="ways-title" className="bg-[#f6f5f1] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{WAYS.label}</Label>
         <h2 id="ways-title" className="mt-6 max-w-[24ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

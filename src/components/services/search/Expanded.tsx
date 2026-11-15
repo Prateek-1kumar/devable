@@ -41,7 +41,7 @@ export default function Expanded() {
   return (
     <section
       aria-labelledby="expanded-title"
-      className="bg-white px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]"
+      className="bg-white px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]"
     >
       <div className="mx-auto max-w-[76rem]">
         <Label>{EXPANDED.label}</Label>

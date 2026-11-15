@@ -9,7 +9,7 @@ const EDGES = "[mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,t
 // −50% loop is seamless (the copy is hidden from screen readers); hovering a rail pauses it.
 export default function Launches() {
   return (
-    <section id="launches" aria-labelledby="launches-title" className="scroll-mt-24 py-20 lg:py-28">
+    <section id="launches" aria-labelledby="launches-title" className="scroll-mt-24 py-14 lg:py-20">
       <div className="mx-auto max-w-[76rem] px-6 sm:px-12 xl:px-0">
         <Label>{LAUNCHES.label}</Label>
         <h2 id="launches-title" className="mt-6 max-w-[22ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

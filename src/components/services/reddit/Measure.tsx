@@ -22,7 +22,7 @@ export default function Measure() {
   const last = MEASURE.groups.length - 1;
 
   return (
-    <section aria-labelledby="measure-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+    <section aria-labelledby="measure-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{MEASURE.label}</Label>
         <h2 id="measure-title" className="mt-6 text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

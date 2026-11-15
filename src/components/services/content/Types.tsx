@@ -20,7 +20,7 @@ export default function Types() {
   const [ref, seen] = useInView<HTMLUListElement>(0.12);
   const scenes = [Article, Steps, Workflow, Balance, Bridge, Horizon];
   return (
-    <section aria-labelledby="types-title" className="px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+    <section aria-labelledby="types-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{TYPES.label}</Label>
         <h2 id="types-title" className="mt-6 max-w-[24ch] text-[clamp(1.9rem,3.2vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.045em] text-ink">

@@ -32,7 +32,7 @@ export default function Process() {
   const [ref, seen] = useInView<HTMLUListElement>(0.15);
   const tiles = [Understand, Prioritize, Build, Review, Publish, Improve];
   return (
-    <section aria-labelledby="process-title" className="bg-[#f6f5f1] px-6 py-16 sm:px-12 lg:py-24 xl:px-[6vw]">
+    <section aria-labelledby="process-title" className="bg-[#f6f5f1] px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
 <style href="content-process" precedence="default">{KEYFRAMES}</style>
       <div className="mx-auto max-w-[76rem]">
         <Label>{PROCESS.label}</Label>

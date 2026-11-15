@@ -19,7 +19,7 @@ const DOT: Record<Article["type"], string> = { guide: "#1f9e8f", "use-case": "#3
 export default function Shipped() {
   const [ref, seen] = useInView<HTMLUListElement>(0.2);
   return (
-    <section id="work" aria-labelledby="work-title" className="scroll-mt-24 px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+    <section id="work" aria-labelledby="work-title" className="scroll-mt-24 px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-14">
           <div>

@@ -16,7 +16,7 @@ const KEYFRAMES = `
 // draws up to the goal), in CSS only and off for reduced motion. SAMPLE figures in the examples.
 export default function Commitments() {
   return (
-    <section aria-labelledby="commit-title" className="px-6 py-20 sm:px-12 lg:py-28 xl:px-[6vw]">
+    <section aria-labelledby="commit-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
         <Label>{COMMITMENTS.label}</Label>
         {/* The headline's three phrases each stay whole, so it only ever breaks between them. */}

@@ -14,7 +14,7 @@ const LINKS: { label: string; platform: Platform; href: string }[] = [
 // the audience and his links.
 export default function Founder() {
   return (
-    <section aria-labelledby="founder-title" className="@container px-6 py-32 sm:px-12 sm:py-44 xl:px-[6vw]">
+    <section aria-labelledby="founder-title" className="@container px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto grid max-w-[76rem] gap-14 lg:grid-cols-12 lg:items-start lg:gap-10">
         <figure className="lg:col-span-5">
           <div className="relative aspect-[4/5] w-full max-w-[30rem] bg-black">
