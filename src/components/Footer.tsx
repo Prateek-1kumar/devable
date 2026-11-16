@@ -1,33 +1,39 @@
 import Image from "next/image";
+import Link from "next/link";
+import HalftoneWordmarkFooter from "@/components/ui/halftone-wordmark-footer";
 import logo from "../../public/brand/devable-logo.png";
+import { HIRING_EMAIL } from "./careers/content";
 
 const TAGLINE = "Growth engines for AI-native DevTools and platforms.";
 
-// ponytail: "#" until these pages exist; Case Studies already has its section.
+// ponytail: Partners and AI Engineering stay "#" until those pages exist.
 const COLUMNS = [
   {
     title: "Services",
     links: [
-      { label: "Technical Content", href: "#" },
-      { label: "Search & AI Visibility", href: "#" },
-      { label: "Reddit", href: "#" },
-      { label: "Creator Distribution", href: "#" },
+      { label: "Technical Content", href: "/services/technical-content" },
+      {
+        label: "Search & AI Visibility",
+        href: "/services/search-ai-visibility",
+      },
+      { label: "Reddit", href: "/services/reddit" },
+      { label: "Creator Distribution", href: "/services/influencer-marketing" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "About", href: "#" },
-      { label: "Case Studies", href: "#case-studies" },
-      { label: "Careers", href: "#" },
+      { label: "About", href: "/about" },
+      { label: "Case Studies", href: "/#case-studies" },
+      { label: "Careers", href: "/careers" },
       { label: "Partners", href: "#" },
     ],
   },
   {
     title: "Resources",
     links: [
-      { label: "Blog", href: "#" },
-      { label: "Guides", href: "#" },
+      { label: "Blog", href: "/blog" },
+      { label: "Guides", href: "/guides" },
       { label: "AI Engineering", href: "#" },
     ],
   },
@@ -50,58 +56,131 @@ export const SOCIAL = [
   },
 ];
 
-// Clean, formal footer on white: one row with the logo and tagline on the left, the three link columns
-// in the middle, and social icons on the right; then a hairline and the legal row.
+const LABEL =
+  "font-mono text-[0.72rem] tracking-[0.14em] text-white/45 uppercase";
+const LINK = "text-[0.95rem] text-white/65 transition-colors hover:text-white";
+
+// The closing page: the same near-black as the CTA band above it (so the two read as one closing block),
+// with the brand, link columns and a contact tile on top, a hairline and the legal row, then the wordmark
+// set enormous in white halftone dots and cropped by the page's bottom edge. The CTA lives in the band
+// above, so nothing here repeats it. The dots warm to the brand green as the pointer pushes them.
 export default function Footer() {
   return (
-    <footer className="bg-white">
-      <div className="px-6 pt-14 pb-10 sm:px-12 lg:pt-16 lg:pb-12 xl:px-[6vw]">
-        <div className="grid gap-10 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-12">
-          <div>
-            <Image src={logo} alt="Devable AI" className="h-7 w-auto" />
-            <p className="mt-3 max-w-[19rem] text-[0.95rem] leading-[1.55] text-balance text-muted">{TAGLINE}</p>
-          </div>
+    <footer className="bg-[#0b0b0b] text-white">
+      <div className="px-6 pb-8 sm:px-12 xl:px-[6vw]">
+        <div className="mx-auto max-w-[76rem] border-t border-white/10 pt-12 lg:pt-14">
+          <div className="grid grid-cols-2 gap-x-10 gap-y-12 lg:grid-cols-12">
+            <div className="col-span-2 lg:col-span-4">
+              <Image
+                src={logo}
+                alt="Devable AI"
+                className="h-7 w-auto mix-blend-screen invert"
+              />
+              <p className="mt-4 max-w-[19rem] text-[1.02rem] leading-[1.5] text-balance text-white/65">
+                {TAGLINE}
+              </p>
+              <ul className="mt-6 flex items-center gap-4">
+                {SOCIAL.map((s) => (
+                  <li key={s.label}>
+                    <a
+                      href={s.href}
+                      aria-label={s.label}
+                      className="block text-white/60 transition-colors hover:text-white"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        className="size-5"
+                      >
+                        {s.icon}
+                      </svg>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:justify-self-center lg:gap-16">
             {COLUMNS.map((col) => (
-              <div key={col.title}>
-                <h3 className="text-[0.75rem] font-medium tracking-[0.12em] text-muted uppercase">{col.title}</h3>
-                <ul className="mt-4 space-y-2.5">
+              <nav
+                key={col.title}
+                aria-label={col.title}
+                className="lg:col-span-2"
+              >
+                <h3 className={LABEL}>{col.title}</h3>
+                <ul className="mt-5 space-y-3">
                   {col.links.map((link) => (
                     <li key={link.label}>
-                      <a href={link.href} className="text-[0.92rem] text-ink/80 transition-colors hover:text-ink">
-                        {link.label}
-                      </a>
+                      {link.href.startsWith("/") ? (
+                        <Link href={link.href} className={LINK}>
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a href={link.href} className={LINK}>
+                          {link.label}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
-              </div>
+              </nav>
             ))}
-          </nav>
 
-          <ul className="flex items-center gap-4 lg:self-center">
-            {SOCIAL.map((s) => (
-              <li key={s.label}>
-                <a href={s.href} aria-label={s.label} className="block text-ink/70 transition-colors hover:text-ink">
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="size-5">
-                    {s.icon}
+            <div className="col-span-2 lg:col-span-2">
+              <h3 className={LABEL}>Get in touch</h3>
+              <a
+                href={`mailto:${HIRING_EMAIL}`}
+                className="group mt-5 flex w-fit items-center gap-3 text-[0.95rem] text-white transition-colors"
+              >
+                <span className="grid size-11 place-items-center rounded-[6px] bg-white/[0.08] transition-colors group-hover:bg-primary group-hover:text-ink">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    aria-hidden="true"
+                    className="size-[1.15rem]"
+                  >
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
                   </svg>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+                </span>
+                {HIRING_EMAIL}
+              </a>
+            </div>
+          </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 text-[0.88rem] text-muted sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} Devable. All rights reserved.</span>
-          <span className="flex gap-6">
-            <a href="#" className="transition-colors hover:text-ink">
-              Privacy
-            </a>
-            <a href="#" className="transition-colors hover:text-ink">
-              Terms
-            </a>
-          </span>
+          <div className="mt-14 grid gap-x-10 gap-y-3 border-t border-white/10 pt-6 text-[0.88rem] text-white/45 lg:grid-cols-12">
+            <span className="lg:col-span-4">
+              © {new Date().getFullYear()} Devable. All rights reserved.
+            </span>
+            <span className="flex gap-6 lg:col-span-8">
+              <a href="#" className="transition-colors hover:text-white">
+                Privacy
+              </a>
+              <a href="#" className="transition-colors hover:text-white">
+                Terms
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Same gutters and max width as the content above, so the word's ink lines up with the grid edges. */}
+      <div className="px-6 sm:px-12 xl:px-[6vw]">
+        <div className="mx-auto max-w-[76rem]">
+          <HalftoneWordmarkFooter
+            wordmark="devable"
+            label=""
+            meta=""
+            columns={[]}
+            backToTop={false}
+            palette={{ background: "#0b0b0b", ink: "#ffffff", warm: "#19e76e" }}
+            fontFamily="var(--font-instrument), 'Helvetica Neue', Arial, sans-serif"
+            fontWeight={700}
+            fit={1}
+            height="min(16vw, 13.5rem)"
+          />
         </div>
       </div>
     </footer>
