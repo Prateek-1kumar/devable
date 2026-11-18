@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { hrefOf, type Resource } from "@/lib/resources";
 import logo from "../../public/brand/devable-logo.png";
@@ -70,7 +71,10 @@ function Logo() {
 
 export default function Navbar({ resourcesFeature = null }: { resourcesFeature?: Resource | null }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const LINKS = links(resourcesFeature);
+  // Book a Call is a focused page: just its own logo, no navigation.
+  if (pathname === "/book") return null;
 
   return (
     <ResizableNavbar>
@@ -78,7 +82,7 @@ export default function Navbar({ resourcesFeature = null }: { resourcesFeature?:
         <Logo />
         <NavItems items={LINKS} />
         {/* The CTA's green icon box grows to fill it on hover (ArcButton). */}
-        <ArcButton href="#contact" size="sm" arrow className="relative z-20">
+        <ArcButton href="/book" size="sm" arrow className="relative z-20">
           Speak With Us
         </ArcButton>
       </NavBody>
@@ -113,7 +117,7 @@ export default function Navbar({ resourcesFeature = null }: { resourcesFeature?:
               </a>
             ),
           )}
-          <ArcButton href="#contact" arrow className="mt-2 w-full">
+          <ArcButton href="/book" arrow className="mt-2 w-full">
             Speak With Us
           </ArcButton>
         </MobileNavMenu>

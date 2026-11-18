@@ -45,7 +45,7 @@ export default function TwoWays() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#f9f8f4] px-7 py-5">
           <p className="text-[1.02rem] text-ink/75">Not sure which fits your next moment? We&apos;ll help you plan it.</p>
-          <ArcButton href="#contact" arrow tone="primary" size="sm">
+          <ArcButton href="/book" arrow tone="primary" size="sm">
             Speak with the Team
           </ArcButton>
         </div>

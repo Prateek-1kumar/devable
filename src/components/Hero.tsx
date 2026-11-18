@@ -25,7 +25,7 @@ export default function Hero() {
             creator distribution.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <ArcButton href="#contact" arrow tone="primary">
+            <ArcButton href="/book" arrow tone="primary">
               Speak with the Team
             </ArcButton>
             <ArcButton href="#case-studies" tone="secondary">

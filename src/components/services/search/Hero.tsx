@@ -19,7 +19,7 @@ export default function Hero() {
           </h1>
           <p className="mt-6 max-w-[40rem] text-lg leading-relaxed tracking-[-0.01em] text-pretty text-ink/70">{HERO.body}</p>
           <div className="mt-9">
-            <ArcButton href="#contact" arrow tone="primary">
+            <ArcButton href="/book" arrow tone="primary">
               {HERO.cta}
             </ArcButton>
           </div>

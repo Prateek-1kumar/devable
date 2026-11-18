@@ -80,7 +80,7 @@ export default function FinalCta({
           style={{ animationDelay: "300ms" }}
           className={`flex w-full flex-col gap-3 lg:max-w-[20rem] lg:justify-self-end ${reveal}`}
         >
-          <DotButton href="#contact" className="w-full">
+          <DotButton href="/book" className="w-full">
             {ctaLabel}
           </DotButton>
           <ArcButton href={caseStudiesHref} tone="white" className="w-full">

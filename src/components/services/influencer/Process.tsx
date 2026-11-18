@@ -91,7 +91,7 @@ export default function Process() {
             </ol>
 
             <div className="mt-9">
-              <ArcButton href="#contact" arrow tone="light" size="sm">
+              <ArcButton href="/book" arrow tone="light" size="sm">
                 {PROCESS.cta}
               </ArcButton>
             </div>

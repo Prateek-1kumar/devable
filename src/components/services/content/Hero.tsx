@@ -25,7 +25,7 @@ export default function Hero() {
             {HERO.body}
           </p>
           <div style={at(0.32)} className="mt-9 flex flex-wrap justify-center gap-4 motion-safe:animate-fade-up">
-            <ArcButton href="#contact" arrow tone="primary">
+            <ArcButton href="/book" arrow tone="primary">
               {HERO.primary}
             </ArcButton>
             <ArcButton href="#work" tone="secondary">

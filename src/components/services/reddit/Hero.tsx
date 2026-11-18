@@ -74,7 +74,7 @@ export default function Hero() {
           <h1 className="mt-7 text-[clamp(2.3rem,4.6vw,4.1rem)] leading-[1.02] font-medium tracking-[-0.05em] text-balance text-ink">{HERO.title}</h1>
           <p className="mt-6 max-w-[40rem] text-lg leading-relaxed tracking-[-0.01em] text-pretty text-ink/70">{HERO.body}</p>
           <div className="mt-9">
-            <ArcButton href="#contact" arrow tone="primary">
+            <ArcButton href="/book" arrow tone="primary">
               {HERO.cta}
             </ArcButton>
           </div>

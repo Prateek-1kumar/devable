@@ -47,7 +47,7 @@ export default function Hero() {
           </div>
 
           <div className="mt-10 flex flex-wrap gap-4">
-            <ArcButton href="#contact" arrow tone="primary">
+            <ArcButton href="/book" arrow tone="primary">
               Speak with the Team
             </ArcButton>
             <ArcButton href="#case-studies" tone="secondary">

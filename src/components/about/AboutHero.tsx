@@ -25,7 +25,7 @@ export default function AboutHero() {
             Engineers, technical writers, creators, and growth operators under one roof, helping AI&#8209;native
             devtools and platforms reach the developers and technical buyers they&rsquo;re built for.
           </p>
-          <ArcButton href="/#contact" arrow className="mt-8">
+          <ArcButton href="/book" arrow className="mt-8">
             Speak with the Team
           </ArcButton>
         </div>
