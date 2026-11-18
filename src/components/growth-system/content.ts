@@ -38,40 +38,62 @@ export const OUTCOMES = {
   ],
 } as const;
 
+// SAMPLE: one tutorial's journey from inputs to a live post. The inputs follow the Technical Content page
+// (product context, developer pain points, search + AI opportunities, technical research).
 export const CONTENT = {
   name: "Technical Content",
   line: "Built for developers, search engines, and LLMs.",
   steps: [
-    { icon: "folder", name: "Inputs" },
-    { icon: "doc", name: "Brief" },
-    { icon: "code", name: "Build & Review" },
-    { icon: "rocket", name: "Published" },
+    { icon: "folder", name: "Inputs", status: "Gathering inputs" },
+    { icon: "doc", name: "Brief", status: "Brief" },
+    { icon: "code", name: "Build & Review", status: "In review" },
+    { icon: "rocket", name: "Published", status: "Published" },
   ],
-  post: {
+  file: "content / llm-ready-data.md",
+  sources: [
+    { mark: "github", label: "your-org/parser", note: "Product" },
+    { mark: "stackoverflow", label: "Keep table structure in RAG?", note: "Dev pain" },
+    { mark: "google", label: "website to llm data", note: "2.9K/mo" },
+    { mark: "docs", label: "docs/quickstart", note: "Research" },
+  ],
+  title: "How to Turn Any Website Into LLM-Ready Data",
+  outline: ["Crawl the site", "Clean and convert to Markdown", "Chunk for retrieval"],
+  draft: "Most RAG failures start before retrieval: messy HTML and lost tables.",
+  code: [
+    [["const ", "#7dd3fc"], ["pages", "#e5f2ea"], [" = await ", "#7dd3fc"], ["crawl", "#86efac"], ["(url)", "#e5f2ea"]],
+    [["const ", "#7dd3fc"], ["docs", "#e5f2ea"], [" = ", "#7dd3fc"], ["toMarkdown", "#86efac"], ["(pages)", "#e5f2ea"]],
+  ],
+  review: { who: "AK", role: "Engineering", text: "Verified against the v2 API" },
+  page: {
+    url: "yourproduct.dev/blog/llm-ready-data",
     tag: "Tutorial",
-    title: "How to Turn Any Website Into LLM-Ready Data",
-    site: "yourproduct.dev/blog",
+    author: "Your Team",
+    date: "Nov 18",
     read: "8 min read",
   },
+  signals: { reads: 2400, rank: 3 },
 } as const;
 
+// SAMPLE: one buyer question, answered in ChatGPT, then recommended across the other engines. Competitor names
+// are neutral on purpose.
 export const SEARCH = {
   name: "Search + AI Visibility",
   line: "Win the searches and AI answers that shape decisions.",
-  engines: [
-    { mark: "chatgpt", name: "ChatGPT" },
-    { mark: "google", name: "Google" },
-    { mark: "claude", name: "Claude" },
-    { mark: "gemini", name: "Gemini" },
-    { mark: "perplexity", name: "Perplexity" },
+  prompt: "What are the best document parsing tools for RAG?",
+  lead: "Here are the strongest options right now:",
+  picks: [
+    { name: "Your Product", text: "layout-aware parsing for PDFs, tables and forms, built for RAG pipelines.", sources: ["yourproduct.dev", "r/LocalLLaMA"] },
+    { name: "Competitor A", text: "solid OCR, weaker on complex tables." },
   ],
-  query: "best document parsing tools",
-  result: {
-    site: "yourproduct.dev",
-    title: "Your Product – Document Parsing API",
-    snippet: "Parse PDFs, tables, and complex layouts for AI workflows.",
-  },
-  overview: ["", "Your Product", " supports layout-aware parsing for PDFs, tables, and forms."],
+  searched: 4,
+  engines: [
+    { key: "chatgpt", mark: "chatgpt", name: "ChatGPT" },
+    { key: "perplexity", mark: "perplexity", name: "Perplexity" },
+    { key: "gemini", mark: "gemini", name: "Gemini" },
+    { key: "claude", mark: "claude", name: "Claude" },
+    { key: "grok", mark: "grok", name: "Grok" },
+    { key: "google", mark: "google", name: "Google AI Overviews" },
+  ],
 } as const;
 
 export const CREATORS = {

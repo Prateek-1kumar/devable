@@ -1,16 +1,13 @@
 "use client";
 
 import { ArrowUp, Box, ChartColumn, Search, Target, Users } from "lucide-react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import dynamic from "next/dynamic";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type CSSProperties, type RefObject } from "react";
+import { AnimatePresence, MotionConfig, motion, useSpring } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { useInView } from "../services/kit";
 import { ContentCard, CreatorCard, RedditCard, SearchCard } from "./cards";
 import type { CardState } from "./clock";
 import { BEATS, HEAD, INPUTS, OUTCOMES } from "./content";
-
-const Engine3D = dynamic(() => import("./Engine3D"), { ssr: false });
 
 // The Devable Growth System (homepage band). One composition on a fixed design stage (W × H), scaled as a whole
 // to fit: product understanding on the left, the four services in a 2×2 around the Devable engine, business
@@ -24,41 +21,33 @@ const Engine3D = dynamic(() => import("./Engine3D"), { ssr: false });
 // picture. Below lg: the parts stack and each card plays as it scrolls in. Reduced motion: the final frame, unpinned.
 
 // ── Stage geometry (design px) ──────────────────────────────────────────────
-const W = 1396;
-const H = 596; // two card rows of ROW_H and a 96px gutter for the tubes
+const W = 1424;
+const H = 624; // two card rows of ROW_H and a 124px gutter for the hub and its feeds
 const PANEL_W = 208;
 const CARD_W = 406;
 const ROW_H = 250;
 const C1 = 244; // left card column x
-const C2 = 746; // right card column x
+const C2 = 774; // right card column x (a 124px gutter between the columns)
 const R2 = H - ROW_H; // bottom row y
-const CX = W / 2; // engine centre
+const CX = W / 2; // hub centre
 const CY = H / 2;
-const ENGINE = 112; // engine tile side (it sits turned 45°)
-const HALF = Math.round((ENGINE / 2) * Math.SQRT2); // centre to a corner of the turned tile
+const HUB = 104; // hub diameter
+const ARC_R = 60; // radius of the progress arc around it
+const FEED_R = 67; // where the lines meet the hub
+const HALF = HUB / 2;
 const PANEL_H = 336;
-const LIFT = 1.2; // how much a card grows when it takes focus
+const LIFT = 1.22; // how much a card grows when it takes focus
 
 const ICON = { cube: Box, users: Users, target: Target, search: Search, bars: ChartColumn } as const;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-// ── Browser facts, read without a hydration mismatch (the server assumes desktop, motion on, no WebGL) ──
+// ── Browser facts, read without a hydration mismatch (the server assumes desktop, motion on) ──
 const media = (q: string) => (cb: () => void) => {
   const m = window.matchMedia(q);
   m.addEventListener("change", cb);
   return () => m.removeEventListener("change", cb);
 };
 const useMedia = (q: string, server: boolean) => useSyncExternalStore(media(q), () => window.matchMedia(q).matches, () => server);
-let webgl: boolean | undefined;
-const hasWebGL = () =>
-  (webgl ??= (() => {
-    try {
-      return !!document.createElement("canvas").getContext("webgl2");
-    } catch {
-      return false;
-    }
-  })());
-const useWebGL = () => useSyncExternalStore(() => () => {}, hasWebGL, () => false);
 
 /* ── The four services: slot, card, tube ─────────────────────────────────────────────────────────── */
 
@@ -70,29 +59,86 @@ const SLOTS: Slot[] = [
   { key: "reddit", Card: RedditCard, x: C2, y: R2, side: 1, up: 1 },
 ];
 
-/** A card's tube: from the middle of the engine edge facing it, through the gutter, into the card's inner edge. */
-function tube(s: Slot) {
-  const x = s.side < 0 ? C1 + Math.round(CARD_W * 0.56) : C2 + Math.round(CARD_W * 0.44);
-  const y = s.up < 0 ? ROW_H : R2;
-  const ex = CX + s.side * HALF * 0.5;
-  const ey = CY + s.up * HALF * 0.5;
-  const lane = CY + s.up * 26;
-  return `M${ex} ${ey} C${ex - s.side * 30} ${lane} ${x} ${lane} ${x} ${y}`;
-}
-const INPUT_TUBE = `M${PANEL_W} ${CY} H${CX - HALF}`;
-const OUTPUT_TUBE = `M${CX + HALF} ${CY} H${W - PANEL_W - 10}`;
+/**
+ * The lines. Each service has its own curved feed: it leaves the middle of the card's inner edge, runs into the
+ * gutter and bends into the hub, the two upper feeds meeting at its top and the two lower at its bottom, like
+ * cables converging on a socket. Product understanding comes in from the left as a quieter dotted line; the
+ * output leaves on the right as a solid line that splits into the four outcome rows. Every path runs in the
+ * direction its signal travels (cards and inputs into the hub, the hub out to outcomes).
+ */
+type Line = { d: string; angle: number };
+const pt = (deg: number, r: number) => [Math.round(CX + r * Math.cos((deg * Math.PI) / 180)), Math.round(CY + r * Math.sin((deg * Math.PI) / 180))];
+/** Where each service's feed meets the hub, in degrees (screen coordinates, 0 = right, 90 = down). */
+const FEED_ANGLE = [-122, -58, 122, 58];
+const feed = (s: Slot, angle: number): Line => {
+  const x = s.side < 0 ? C1 + CARD_W - 8 : C2 + 8; // starts just under the card's inner edge
+  const y = s.up < 0 ? Math.round(ROW_H * 0.55) : Math.round(R2 + ROW_H * 0.45);
+  const [ex, ey] = pt(angle, FEED_R);
+  const [cx2, cy2] = pt(angle, FEED_R + 46);
+  return { d: `M${x} ${y} C${x - s.side * 52} ${y} ${cx2} ${cy2} ${ex} ${ey}`, angle };
+};
+const FEEDS = SLOTS.map((s, i) => feed(s, FEED_ANGLE[i]));
+const INPUT = `M${PANEL_W + 6} ${CY} H${CX - FEED_R}`;
+/** Row centres of the outcomes panel, from its layout (padding, label, centred list of 48px rows, 10px gaps). */
+const OUT_ROWS = [0, 1, 2, 3].map((i) => Math.round(CY - PANEL_H / 2 + 98.5 + i * 58));
+const OUT_X = W - PANEL_W - 6; // just short of the panel
+const OUTPUTS = OUT_ROWS.map((y) => `M${CX + FEED_R} ${CY} H${OUT_X - 74} C${OUT_X - 34} ${CY} ${OUT_X - 40} ${y} ${OUT_X} ${y}`);
 
-/** Where a card goes when it takes focus: beside the engine on its own side, vertically centred. */
+/**
+ * How a card takes focus: it grows in its own quadrant, anchored at its inner corner (the one facing the engine),
+ * so it opens outward, away from the core. It then steps a little further out and is nudged back inside the
+ * stage's top or bottom edge if it would cross it.
+ */
+const ROOM = 14; // px a lifted card may overhang the stage's top or bottom edge
 function lift(s: Slot) {
-  const w = CARD_W * LIFT;
-  const cx = s.side < 0 ? CX - HALF - 26 - w / 2 : CX + HALF + 26 + w / 2;
-  return { x: cx - (s.x + CARD_W / 2), y: CY - (s.y + ROW_H / 2) };
+  const h = ROW_H * LIFT;
+  const dx = s.side * 28;
+  const dy = s.up < 0 ? Math.max(0, -ROOM - (ROW_H - h)) : -Math.max(0, R2 + h - (H + ROOM));
+  return { x: dx, y: dy, originX: s.side < 0 ? 1 : 0, originY: s.up < 0 ? 1 : 0 };
+}
+
+/**
+ * The focused card's 3D: it leans a few degrees toward the cursor (from a resting lean that faces its quadrant
+ * out to the viewer), the glare on its face follows, and its preview layers part from it in depth.
+ */
+function Tilt({ active, side, up, children }: { active: boolean; side: -1 | 1; up: -1 | 1; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const spring = { stiffness: 140, damping: 20, mass: 0.8 };
+  const rx = useSpring(0, spring);
+  const ry = useSpring(0, spring);
+  useEffect(() => {
+    const el = ref.current;
+    const base = { x: up < 0 ? 2.5 : -2.5, y: side < 0 ? -3.5 : 3.5 };
+    if (!active || !el) {
+      rx.set(0);
+      ry.set(0);
+      return;
+    }
+    rx.set(base.x);
+    ry.set(base.y);
+    const move = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      const px = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width / 2)));
+      const py = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (r.height / 2)));
+      ry.set(base.y + px * 6);
+      rx.set(base.x - py * 5);
+      el.style.setProperty("--gx", `${Math.round(50 + px * 45)}%`);
+      el.style.setProperty("--gy", `${Math.round(30 + py * 40)}%`);
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    return () => window.removeEventListener("pointermove", move);
+  }, [active, side, up, rx, ry]);
+  return (
+    <motion.div ref={ref} className="h-full [transform-style:preserve-3d]" style={{ rotateX: rx, rotateY: ry, transformPerspective: 1200, ["--glare" as string]: active ? 0.55 : 0 }}>
+      {children}
+    </motion.div>
+  );
 }
 
 /* ── Engine ──────────────────────────────────────────────────────────────────────────────────────── */
 
-function DMark({ lit, className }: { lit: number; className?: string }) {
-  // The Devable D: four bars inside a D outline (straight left edge, rounded right). Each bar is one service.
+/** The Devable D: four bars inside a D outline (straight left edge, rounded right). */
+function DMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" aria-hidden="true" className={className}>
       <defs>
@@ -100,122 +146,176 @@ function DMark({ lit, className }: { lit: number; className?: string }) {
           <path d="M6 4h14a16 16 0 0 1 16 16v0a16 16 0 0 1-16 16H6Z" />
         </clipPath>
       </defs>
-      <g clipPath="url(#gs-d)">
+      <g clipPath="url(#gs-d)" fill="currentColor">
         {[0, 1, 2, 3].map((b) => (
-          <rect
-            key={b}
-            x="6"
-            y={4 + b * 8.5}
-            width="32"
-            height="6.4"
-            className="transition-[fill] duration-700"
-            style={{ fill: b < lit ? "var(--primary)" : "rgb(255 255 255 / 0.92)", transitionDelay: b < lit ? "450ms" : "0ms" }}
-          />
+          <rect key={b} x="6" y={4 + b * 8.5} width="32" height="6.4" />
         ))}
       </g>
     </svg>
   );
 }
 
-function Engine({ lit, active, three, style }: { lit: number; active: boolean; three: boolean; style?: CSSProperties }) {
-  const [ready, setReady] = useState(false);
-  const size = HALF * 2 + 64;
+/** An arc of the hub's progress ring, centred on `angle`, `span` degrees wide, at radius ARC_R around (0, 0). */
+function arc(angle: number, span: number) {
+  const a0 = ((angle - span / 2) * Math.PI) / 180;
+  const a1 = ((angle + span / 2) * Math.PI) / 180;
+  const f = (n: number) => Math.round(n * 100) / 100;
+  return `M${f(ARC_R * Math.cos(a0))} ${f(ARC_R * Math.sin(a0))} A${ARC_R} ${ARC_R} 0 0 1 ${f(ARC_R * Math.cos(a1))} ${f(ARC_R * Math.sin(a1))}`;
+}
+
+/**
+ * The hub: a raised porcelain puck in the cards' own material (a soft top light, a recessed face, layered
+ * shadows), the Devable D in ink. Around it a hairline ring holds four arcs, one where each service's feed comes
+ * in; each draws itself green as that service docks, and a soft ring rolls out once.
+ */
+function Engine({ lit, sides, style }: { lit: number; sides: boolean[]; style?: CSSProperties }) {
+  const box = ARC_R * 2 + 12;
   return (
-    <div className="absolute grid place-items-center" style={{ width: HALF * 2, height: HALF * 2, ...style }}>
-      {/* Contact shadow under the tile. */}
-      <span aria-hidden="true" className="absolute top-[58%] h-1/2 w-[86%] rounded-full bg-[radial-gradient(closest-side,rgb(23_44_33/0.32),transparent)] blur-[10px]" />
-      {/* CSS tile: the server's picture, the fallback without WebGL, and what the 3D body replaces once ready. */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          "absolute rotate-45 rounded-[26px] bg-[linear-gradient(135deg,#2b4a38_0%,#14271c_45%,#0b1610_100%)] shadow-[0_0_0_5px_#fff,0_0_0_6.5px_rgb(25_231_110/0.85),inset_0_1.5px_0_rgb(255_255_255/0.22),inset_0_-10px_22px_rgb(0_0_0/0.35),inset_0_0_0_1px_rgb(255_255_255/0.06)] transition-opacity duration-700",
-          three && ready ? "opacity-0" : "opacity-100",
-        )}
-        style={{ width: ENGINE, height: ENGINE }}
-      >
-        <span className="absolute inset-[7px] rounded-[20px] bg-[linear-gradient(135deg,rgb(255_255_255/0.12),transparent_45%)]" />
-      </div>
-      {three && (
-        <div aria-hidden="true" className={cn("pointer-events-none absolute transition-opacity duration-700", ready ? "opacity-100" : "opacity-0")} style={{ width: size, height: size }}>
-          <Engine3D lit={lit} active={active} size={size} onReady={() => setReady(true)} />
-        </div>
-      )}
-      {/* A ring that rolls out once each time a service lands. */}
+    <div className="absolute grid place-items-center" style={{ width: HUB, height: HUB, ...style }}>
+      {/* Progress ring. */}
+      <svg aria-hidden="true" viewBox={`${-box / 2} ${-box / 2} ${box} ${box}`} className="pointer-events-none absolute" style={{ width: box, height: box }}>
+        <circle r={ARC_R} fill="none" stroke="rgb(23 44 33 / 0.08)" strokeWidth="1" />
+        {sides.map((on, i) => (
+          <path
+            key={i}
+            d={arc(FEED_ANGLE[i], 44)}
+            pathLength={1}
+            fill="none"
+            stroke="#16b058"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+            strokeDasharray="1 1"
+            style={{ strokeDashoffset: on ? 0 : 1, transition: "stroke-dashoffset 0.9s cubic-bezier(0.45,0,0.25,1) 0.9s" }}
+          />
+        ))}
+      </svg>
+      {/* A soft ring that rolls out once each time a service lands. */}
       <AnimatePresence>
         {lit > 0 && (
           <motion.span
             key={lit}
             aria-hidden="true"
-            initial={{ opacity: 0.55, scale: 0.92, rotate: 45 }}
-            animate={{ opacity: 0, scale: 1.45, rotate: 45 }}
-            transition={{ duration: 1.1, ease: "easeOut", delay: 0.45 }}
-            className="absolute rounded-[30px] border border-primary"
-            style={{ width: ENGINE + 14, height: ENGINE + 14 }}
+            initial={{ opacity: 0.5, scale: 1 }}
+            animate={{ opacity: 0, scale: 1.5 }}
+            transition={{ duration: 1.4, ease: "easeOut", delay: 1.1 }}
+            className="absolute rounded-full border border-primary/70"
+            style={{ width: HUB, height: HUB }}
           />
         )}
       </AnimatePresence>
-      <div className="relative flex flex-col items-center">
-        <DMark lit={lit} className="size-[30px]" />
-        <span className="mt-1 text-[13px] font-medium tracking-[-0.01em] text-white">Devable</span>
+      {/* The puck. */}
+      <div
+        className="relative grid size-full place-items-center rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f1f4f2_100%)] shadow-[inset_0_1px_0_#fff,inset_0_-2px_3px_rgb(23_44_33/0.06),0_0_0_1px_rgb(23_44_33/0.07),0_2px_3px_rgb(23_44_33/0.08),0_16px_26px_-12px_rgb(23_44_33/0.32),0_36px_56px_-28px_rgb(23_44_33/0.4)]"
+      >
+        <div className="absolute inset-[9px] rounded-full bg-[radial-gradient(circle_at_50%_28%,#ffffff_0%,#f4f6f5_70%)] shadow-[inset_0_1px_2px_rgb(23_44_33/0.12),inset_0_-1px_0_#fff,0_0_0_1px_rgb(23_44_33/0.03)]" />
+        <div className="relative flex flex-col items-center text-ink">
+          <DMark className="size-[28px]" />
+          <span className="mt-1 text-[11.5px] font-medium tracking-[-0.01em]">Devable</span>
+        </div>
       </div>
+      <span className="sr-only">Devable: {lit} of 4 services connected</span>
     </div>
   );
 }
 
-/* ── Tubes and the signals that run them ─────────────────────────────────────────────────────────── */
+/* ── Lines: hairlines at rest, drawn green as each part connects, and a soft pulse running through ──── */
 
-function TubeSvg({ lit }: { lit: boolean[] }) {
-  const paths = [...SLOTS.map(tube), INPUT_TUBE, OUTPUT_TUBE];
+const LINE_CSS = `
+@keyframes gs-pulse { from { stroke-dashoffset: 0.32 } to { stroke-dashoffset: -1 } }
+.gs-pulse { animation: gs-pulse var(--dur) cubic-bezier(0.4, 0, 0.3, 1) var(--delay) var(--count) both; }
+@media (prefers-reduced-motion: reduce) { .gs-pulse { display: none } }
+`;
+
+/** A soft band of light sweeping a path once (or on a loop): a blurred, brighter stretch of the line. */
+function Pulse({ d, duration = 1.6, delay = 0, loop = false }: { d: string; duration?: number; delay?: number; loop?: boolean }) {
+  const style = { "--dur": `${duration}s`, "--delay": `${delay}s`, "--count": loop ? "infinite" : "1" } as CSSProperties;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="absolute inset-0 h-full w-full overflow-visible">
-      <defs>
-        <linearGradient id="gs-tube" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#19e76e" stopOpacity="0.16" />
-          <stop offset="0.5" stopColor="#19e76e" stopOpacity="0.26" />
-          <stop offset="1" stopColor="#19e76e" stopOpacity="0.16" />
-        </linearGradient>
-      </defs>
-      {paths.map((d, i) => (
-        <g key={i} fill="none" strokeLinecap="round" className="transition-opacity duration-700" style={{ opacity: lit[i] ? 1 : 0.35 }}>
-          <path d={d} stroke="#e9fbf1" strokeWidth="12" />
-          <path d={d} stroke="url(#gs-tube)" strokeWidth="12" />
-          <path d={d} stroke="#fff" strokeOpacity="0.85" strokeWidth="4.5" />
-          <path d={d} stroke="#19c862" strokeOpacity="0.75" strokeWidth="1.6" />
-        </g>
-      ))}
-      <circle cx={PANEL_W} cy={CY} r="4.5" fill="#fff" stroke="#19c862" strokeWidth="1.6" className="transition-opacity duration-700" style={{ opacity: lit[4] ? 1 : 0.35 }} />
-      <path
-        d={`M${W - PANEL_W - 18} ${CY - 6} l8 6 -8 6`}
-        fill="none"
-        stroke="#19c862"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="transition-opacity duration-700"
-        style={{ opacity: lit[5] ? 1 : 0.35 }}
-      />
-    </svg>
+    <g style={style} fill="none" strokeLinecap="round">
+      <path className="gs-pulse" d={d} pathLength={1} stroke="#4ff09a" strokeOpacity="0.55" strokeWidth="7" strokeDasharray="0.32 2" filter="url(#gs-soft)" />
+      <path className="gs-pulse" d={d} pathLength={1} stroke="#7cf7b8" strokeWidth="2" strokeDasharray="0.32 2" filter="url(#gs-soft-sm)" />
+    </g>
   );
 }
 
-const SIGNAL_CSS = `
-@keyframes gs-to-start { 0% { offset-distance: 100%; opacity: 0 } 12% { opacity: 1 } 88% { opacity: 1 } 100% { offset-distance: 0%; opacity: 0 } }
-@keyframes gs-to-end { 0% { offset-distance: 0%; opacity: 0 } 12% { opacity: 1 } 88% { opacity: 1 } 100% { offset-distance: 100%; opacity: 0 } }
-`;
-
-/** A small green packet running a tube: `in` runs end → start (a card into the engine), `out` start → end. */
-function Signal({ d, dir, duration = 1, delay = 0, loop = false }: { d: string; dir: "in" | "out"; duration?: number; delay?: number; loop?: boolean }) {
+/** One line: a hairline track and the green that draws along it when `on`. */
+function Track({ d, on, dotted = false, delay = 0.25 }: { d: string; on: boolean; dotted?: boolean; delay?: number }) {
+  if (dotted)
+    return (
+      <path
+        d={d}
+        fill="none"
+        strokeLinecap="round"
+        strokeWidth="2"
+        strokeDasharray="0.1 6"
+        className="transition-[stroke] duration-700"
+        style={{ stroke: on ? "#16b058" : "rgb(23 44 33 / 0.28)", transitionDelay: on ? `${delay}s` : "0s" }}
+      />
+    );
   return (
-    <span
-      aria-hidden="true"
-      className="absolute top-0 left-0 h-[5px] w-4 rounded-full bg-[#19c862] shadow-[0_0_0_1.5px_#fff] motion-reduce:hidden"
-      style={{
-        offsetPath: `path("${d}")`,
-        offsetRotate: "auto",
-        opacity: 0,
-        animation: `${dir === "in" ? "gs-to-start" : "gs-to-end"} ${duration}s cubic-bezier(0.45,0,0.25,1) ${delay}s ${loop ? "infinite" : "1 forwards"}`,
-      }}
-    />
+    <g fill="none" strokeLinecap="round">
+      <path d={d} stroke="rgb(23 44 33 / 0.13)" strokeWidth="1" />
+      <path
+        d={d}
+        pathLength={1}
+        stroke="#16b058"
+        strokeWidth="1.6"
+        strokeDasharray="1 1"
+        style={{ strokeDashoffset: on ? 0 : 1, transition: `stroke-dashoffset 1s cubic-bezier(0.45,0,0.25,1) ${on ? delay : 0}s` }}
+      />
+    </g>
+  );
+}
+
+function Wires({ lit, beat, epoch, live }: { lit: boolean[]; beat: number; epoch: number; live: boolean }) {
+  const [inOn, outOn] = [lit[4], lit[5]];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="absolute inset-0 h-full w-full overflow-visible">
+      <defs>
+        <filter id="gs-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
+        <filter id="gs-soft-sm" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="0.6" />
+        </filter>
+      </defs>
+      <style>{LINE_CSS}</style>
+      {FEEDS.map((f, i) => (
+        <Track key={i} d={f.d} on={lit[i]} />
+      ))}
+      <Track d={INPUT} on={inOn} dotted />
+      {OUTPUTS.map((d, i) => (
+        <Track key={i} d={d} on={outOn} delay={0.25 + i * 0.12} />
+      ))}
+      {/* Arrowheads into the outcome rows. */}
+      {OUT_ROWS.map((y, i) => (
+        <path
+          key={i}
+          d={`M${OUT_X - 5} ${y - 4} l5 4 -5 4`}
+          fill="none"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="transition-[stroke] duration-500"
+          style={{ stroke: outOn ? "#16b058" : "rgb(23 44 33 / 0.25)", transitionDelay: outOn ? `${1 + i * 0.12}s` : "0s" }}
+        />
+      ))}
+
+      {/* One pulse as each part connects; in the final frame a pulse sweeps each line in turn. */}
+      {beat >= 2 && beat <= 5 && <Pulse key={`dock-${epoch}`} d={FEEDS[beat - 2].d} delay={0.2} />}
+      {beat === 5 && <Pulse key={`in-${epoch}`} d={INPUT} duration={1.8} delay={0.5} />}
+      {beat === FINAL && OUTPUTS.map((d, i) => <Pulse key={`out-${epoch}-${i}`} d={d} duration={1.8} delay={0.3} />)}
+      {live && (
+        <>
+          <Pulse d={INPUT} duration={2.4} delay={2.2} loop />
+          {FEEDS.map((f, i) => (
+            <Pulse key={`f${i}`} d={f.d} duration={2.2} delay={2.8 + i * 0.6} loop />
+          ))}
+          {OUTPUTS.map((d, i) => (
+            <Pulse key={`o${i}`} d={d} duration={2.4} delay={3.6 + i * 0.25} loop />
+          ))}
+        </>
+      )}
+    </svg>
   );
 }
 
@@ -323,7 +423,7 @@ function useBeat(track: RefObject<HTMLElement | null>, enabled: boolean) {
 
 const at = (x: number, y: number, w: number, h: number): CSSProperties => ({ left: x, top: y, width: w, height: h });
 
-function Stage({ beat, epoch, onScreen, three }: { beat: number; epoch: number; onScreen: boolean; three: boolean }) {
+function Stage({ beat, epoch, onScreen }: { beat: number; epoch: number; onScreen: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
@@ -338,13 +438,13 @@ function Stage({ beat, epoch, onScreen, three }: { beat: number; epoch: number; 
 
   const focus = beat >= 1 && beat <= 4 ? beat - 1 : -1; // the lifted card, if any
   const docked = Math.min(4, Math.max(0, beat - 1)); // services landed so far
-  const tubesLit = [...SLOTS.map((_, i) => beat > i + 1), beat >= 5, beat >= 6];
+  const wiresLit = [...SLOTS.map((_, i) => beat > i + 1), beat >= 5, beat >= 6];
 
   return (
     <div ref={box} className="relative h-full w-full">
       <div className="absolute top-1/2 left-1/2" style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}>
         <div aria-hidden="true" className="absolute -inset-x-24 -inset-y-16 bg-[radial-gradient(42%_48%_at_50%_50%,rgb(23_44_33/0.06),transparent_70%)]" />
-        <TubeSvg lit={tubesLit} />
+        <Wires lit={wiresLit} beat={beat} epoch={epoch} live={beat === FINAL && onScreen} />
 
         <motion.div
           className="absolute"
@@ -373,44 +473,29 @@ function Stage({ beat, epoch, onScreen, three }: { beat: number; epoch: number; 
             <motion.div
               key={s.key}
               className="absolute"
-              style={{ ...at(s.x, s.y, CARD_W, ROW_H), zIndex: lifted ? 30 : 10 }}
+              style={{ ...at(s.x, s.y, CARD_W, ROW_H), zIndex: lifted ? 30 : 10, originX: to.originX, originY: to.originY }}
               initial={false}
               animate={{
                 x: lifted ? to.x : 0,
                 y: lifted ? to.y : 0,
                 scale: lifted ? LIFT : 1,
                 opacity: lifted ? 1 : state === "done" ? (focus >= 0 ? 0.3 : 1) : focus >= 0 ? 0.16 : 0.4,
-                filter: state === "ghost" && !lifted ? "saturate(0.2)" : "saturate(1)",
+                filter: state === "ghost" && !lifted ? "saturate(0.2)" : "none",
               }}
-              transition={{ duration: 0.8, ease: EASE }}
+              transition={{ duration: 1.1, ease: EASE }}
             >
-              <s.Card
-                key={state === "play" ? `play-${epoch}` : "rest"}
-                state={state}
-                className={cn("h-full transition-shadow duration-700", lifted && "shadow-[0_0_0_1px_rgb(23_44_33/0.08),0_2px_4px_rgb(23_44_33/0.06),0_50px_80px_-40px_rgb(23_44_33/0.55)]")}
-              />
+              <Tilt active={lifted} side={s.side} up={s.up}>
+                <s.Card
+                  key={state === "play" ? `play-${epoch}` : "rest"}
+                  state={state}
+                  className={cn("h-full transition-shadow duration-700", lifted && "shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(23_44_33/0.08),0_2px_4px_rgb(23_44_33/0.06),0_24px_40px_-24px_rgb(23_44_33/0.35),0_60px_90px_-50px_rgb(23_44_33/0.6)]")}
+                />
+              </Tilt>
             </motion.div>
           );
         })}
 
-        {/* Signals: one per dock as the story moves on, then the whole system running in the final frame. */}
-        <div className="pointer-events-none absolute inset-0 z-20">
-          <style href="gs-signals" precedence="default">{SIGNAL_CSS}</style>
-          {beat >= 2 && beat <= 5 && <Signal key={`dock-${epoch}`} d={tube(SLOTS[beat - 2])} dir="in" duration={1.1} delay={0.5} />}
-          {beat === 5 && <Signal key={`in-${epoch}`} d={INPUT_TUBE} dir="out" duration={1.3} delay={0.9} />}
-          {beat === FINAL && <Signal key={`out-${epoch}`} d={OUTPUT_TUBE} dir="out" duration={1.3} delay={0.2} />}
-          {beat === FINAL && onScreen && (
-            <>
-              {SLOTS.map((s, i) => (
-                <Signal key={s.key} d={tube(s)} dir="in" duration={1.6} delay={1.8 + i * 0.45} loop />
-              ))}
-              <Signal d={INPUT_TUBE} dir="out" duration={2.2} delay={1.6} loop />
-              <Signal d={OUTPUT_TUBE} dir="out" duration={2.2} delay={2.7} loop />
-            </>
-          )}
-        </div>
-
-        <Engine lit={docked} active={onScreen} three={three} style={{ left: CX - HALF, top: CY - HALF, zIndex: 25 }} />
+        <Engine lit={docked} sides={wiresLit.slice(0, 4)} style={{ left: CX - HALF, top: CY - HALF, zIndex: 25 }} />
       </div>
     </div>
   );
@@ -432,7 +517,6 @@ export default function GrowthSystem() {
   const reduced = useMedia("(prefers-reduced-motion: reduce)", false);
   const desktop = useMedia("(min-width: 1024px)", true);
   const pinned = desktop && !reduced;
-  const three = useWebGL() && pinned;
   const { beat: scrolled, epoch } = useBeat(track, pinned);
   const beat = pinned ? scrolled : FINAL;
 
@@ -474,14 +558,14 @@ export default function GrowthSystem() {
           </header>
 
           <div className="mx-auto mt-4 hidden min-h-0 w-full max-w-[90rem] flex-1 lg:block lg:motion-reduce:h-[640px] lg:motion-reduce:flex-none">
-            <Stage beat={beat} epoch={epoch} onScreen={onScreen} three={three} />
+            <Stage beat={beat} epoch={epoch} onScreen={onScreen} />
           </div>
 
           {/* Below lg: the same parts, stacked in reading order. */}
           <div className="mx-auto mt-10 flex max-w-[26rem] flex-col gap-4 lg:hidden">
             <Inputs />
             <div className="relative mx-auto my-2 size-[140px]">
-              <Engine lit={4} active={false} three={false} style={{ left: 70 - HALF, top: 70 - HALF }} />
+              <Engine lit={4} sides={[true, true, true, true]} style={{ left: 70 - HALF, top: 70 - HALF }} />
             </div>
             {SLOTS.map((s) => (
               <StackCard key={s.key} Card={s.Card} reduced={reduced} />
