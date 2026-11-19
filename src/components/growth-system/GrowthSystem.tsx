@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, Box, ChartColumn, Search, Target, Users } from "lucide-react";
-import { AnimatePresence, MotionConfig, motion, useSpring } from "motion/react";
+import { MotionConfig, animate, motion, useMotionValue, useReducedMotion, useSpring, type AnimationPlaybackControls } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { useInView } from "../services/kit";
@@ -11,13 +11,13 @@ import { BEATS, HEAD, INPUTS, OUTCOMES } from "./content";
 
 // The Devable Growth System (homepage band). One composition on a fixed design stage (W × H), scaled as a whole
 // to fit: product understanding on the left, the four services in a 2×2 around the Devable engine, business
-// outcomes on the right, joined by soft tubes. Every element sits where it ends from the first frame; the scroll
+// outcomes on the right, joined by conduits that plug into the engine's sockets. Every element sits where it ends from the first frame; the scroll
 // only moves focus.
 //
 // Desktop: the band pins for one beat per BEATS entry. 0 the engine, everything else soft. 1–4 one service at a
 // time lifts out beside the engine (the engine stays in view) and plays its demo on its own clock; when the story
-// moves on it docks: a signal runs its tube into the core and one bar of the D lights. 5 product understanding
-// feeds in. 6 the outcomes light and the whole system runs. Scrolling past a beat skips its demo to the finished
+// moves on it docks: a signal runs its conduit into the engine, its socket lights and the dial clicks a quarter turn. 5 product understanding
+// feeds in. 6 the outcomes light and the dial spins up and runs. Scrolling past a beat skips its demo to the finished
 // picture. Below lg: the parts stack and each card plays as it scrolls in. Reduced motion: the final frame, unpinned.
 
 // ── Stage geometry (design px) ──────────────────────────────────────────────
@@ -31,9 +31,10 @@ const C2 = 774; // right card column x (a 124px gutter between the columns)
 const R2 = H - ROW_H; // bottom row y
 const CX = W / 2; // hub centre
 const CY = H / 2;
-const HUB = 104; // hub diameter
-const ARC_R = 60; // radius of the progress arc around it
-const FEED_R = 67; // where the lines meet the hub
+// The engine is a precision dial. It fills the space between the four cards' inner corners: those corners sit
+// ~88px from the centre (more with their rounding), so a 168px dial clears them while overlapping the gutters.
+const HUB = 168; // dial diameter
+const FEED_R = 77; // where the conduits plug in: the sockets on the dial's housing ring
 const HALF = HUB / 2;
 const PANEL_H = 336;
 const LIFT = 1.22; // how much a card grows when it takes focus
@@ -155,65 +156,109 @@ function DMark({ className }: { className?: string }) {
   );
 }
 
-/** An arc of the hub's progress ring, centred on `angle`, `span` degrees wide, at radius ARC_R around (0, 0). */
-function arc(angle: number, span: number) {
-  const a0 = ((angle - span / 2) * Math.PI) / 180;
-  const a1 = ((angle + span / 2) * Math.PI) / 180;
-  const f = (n: number) => Math.round(n * 100) / 100;
-  return `M${f(ARC_R * Math.cos(a0))} ${f(ARC_R * Math.sin(a0))} A${ARC_R} ${ARC_R} 0 0 1 ${f(ARC_R * Math.cos(a1))} ${f(ARC_R * Math.sin(a1))}`;
-}
+/** Where the sockets sit on the housing: one per service feed, then product understanding (in) and outcomes (out). */
+const SOCKETS = [...FEED_ANGLE, 180, 0];
+const TICKS = Array.from({ length: 60 }, (_, i) => i);
 
 /**
- * The hub: a raised porcelain puck in the cards' own material (a soft top light, a recessed face, layered
- * shadows), the Devable D in ink. Around it a hairline ring holds four arcs, one where each service's feed comes
- * in; each draws itself green as that service docks, and a soft ring rolls out once.
+ * The engine: a white precision dial, machined rather than drawn. A matte housing ring holds six sockets, where
+ * the conduits plug in, each with an LED that turns green when its part connects. Inside it a tick-marked bezel
+ * (a fine 60-step scale with a green index) turns: each time a service connects it clicks a quarter turn into
+ * place with a small mechanical overshoot; when the whole system is connected it spins up and settles into a
+ * slow, steady turn. The light on the brushed bezel stays put while the scale turns under it. At the centre a
+ * raised button carries the Devable mark.
  */
-function Engine({ lit, sides, style }: { lit: number; sides: boolean[]; style?: CSSProperties }) {
-  const box = ARC_R * 2 + 12;
+function Engine({ docked, sockets, running, style }: { docked: number; sockets: boolean[]; running: boolean; style?: CSSProperties }) {
+  const rot = useMotionValue(0);
+  const reduced = useReducedMotion();
+  const anim = useRef<AnimationPlaybackControls | null>(null);
+  useEffect(() => {
+    const stop = () => anim.current?.stop();
+    stop();
+    // The nearest resting angle for this many connections (whole turns kept, so it never unwinds backwards).
+    const base = docked * 90;
+    const rest = base + 360 * Math.round((rot.get() - base) / 360);
+    if (reduced) {
+      rot.set(base);
+      return stop;
+    }
+    if (!running) {
+      // Click into place once the signal has run the conduit in.
+      anim.current = animate(rot, rest, { type: "spring", stiffness: 190, damping: 14, mass: 1, delay: docked > 0 ? 1.15 : 0 });
+      return stop;
+    }
+    // Spin up two turns, then cruise.
+    anim.current = animate(rot, rest + 720, {
+      duration: 2.2,
+      delay: 1.1,
+      ease: [0.6, 0, 0.15, 1],
+      onComplete: () => {
+        anim.current = animate(rot, rot.get() + 360, { duration: 60, ease: "linear", repeat: Infinity });
+      },
+    });
+    return stop;
+  }, [docked, running, reduced, rot]);
+
+  // Rounded, so the server and the browser print identical coordinates.
+  const port = (deg: number, r: number) => [Math.round(r * Math.cos((deg * Math.PI) / 180) * 100) / 100, Math.round(r * Math.sin((deg * Math.PI) / 180) * 100) / 100];
   return (
-    <div className="absolute grid place-items-center" style={{ width: HUB, height: HUB, ...style }}>
-      {/* Progress ring. */}
-      <svg aria-hidden="true" viewBox={`${-box / 2} ${-box / 2} ${box} ${box}`} className="pointer-events-none absolute" style={{ width: box, height: box }}>
-        <circle r={ARC_R} fill="none" stroke="rgb(23 44 33 / 0.08)" strokeWidth="1" />
-        {sides.map((on, i) => (
-          <path
-            key={i}
-            d={arc(FEED_ANGLE[i], 44)}
-            pathLength={1}
-            fill="none"
-            stroke="#16b058"
-            strokeWidth="2.25"
-            strokeLinecap="round"
-            strokeDasharray="1 1"
-            style={{ strokeDashoffset: on ? 0 : 1, transition: "stroke-dashoffset 0.9s cubic-bezier(0.45,0,0.25,1) 0.9s" }}
-          />
-        ))}
-      </svg>
-      {/* A soft ring that rolls out once each time a service lands. */}
-      <AnimatePresence>
-        {lit > 0 && (
-          <motion.span
-            key={lit}
-            aria-hidden="true"
-            initial={{ opacity: 0.5, scale: 1 }}
-            animate={{ opacity: 0, scale: 1.5 }}
-            transition={{ duration: 1.4, ease: "easeOut", delay: 1.1 }}
-            className="absolute rounded-full border border-primary/70"
-            style={{ width: HUB, height: HUB }}
-          />
-        )}
-      </AnimatePresence>
-      {/* The puck. */}
-      <div
-        className="relative grid size-full place-items-center rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f1f4f2_100%)] shadow-[inset_0_1px_0_#fff,inset_0_-2px_3px_rgb(23_44_33/0.06),0_0_0_1px_rgb(23_44_33/0.07),0_2px_3px_rgb(23_44_33/0.08),0_16px_26px_-12px_rgb(23_44_33/0.32),0_36px_56px_-28px_rgb(23_44_33/0.4)]"
-      >
-        <div className="absolute inset-[9px] rounded-full bg-[radial-gradient(circle_at_50%_28%,#ffffff_0%,#f4f6f5_70%)] shadow-[inset_0_1px_2px_rgb(23_44_33/0.12),inset_0_-1px_0_#fff,0_0_0_1px_rgb(23_44_33/0.03)]" />
-        <div className="relative flex flex-col items-center text-ink">
-          <DMark className="size-[28px]" />
-          <span className="mt-1 text-[11.5px] font-medium tracking-[-0.01em]">Devable</span>
+    <div className="absolute" style={{ width: HUB, height: HUB, ...style }}>
+      {/* Housing: matte white, a top light, long soft shadows. */}
+      <div className="absolute inset-0 rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f3f5f4_55%,#eceff0_100%)] shadow-[inset_0_1px_0_#fff,inset_0_-1px_2px_rgb(23_44_33/0.05),0_0_0_1px_rgb(23_44_33/0.08),0_2px_3px_rgb(23_44_33/0.07),0_18px_30px_-14px_rgb(23_44_33/0.34),0_44px_70px_-34px_rgb(23_44_33/0.42)]" />
+      {/* The groove the bezel sits in. */}
+      <div className="absolute inset-[15px] rounded-full bg-[#e7ebe9] shadow-[inset_0_1.5px_3px_rgb(23_44_33/0.22),0_1px_0_#fff]" />
+      {/* Bezel: brushed metal-white, its light fixed. */}
+      <div className="absolute inset-[17px] rounded-full bg-[conic-gradient(from_200deg,#ffffff,#e6eae8_14%,#fafbfa_28%,#dfe4e1_46%,#ffffff_62%,#e7ebe9_80%,#ffffff)] shadow-[inset_0_1px_0_rgb(255_255_255/0.9),inset_0_-1px_1px_rgb(23_44_33/0.08),0_1px_2px_rgb(23_44_33/0.12)]" />
+      {/* The scale, which turns. */}
+      <motion.svg aria-hidden="true" viewBox="-67 -67 134 134" className="absolute inset-[17px]" style={{ rotate: rot }}>
+        {TICKS.map((i) => {
+          const major = i % 5 === 0;
+          const quarter = i % 15 === 0;
+          const [x1, y1] = port(i * 6 - 90, quarter ? 50 : major ? 54 : 57);
+          const [x2, y2] = port(i * 6 - 90, 62);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#172c21" strokeOpacity={quarter ? 0.5 : major ? 0.32 : 0.16} strokeWidth={quarter ? 1.4 : major ? 1.1 : 0.7} strokeLinecap="round" />;
+        })}
+        {/* The index. */}
+        <line x1="0" y1="-48" x2="0" y2="-62" stroke="#19c463" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.25" />
+        <line x1="0" y1="-49" x2="0" y2="-62" stroke="#19c463" strokeWidth="2.4" strokeLinecap="round" />
+      </motion.svg>
+      {/* The well around the button. */}
+      <div className="absolute inset-[39px] rounded-full bg-[#eef1ef] shadow-[inset_0_2px_4px_rgb(23_44_33/0.2),0_1px_0_rgb(255_255_255/0.9)]" />
+      {/* The button. */}
+      <div className="absolute inset-[42px] grid place-items-center rounded-full bg-[radial-gradient(circle_at_50%_28%,#ffffff_0%,#f8f9f8_50%,#eaeeec_100%)] shadow-[inset_0_1px_0_#fff,inset_0_-2px_3px_rgb(23_44_33/0.06),0_0_0_1px_rgb(23_44_33/0.07),0_3px_6px_-1px_rgb(23_44_33/0.22),0_10px_16px_-8px_rgb(23_44_33/0.3)]">
+        <div className="flex flex-col items-center text-ink">
+          <DMark className="size-[26px]" />
+          <span className="mt-1 text-[11px] font-medium tracking-[-0.01em]">Devable</span>
         </div>
       </div>
-      <span className="sr-only">Devable: {lit} of 4 services connected</span>
+      {/* Sockets on the housing, each with its LED. */}
+      <svg aria-hidden="true" viewBox={`${-HALF} ${-HALF} ${HUB} ${HUB}`} className="pointer-events-none absolute inset-0 overflow-visible">
+        <defs>
+          <radialGradient id="gs-socket" cx="50%" cy="35%" r="65%">
+            <stop offset="0" stopColor="#e3e7e5" />
+            <stop offset="1" stopColor="#f7f9f8" />
+          </radialGradient>
+          <filter id="gs-led" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+        {SOCKETS.map((deg, i) => {
+          const [x, y] = port(deg, FEED_R);
+          const on = sockets[i];
+          const t = "fill 0.5s ease, opacity 0.5s ease";
+          const delay = on ? (i < 4 ? "1.15s" : "0.9s") : "0s";
+          return (
+            <g key={i} transform={`translate(${x} ${y})`}>
+              <circle r="5.6" fill="url(#gs-socket)" stroke="rgb(23 44 33 / 0.14)" strokeWidth="0.8" />
+              <circle r="4.4" fill="none" stroke="#fff" strokeOpacity="0.9" strokeWidth="0.6" transform="translate(0 0.6)" />
+              <circle r="4.6" fill="#2fe07f" filter="url(#gs-led)" style={{ opacity: on ? 0.8 : 0, transition: t, transitionDelay: delay }} />
+              <circle r="2.3" style={{ fill: on ? "#22d36f" : "#c9d1cd", transition: t, transitionDelay: delay }} />
+              <circle r="0.8" cx="-0.6" cy="-0.7" fill="#fff" opacity="0.8" />
+            </g>
+          );
+        })}
+      </svg>
+      <span className="sr-only">Devable: {docked} of 4 services connected</span>
     </div>
   );
 }
@@ -237,7 +282,7 @@ function Pulse({ d, duration = 1.6, delay = 0, loop = false }: { d: string; dura
   );
 }
 
-/** One line: a hairline track and the green that draws along it when `on`. */
+/** One line: a conduit (or, for product understanding, a dotted line) whose green core draws along it when `on`. */
 function Track({ d, on, dotted = false, delay = 0.25 }: { d: string; on: boolean; dotted?: boolean; delay?: number }) {
   if (dotted)
     return (
@@ -253,12 +298,16 @@ function Track({ d, on, dotted = false, delay = 0.25 }: { d: string; on: boolean
     );
   return (
     <g fill="none" strokeLinecap="round">
-      <path d={d} stroke="rgb(23 44 33 / 0.13)" strokeWidth="1" />
+      {/* The conduit: a pale tube with hairline walls. */}
+      <path d={d} stroke="rgb(23 44 33 / 0.1)" strokeWidth="6.5" />
+      <path d={d} stroke="#fbfcfb" strokeWidth="4.9" />
+      <path d={d} stroke="rgb(23 44 33 / 0.05)" strokeWidth="1.4" />
+      {/* Its core, drawn green when the part connects. */}
       <path
         d={d}
         pathLength={1}
         stroke="#16b058"
-        strokeWidth="1.6"
+        strokeWidth="1.8"
         strokeDasharray="1 1"
         style={{ strokeDashoffset: on ? 0 : 1, transition: `stroke-dashoffset 1s cubic-bezier(0.45,0,0.25,1) ${on ? delay : 0}s` }}
       />
@@ -321,26 +370,28 @@ function Wires({ lit, beat, epoch, live }: { lit: boolean[]; beat: number; epoch
 
 /* ── Side panels ─────────────────────────────────────────────────────────────────────────────────── */
 
-const PANEL =
-  "rounded-[18px] bg-white/90 p-4 shadow-[0_0_0_1px_rgb(23_44_33/0.07),0_1px_2px_rgb(23_44_33/0.05),0_24px_44px_-30px_rgb(23_44_33/0.3)] backdrop-blur-[2px]";
+/** The side panels: plain white, a hairline edge, a soft shadow. */
+const PANEL = "rounded-[18px] bg-white p-4 shadow-[0_0_0_1px_rgb(23_44_33/0.07),0_1px_2px_rgb(23_44_33/0.05),0_24px_44px_-30px_rgb(23_44_33/0.3)]";
 const LABEL = "font-mono text-[10px] tracking-[0.12em] text-ink/45 uppercase";
-const ROW_IN = "transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
+const ROW_IN = "transition-[opacity,translate,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
+/** What Devable learns, kept quiet: a paper icon tile, the name, one muted line. */
 function Inputs({ shown = true, style, className }: { shown?: boolean; style?: CSSProperties; className?: string }) {
   return (
     <section aria-label={INPUTS.label} className={cn(PANEL, "flex flex-col", className)} style={style}>
       <p className={LABEL}>{INPUTS.label}</p>
-      <ul className="mt-5 flex flex-1 flex-col justify-center gap-6">
+      <ul className="mt-4 flex flex-1 flex-col justify-evenly">
         {INPUTS.rows.map((r, i) => {
           const Icon = ICON[r.icon];
+          const [first, ...rest] = r.line.split(" · ");
           return (
             <li key={r.name} className={cn("flex gap-3", ROW_IN, shown ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-60")} style={{ transitionDelay: shown ? `${150 + i * 120}ms` : "0ms" }}>
-              <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-paper text-ink/75 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.06)]">
-                <Icon className="size-[17px]" strokeWidth={1.7} />
+              <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-paper text-ink/70 shadow-[inset_0_0_0_1px_rgb(23_44_33/0.05)]">
+                <Icon className="size-4" strokeWidth={1.7} />
               </span>
               <div className="min-w-0">
                 <p className="text-[14px] leading-tight font-medium tracking-[-0.01em] text-ink">{r.name}</p>
-                <p className="mt-1 text-[11.5px] leading-snug text-ink/50">{r.line}</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-balance text-ink/50">{[first, ...rest.map((x) => x.toLowerCase())].join(", ")}</p>
               </div>
             </li>
           );
@@ -350,6 +401,8 @@ function Inputs({ shown = true, style, className }: { shown?: boolean; style?: C
   );
 }
 
+/** What it moves, in the brand's colours. Rows are 48px with 10px gaps, centred under the label: OUT_ROWS (the
+ *  arrows' targets) depends on it. */
 function Outcomes({ shown = true, style, className }: { shown?: boolean; style?: CSSProperties; className?: string }) {
   return (
     <section aria-label={OUTCOMES.label} className={cn(PANEL, "flex flex-col", className)} style={style}>
@@ -360,21 +413,19 @@ function Outcomes({ shown = true, style, className }: { shown?: boolean; style?:
           return (
             <li
               key={r.name}
-              className={cn(
-                "flex items-center gap-3 rounded-[12px] p-2 pr-2.5 transition-[background-color,box-shadow,opacity,translate] duration-500",
-                shown ? "translate-x-0 bg-[linear-gradient(90deg,rgb(216_248_229/0.6),rgb(216_248_229/0.15))] opacity-100 shadow-[inset_0_0_0_1px_rgb(25_150_80/0.12)]" : "translate-x-2 bg-paper/60 opacity-60",
-              )}
+              className={cn("flex h-12 items-center gap-2.5 rounded-[12px] pr-2.5 pl-2", ROW_IN, shown ? "translate-x-0 bg-light-green-soft/70 opacity-100" : "translate-x-2 bg-paper opacity-60")}
               style={{ transitionDelay: shown ? `${350 + i * 160}ms` : "0ms" }}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-white text-ink/80 shadow-[0_0_0_1px_rgb(23_44_33/0.07)]">
+              <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-white text-ink shadow-[0_1px_2px_rgb(23_44_33/0.08)]">
                 <Icon className="size-4" strokeWidth={1.8} />
               </span>
-              <p className="min-w-0 flex-1 text-[13px] leading-tight font-medium tracking-[-0.01em] text-ink">{r.name}</p>
-              <ArrowUp
-                className={cn("size-4 shrink-0 text-[#16a34a] transition-[opacity,translate] duration-500", shown ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0")}
-                style={{ transitionDelay: shown ? `${550 + i * 160}ms` : "0ms" }}
-                strokeWidth={2.4}
-              />
+              <p className="min-w-0 flex-1 text-[12.5px] leading-[1.2] font-medium tracking-[-0.01em] text-balance text-ink">{r.name}</p>
+              <span
+                className={cn("grid size-5 shrink-0 place-items-center rounded-full bg-primary text-ink transition-[opacity,translate] duration-500", shown ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0")}
+                style={{ transitionDelay: shown ? `${600 + i * 160}ms` : "0ms" }}
+              >
+                <ArrowUp className="size-3" strokeWidth={2.6} />
+              </span>
             </li>
           );
         })}
@@ -495,7 +546,7 @@ function Stage({ beat, epoch, onScreen }: { beat: number; epoch: number; onScree
           );
         })}
 
-        <Engine lit={docked} sides={wiresLit.slice(0, 4)} style={{ left: CX - HALF, top: CY - HALF, zIndex: 25 }} />
+        <Engine docked={docked} sockets={wiresLit} running={beat === FINAL && onScreen} style={{ left: CX - HALF, top: CY - HALF, zIndex: 25 }} />
       </div>
     </div>
   );
@@ -539,22 +590,10 @@ export default function GrowthSystem() {
               {HEAD.title}
             </h2>
             <p className="mx-auto mt-3 max-w-[44rem] text-[1rem] leading-relaxed text-pretty text-ink/60 lg:mt-2">{HEAD.sub}</p>
-            {/* Where the story is. */}
-            <div className="mt-3 hidden h-6 items-center justify-center lg:flex lg:motion-reduce:hidden" aria-live="polite">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.p
-                  key={beat}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3, ease: EASE }}
-                  className="flex items-center gap-2 rounded-full bg-paper px-3 py-1 font-mono text-[10.5px] tracking-[0.1em] text-ink/60 uppercase shadow-[inset_0_0_0_1px_rgb(23_44_33/0.06)]"
-                >
-                  <span className={cn("size-1.5 rounded-full", beat === 0 ? "bg-ink/30" : "bg-primary")} />
-                  {BEATS[beat]}
-                </motion.p>
-              </AnimatePresence>
-            </div>
+            {/* Where the story is, for screen readers. */}
+            <p className="sr-only" aria-live="polite">
+              {BEATS[beat]}
+            </p>
           </header>
 
           <div className="mx-auto mt-4 hidden min-h-0 w-full max-w-[90rem] flex-1 lg:block lg:motion-reduce:h-[640px] lg:motion-reduce:flex-none">
@@ -564,8 +603,8 @@ export default function GrowthSystem() {
           {/* Below lg: the same parts, stacked in reading order. */}
           <div className="mx-auto mt-10 flex max-w-[26rem] flex-col gap-4 lg:hidden">
             <Inputs />
-            <div className="relative mx-auto my-2 size-[140px]">
-              <Engine lit={4} sides={[true, true, true, true]} style={{ left: 70 - HALF, top: 70 - HALF }} />
+            <div className="relative mx-auto my-2" style={{ width: HUB, height: HUB }}>
+              <Engine docked={4} sockets={[true, true, true, true, true, true]} running={false} />
             </div>
             {SLOTS.map((s) => (
               <StackCard key={s.key} Card={s.Card} reduced={reduced} />
