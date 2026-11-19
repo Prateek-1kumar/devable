@@ -10,6 +10,7 @@ import { show, type SceneProps } from "./scene";
 const KEYFRAMES = `
 @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(25 231 110 / 0.28); } 50% { box-shadow: 0 0 0 9px rgb(25 231 110 / 0); } }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes gap-ripple { 0% { transform: scale(1); opacity: 0.45; } 70%, 100% { transform: scale(1.32); opacity: 0; } }
 `;
 
 // The four pictures beside "How we improve search & AI visibility", one idea each, drawn as concept and not as a
@@ -68,7 +69,7 @@ const Tag = ({ children, icon, small = false }: { children: ReactNode; icon?: Re
 function Tile({ icon: I, mark, lit = false, glow = false }: { icon?: LucideIcon; mark?: Icon; lit?: boolean; glow?: boolean }) {
   return (
     <span
-      className={`grid size-[3.7em] place-items-center rounded-[1em] shadow-[0_0_0_1px_rgb(23_44_33/0.1),0_1px_2px_rgb(23_44_33/0.05),0_12px_20px_-12px_rgb(23_44_33/0.3),inset_0_1px_0_#fff] ${lit ? "bg-primary motion-safe:animate-[breathe_5s_ease-in-out_infinite]" : "bg-white"} ${glow ? "motion-safe:animate-[breathe_5s_ease-in-out_infinite]" : ""}`}
+      className={`grid size-[3.7em] place-items-center rounded-[1em] shadow-[0_0_0_1px_rgb(23_44_33/0.1),0_1px_2px_rgb(23_44_33/0.05),0_12px_20px_-12px_rgb(23_44_33/0.3),inset_0_1px_0_#fff] ${lit ? "bg-[linear-gradient(180deg,#45f28f_0%,#19d466_100%)] !shadow-[inset_0_1px_0_rgb(255_255_255/0.55),inset_0_-1px_0_rgb(0_80_40/0.18),0_0_0_1px_rgb(20_150_75/0.35),0_2px_3px_rgb(20_120_60/0.2),0_14px_22px_-12px_rgb(20_150_75/0.75)]" : "bg-white"} ${glow ? "motion-safe:animate-[breathe_5s_ease-in-out_infinite]" : ""}`}
     >
       {mark ? <Mark name={mark} className="size-[1.7em]" /> : I && <I className="size-[1.7em]" strokeWidth={1.7} color={INK} />}
     </span>
@@ -174,16 +175,20 @@ export function Intelligence({ on }: SceneProps) {
               <Packet on={on} d={`M${s.x} ${s.y} Q ${s.c[0]} ${s.c[1]} ${s.to[0]} ${s.to[1]}`} begin={i * 0.9} dur={3.8} />
             </g>
           ))}
-          <Wire on={on} d="M268 214 H402" w={1.8} />
-          <Packet on={on} d="M268 214 H402" begin={0.6} dur={2.6} />
-          <path d="M406 214 l-8 -5 v10 z" fill={GREEN} className={show(on)} style={delay(0.6)} />
-          {/* the gap: a ring and a few sparks around the target */}
+          <Wire on={on} d="M268 214 H390" w={1.8} />
+          <Packet on={on} d="M268 214 H390" begin={0.6} dur={2.6} />
+          <path d="M398 214 l-7.5 -4.6 v9.2 z" fill={GREEN} className={show(on)} style={delay(0.6)} />
+          {/* The gap: a soft green halo with one hairline edge, and a ripple that rolls out of it now and then. */}
           <g className={show(on)} style={delay(0.8)}>
-            <circle cx="444" cy="214" r="36" fill="none" stroke={GREEN} strokeOpacity="0.5" strokeWidth="1.2" strokeDasharray="2 4" />
-            <circle cx="444" cy="214" r="50" fill="none" stroke={GREEN} strokeOpacity="0.22" strokeWidth="1" />
-            {[-62, -34, -6].map((a) => (
-              <path key={a} d={`M${444 + 56 * Math.cos((a * Math.PI) / 180)} ${214 + 56 * Math.sin((a * Math.PI) / 180)} l${8 * Math.cos((a * Math.PI) / 180)} ${8 * Math.sin((a * Math.PI) / 180)}`} stroke={GREEN} strokeWidth="1.8" strokeLinecap="round" />
-            ))}
+            <defs>
+              <radialGradient id="gap-halo">
+                <stop offset="0.55" stopColor={GREEN} stopOpacity="0.16" />
+                <stop offset="1" stopColor={GREEN} stopOpacity="0.03" />
+              </radialGradient>
+            </defs>
+            <circle cx="444" cy="214" r="44" fill="url(#gap-halo)" />
+            <circle cx="444" cy="214" r="44" fill="none" stroke={GREEN} strokeOpacity="0.35" strokeWidth="1" />
+            <circle cx="444" cy="214" r="44" fill="none" stroke={GREEN} strokeWidth="1" className={on ? "motion-safe:animate-[gap-ripple_3.6s_cubic-bezier(0.2,0.6,0.3,1)_infinite]" : "opacity-0"} style={{ transformOrigin: "444px 214px", transformBox: "view-box" }} />
           </g>
         </>
       }
@@ -200,8 +205,11 @@ export function Intelligence({ on }: SceneProps) {
       <At x={206} y={124} on={on} d={0.4}>
         <Tag>Your category</Tag>
       </At>
-      <At x={444} y={162} on={on} d={0.7}>
-        <span className="flex items-center rounded-full bg-primary px-[0.95em] py-[0.5em] text-[1em] leading-none font-semibold whitespace-nowrap text-ink shadow-[0_8px_16px_-10px_rgb(25_231_110/0.8)]">High-impact gap</span>
+      <At x={444} y={146} on={on} d={0.7}>
+        <span className="flex items-center gap-[0.5em] rounded-full bg-white px-[0.95em] py-[0.5em] text-[1em] leading-none font-semibold whitespace-nowrap text-ink shadow-[0_0_0_1px_rgb(25_200_100/0.45),0_1px_2px_rgb(23_44_33/0.05),0_8px_16px_-10px_rgb(25_160_80/0.55)]">
+          <span className="size-[0.55em] rounded-full bg-primary shadow-[0_0_0_0.22em_rgb(25_231_110/0.2)]" />
+          High-impact gap
+        </span>
       </At>
       <At x={444} y={214} on={on} d={0.7}>
         <Tile icon={Crosshair} lit />

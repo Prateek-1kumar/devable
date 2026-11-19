@@ -77,11 +77,11 @@ export default function Conversation({ on }: { on: boolean }) {
               <span className="absolute inset-x-0 top-0 bottom-3.5 bg-primary" />
               <span className="absolute bottom-0 left-0 h-3.5 w-[1.4rem] rounded-bl-[10px] border-b-[1.5px] border-l-[1.5px] border-primary" />
             </span>
-            <Neighbour who={C.above} n={1} show={b >= 2} />
+            <Neighbour who={C.above} show={b >= 2} />
             <div className="mt-3 ml-9">
               <div className={`rounded-xl px-3.5 py-3 transition-[background-color,box-shadow] duration-1000 motion-reduce:transition-none ${lit ? "bg-[color-mix(in_srgb,var(--primary)_7%,white)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_16%,transparent)]" : ""}`}>
                 <div className={`flex gap-2.5 ${fade(b >= 3)}`}>
-                  <Avatar n={4} className="size-7" />
+                  <Avatar name={a.user} className="size-7" />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 text-[12px] text-ink/55">
                       <span className="font-semibold text-ink">{a.user}</span>
@@ -125,7 +125,7 @@ export default function Conversation({ on }: { on: boolean }) {
 
           {/* And another, below. */}
           <div className="mt-3">
-            <Neighbour who={C.below} n={3} show={b >= 7} />
+            <Neighbour who={C.below} show={b >= 7} />
           </div>
         </div>
       </div>
@@ -134,10 +134,10 @@ export default function Conversation({ on }: { on: boolean }) {
 }
 
 /** A comment drawn only as its author, two lines of grey and its vote row: there to give the reply a thread to sit in. */
-function Neighbour({ who, n, show: shown }: { who: { user: string; age: string; votes: number }; n: number; show: boolean }) {
+function Neighbour({ who, show: shown }: { who: { user: string; age: string; votes: number }; show: boolean }) {
   return (
     <div className={`flex gap-2.5 ${fade(shown)}`}>
-      <Avatar n={n} className="size-7" />
+      <Avatar name={who.user} className="size-7" />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-[12px] text-ink/55">
           <span className="font-semibold text-ink">{who.user}</span>

@@ -30,6 +30,7 @@ import {
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Mark } from "../services/parts";
+import { Snoovatar } from "../services/reddit/Snoovatar";
 import { compact, count, seg, usePlayhead, type CardState } from "./clock";
 import { CONTENT, CREATORS, REDDIT, SEARCH } from "./content";
 
@@ -602,7 +603,7 @@ export function RedditCard({ state = "done", className }: CardProps) {
           <div className="flex gap-2 border-l-2 border-[#e5ebee] pl-2.5">
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-[10px] text-[#576f76]">
-                <span className="size-3.5 rounded-full bg-[conic-gradient(#ffb000,#ff4500,#ffb000)]" />
+                <Snoovatar seed={comment.user} className="size-[18px]" />
                 <span className="font-semibold text-[#0f1a1c]">{comment.user}</span>
                 &middot; {comment.age}
               </p>

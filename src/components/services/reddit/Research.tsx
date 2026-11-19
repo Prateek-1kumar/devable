@@ -108,7 +108,7 @@ export default function Research({ on }: { on: boolean }) {
             </div>
 
             <div className={`mt-3 flex gap-2.5 border-t border-ink/[0.06] pt-3 ${show(b >= 6)}`}>
-              <Avatar n={5} className="size-7" />
+              <Avatar name={c.user} className="size-7" />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 text-[12px] text-ink/55">
                   <span className="font-semibold text-ink">{c.user}</span>

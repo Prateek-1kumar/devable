@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowBigDown, ArrowBigUp, Ellipsis, MessageSquare, Plus, Share } from "lucide-react";
+import { Snoovatar } from "./Snoovatar";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import ArcButton from "../../ArcButton";
 import { Label, useInView } from "../kit";
@@ -30,7 +31,6 @@ const SLOT = [
 const EASE = "cubic-bezier(0.22,1,0.36,1)";
 
 // Each commenter's avatar colour, as Reddit hands them out.
-const AVATAR = [["#ff6a3d", "#b5391a"], ["#5b8def", "#2c58b4"], ["#3fb985", "#1f7a55"], ["#9a7be8", "#5f45a8"], ["#f2b134", "#a8741a"], ["#37b6c4", "#1d7480"]];
 
 // The first viewport: the claim centred on the page (label, headline, body, one button) and under it three real-looking
 // Reddit threads (see ThreadCard). The middle one is lit from the start; the other two sit back, still fully legible.
@@ -115,7 +115,7 @@ export default function Hero() {
                   } rounded-[20px] bg-white`}
                 >
                   <div className="motion-safe:animate-fade-up" style={{ animationDelay: `${0.3 + (i === 1 ? 0 : 0.12)}s` }}>
-                    <ThreadCard thread={t} i={i} on={lit === i} play={seen && !still && lit === i} stamp={swaps} />
+                    <ThreadCard thread={t} on={lit === i} play={seen && !still && lit === i} stamp={swaps} />
                   </div>
                 </article>
               );
@@ -127,22 +127,9 @@ export default function Hero() {
   );
 }
 
-/** A default Reddit avatar: the snoo on a coloured disc. */
-export function Avatar({ n, className = "size-7" }: { n: number; className?: string }) {
-  const [bg, eye] = AVATAR[n % AVATAR.length];
-  return (
-    <svg viewBox="0 0 28 28" className={`${className} shrink-0`} aria-hidden="true">
-      <circle cx="14" cy="14" r="14" fill={bg} />
-      <path d="M14 10.2 15.2 6l3.4.9" fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="19.6" cy="6.8" r="1.5" fill="#fff" />
-      <circle cx="7.6" cy="13.2" r="2.1" fill="#fff" />
-      <circle cx="20.4" cy="13.2" r="2.1" fill="#fff" />
-      <ellipse cx="14" cy="16.4" rx="7.4" ry="5.6" fill="#fff" />
-      <circle cx="11.2" cy="15.6" r="1.25" fill={eye} />
-      <circle cx="16.8" cy="15.6" r="1.25" fill={eye} />
-      <path d="M11.4 18.6q2.6 1.7 5.2 0" fill="none" stroke={eye} strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  );
+/** A commenter's Reddit avatar: a snoo character picked from their username (see Snoovatar). */
+export function Avatar({ name, className = "size-7" }: { name: string; className?: string }) {
+  return <Snoovatar seed={name} className={className} />;
 }
 
 /** "4h" the way Reddit writes it: "4 min. ago", "4 hr. ago", "1 day ago", "2 days ago". */
@@ -152,7 +139,7 @@ export const ago = (a: string) => {
 };
 
 /** One thread as Reddit draws it: the post (community, age, title, votes, comments), then the helpful comment with its reply under it. */
-function ThreadCard({ thread: t, i, on, play, stamp }: { thread: Thread; i: number; on: boolean; play: boolean; stamp: number }) {
+function ThreadCard({ thread: t, on, play, stamp }: { thread: Thread; on: boolean; play: boolean; stamp: number }) {
   return (
     <>
       <div className="px-5 pt-4 pb-4">
@@ -185,7 +172,7 @@ function ThreadCard({ thread: t, i, on, play, stamp }: { thread: Thread; i: numb
       <div key={play ? stamp : "rest"} className={`rounded-b-[20px] border-t border-line px-5 pt-4 pb-5 transition-colors duration-700 motion-reduce:transition-none ${on ? "bg-[color-mix(in_srgb,var(--primary)_5%,white)]" : ""}`}>
         <div className="flex gap-3">
           <div className="flex w-7 shrink-0 flex-col items-center">
-            <Avatar n={i * 2} />
+            <Avatar name={t.reply.user} />
             {/* Reddit's thread line, down the whole comment: it draws in green when this thread is in the middle. */}
             <span aria-hidden="true" className="relative mt-1.5 w-0.5 flex-1 rounded-full bg-ink/10">
               <span
@@ -239,7 +226,7 @@ function ThreadCard({ thread: t, i, on, play, stamp }: { thread: Thread; i: numb
               </p>
             ) : (
               <div className="mt-3 flex gap-2.5" style={arrive(play, 1500)}>
-                <Avatar n={i * 2 + 1} className="size-[22px]" />
+                <Avatar name={t.under.user} className="size-[22px]" />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 text-[12px] text-ink/55">
                     <span className="font-semibold text-ink">{t.under.user}</span>
