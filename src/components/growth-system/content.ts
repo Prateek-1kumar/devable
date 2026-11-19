@@ -52,7 +52,7 @@ export const CONTENT = {
   file: "content / llm-ready-data.md",
   sources: [
     { mark: "github", label: "your-org/parser", note: "Product" },
-    { mark: "stackoverflow", label: "Keep table structure in RAG?", note: "Dev pain" },
+    { mark: "stackoverflow", label: "Tables break in RAG?", note: "Dev pain" },
     { mark: "google", label: "website to llm data", note: "2.9K/mo" },
     { mark: "docs", label: "docs/quickstart", note: "Research" },
   ],
@@ -60,8 +60,9 @@ export const CONTENT = {
   outline: ["Crawl the site", "Clean and convert to Markdown", "Chunk for retrieval"],
   draft: "Most RAG failures start before retrieval: messy HTML and lost tables.",
   code: [
-    [["const ", "#7dd3fc"], ["pages", "#e5f2ea"], [" = await ", "#7dd3fc"], ["crawl", "#86efac"], ["(url)", "#e5f2ea"]],
-    [["const ", "#7dd3fc"], ["docs", "#e5f2ea"], [" = ", "#7dd3fc"], ["toMarkdown", "#86efac"], ["(pages)", "#e5f2ea"]],
+    [["const ", "#8a63d2"], ["pages", "#24352b"], [" = ", "#7a857e"], ["await ", "#8a63d2"], ["crawl", "#12894b"], ["(url)", "#5b6a61"]],
+    [["const ", "#8a63d2"], ["docs", "#24352b"], [" = ", "#7a857e"], ["toMarkdown", "#12894b"], ["(pages)", "#5b6a61"]],
+    [["const ", "#8a63d2"], ["chunks", "#24352b"], [" = ", "#7a857e"], ["chunk", "#12894b"], ["(docs)", "#5b6a61"]],
   ],
   review: { who: "AK", role: "Engineering", text: "Verified against the v2 API" },
   page: {
@@ -80,12 +81,8 @@ export const SEARCH = {
   name: "Search + AI Visibility",
   line: "Win the searches and AI answers that shape decisions.",
   prompt: "What are the best document parsing tools for RAG?",
-  lead: "Here are the strongest options right now:",
-  picks: [
-    { name: "Your Product", text: "layout-aware parsing for PDFs, tables and forms, built for RAG pipelines.", sources: ["yourproduct.dev", "r/LocalLLaMA"] },
-    { name: "Competitor A", text: "solid OCR, weaker on complex tables." },
-  ],
-  searched: 4,
+  // The answer, kept visual: Your Product as the top pick (a short tag and its sources), the rest faded out.
+  pick: { name: "Your Product", tag: "Best for RAG parsing", sources: ["yourproduct.dev", "r/LocalLLaMA"] },
   engines: [
     { key: "chatgpt", mark: "chatgpt", name: "ChatGPT" },
     { key: "perplexity", mark: "perplexity", name: "Perplexity" },
@@ -99,17 +96,17 @@ export const SEARCH = {
 export const CREATORS = {
   name: "Influencer Marketing",
   line: "Creators. Campaigns. Distribution.",
+  // David Stout's post announcing TwIL-8B: https://x.com/Davidstout/status/2118035011236397350
+  // Shown as X's post view, cut where X folds a long post ("Show more"). The post's video is left out to keep
+  // the card compact.
   post: {
-    name: "Chubby♨️",
-    handle: "@kimmonismus",
-    date: "Oct 2",
-    avatar: "/growth-system/chubby.jpg",
-    media: "/growth-system/webai-post.png",
-    text: "webAI has released a 3.66B model for formal logic that can run locally on a laptop.\n\nIn webAI’s tests, TwIL-LM3-Pro is roughly level with Qwen3-8B on the headline formal-logic composite, with less than half the parameters.",
-    // Replies and likes are the post's public counts (2026-11-18).
-    // TODO(client): reposts and views aren't in X's public data. Replace these placeholders with the numbers
-    // from a screenshot of the live post.
-    stats: { replies: 22, reposts: 31, likes: 142, views: 18000 },
+    name: "David Stout",
+    handle: "@Davidstout",
+    avatar: "/growth-system/david-stout.jpg",
+    time: "5:37 PM · Nov 4, 2026",
+    paragraphs: ["Modest intelligence is arriving faster than most people realize.", "Today, we\u2019re open-sourcing TwIL-8B."],
+    // The post's public counts (2026-11-19).
+    stats: { replies: 167, reposts: 321, likes: 3460, bookmarks: 4440, views: 902716 },
   },
 } as const;
 
