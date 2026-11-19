@@ -1,6 +1,5 @@
 "use client";
 
-import NumberFlow from "@number-flow/react";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Label } from "../kit";
 import { CASES } from "./content";
@@ -22,11 +21,12 @@ const subscribe = (onChange: () => void) => {
 };
 
 /** A block floating up into place after `ms`: the change of study plays as one staggered, unhurried entrance. */
-const enterAt = (ms: number): CSSProperties => ({ animation: `float-in 760ms cubic-bezier(0.22,1,0.36,1) ${ms}ms both` });
+const enter = (ms: number): CSSProperties => ({ animation: `float-in 760ms cubic-bezier(0.22,1,0.36,1) ${ms}ms both` });
 
 // Four case studies, one at a time, framed like a premium product card: a soft brand-green frame holding two inset panels with
-// small radii. On the left, only what persuades: the headline, the results (the business outcome as one big number with the other two as quiet support), the client's quote with who said it, and the link.
-// On the right, a visual for the client: its logo in ink on the brand green, with a soft light and a fine grid, and nothing else, so it stays calm. Under the card, the clients as
+// small radii. On the left, only what persuades: the headline, the client's quote set large with who said it, and the link.
+// On the right, a visual for the client: its logo in ink on the brand green, with a soft light and a fine grid, with the three
+// results in one frosted glass pill floating at its foot, small enough to leave the visual alone. Under the card, the clients as
 // tabs in a rectangular bar of the same shape: the active tab fills with brand green like a progress bar and, when it is full,
 // the section moves on to the next study; any tab can be clicked to jump there. The loop pauses while the pointer or focus is
 // on the card or tabs and while the section is off screen, and never runs with reduced motion (the active tab is then simply
@@ -105,21 +105,32 @@ export default function Cases() {
         </h2>
 
         <div ref={box} className="mt-14">
-          <article id="case-panel" role="tabpanel" aria-labelledby={`case-tab-${active}`} className="rounded-[14px] bg-[color-mix(in_srgb,var(--primary)_16%,white)] p-2 ring-1 ring-primary/25 sm:p-2.5">
-            <div className="grid gap-2 sm:gap-2.5 lg:min-h-[24rem] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <article {...hold} id="case-panel" role="tabpanel" aria-labelledby={`case-tab-${active}`} className="rounded-[14px] bg-[color-mix(in_srgb,var(--primary)_16%,white)] p-2 ring-1 ring-primary/25 sm:p-2.5">
+            <div className="grid gap-2 sm:gap-2.5 lg:min-h-[30rem] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
               {/* The words: the headline, the quote, the link. */}
-              <div className="flex flex-col rounded-[9px] bg-white p-6 shadow-[0_1px_2px_rgb(23_44_33/0.05)] sm:p-8" style={lift}>
-                {/* Every study's words sit in the same grid cell and only the live one is seen, so the card is always as tall as the tallest
-                    study and never jumps when the study changes. */}
-                <div className="grid flex-1">
-                  {CASES.cases.map((c) => (
-                    <div key={c.client} aria-hidden="true" className="invisible flex flex-col [grid-area:1/1]">
-                      <StudyCopy study={c} live={false} reduced={reduced} visible={false} />
-                    </div>
-                  ))}
-                  <div key={`copy-${shown}`} className="flex flex-col [grid-area:1/1]">
-                    <StudyCopy study={study} live reduced={reduced} visible={visible} hold={hold} />
-                  </div>
+              <div className="flex flex-col rounded-[9px] bg-white p-6 shadow-[0_1px_2px_rgb(23_44_33/0.05)] sm:p-9" style={lift}>
+                <div key={`copy-${shown}`} className="flex flex-1 flex-col">
+                  <p className="flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.12em] text-ink/65 uppercase" style={enter(0)}>
+                    <span className="size-1.5 rounded-full bg-[#1a7f47]" />
+                    Case study
+                  </p>
+                  <h3 className="mt-5 max-w-[20ch] text-[clamp(1.65rem,2.6vw,2.35rem)] leading-[1.08] font-semibold tracking-[-0.045em] text-ink" style={enter(90)}>
+                    {study.outcome}
+                  </h3>
+                  {study.quote && (
+                    <blockquote className="mt-10 lg:mt-auto" style={enter(200)}>
+                      <p className="text-[clamp(1.1rem,1.5vw,1.35rem)] leading-[1.5] tracking-[-0.01em] text-ink/90">“{study.quote.text}”</p>
+                      <footer className="mt-4 font-mono text-[0.72rem] font-medium tracking-[0.1em] text-ink/65 uppercase">{study.quote.by}</footer>
+                    </blockquote>
+                  )}
+                  <a href={study.href} className="group mt-8 inline-flex w-fit items-center gap-2 text-[0.92rem] font-medium text-ink" style={enter(300)}>
+                    <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-300 group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
+                      Read the case study
+                    </span>
+                    <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </a>
                 </div>
               </div>
 
@@ -140,13 +151,31 @@ export default function Cases() {
                 <div className="absolute inset-x-0 top-0 h-[65%] bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,rgb(255_255_255/0.45),transparent_70%)]" />
                 <div className="absolute bottom-[-78%] left-1/2 aspect-square w-[125%] -translate-x-1/2 rounded-full border border-white/70 shadow-[inset_0_26px_70px_-24px_rgb(255_255_255/0.7),0_-8px_50px_-10px_rgb(255_255_255/0.5)]" />
 
-                <div className="relative flex w-full flex-col items-center px-8" style={lift}>
-                  <div key={`logo-${shown}`} className="flex w-full justify-center" style={enterAt(60)}>
+                <div className="relative flex w-full flex-col items-center px-8 pb-20 sm:pb-24" style={lift}>
+                  <div key={`logo-${shown}`} className="flex w-full justify-center" style={enter(60)}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- static logo, shown as an ink silhouette */}
                     <img src={study.logo} alt={study.client} className="h-[clamp(2.4rem,4.4vw,3.6rem)] w-auto max-w-[80%] object-contain opacity-90 brightness-0" />
                   </div>
                 </div>
 
+                {/* The results, in one frosted glass pill floating at the foot of the panel: the green and the grid show through it,
+                    and the figures build left to right to the business outcome. */}
+                <div className="absolute bottom-4 left-1/2 max-w-[calc(100%-1.5rem)] -translate-x-1/2 sm:bottom-6" style={lift}>
+                  <dl
+                    key={`stats-${shown}`}
+                    className="flex items-center gap-6 rounded-full bg-white/60 px-7 py-3.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.8),inset_0_0_0_1px_rgb(255_255_255/0.5),0_18px_36px_-16px_rgb(23_44_33/0.45)] backdrop-blur-xl backdrop-saturate-150 sm:gap-10 sm:px-10 sm:py-4"
+                    style={enter(260)}
+                  >
+                    {study.stats.map((r, n) => (
+                      <div key={r.label}>
+                        <dd className="text-[clamp(1.35rem,2.2vw,1.9rem)] leading-none font-semibold tracking-[-0.045em] text-ink tabular-nums">
+                          <CountUp value={r.value} delay={420 + n * 120} still={reduced} />
+                        </dd>
+                        <dt className="mt-2 font-mono text-[0.58rem] leading-snug font-medium tracking-[0.08em] whitespace-nowrap text-ink/80 uppercase sm:text-[0.66rem]">{r.label}</dt>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               </div>
             </div>
           </article>
@@ -191,76 +220,28 @@ export default function Cases() {
   );
 }
 
-/** One study's words: kicker, headline, the results, the quote and the link. `live` is the one on show (it animates in); the others are only there to size the card. */
-function StudyCopy({ study, live, reduced, visible, hold }: { study: (typeof CASES.cases)[number]; live: boolean; reduced: boolean; visible: boolean; hold?: Record<string, () => void> }) {
-  const hero = study.stats[study.stats.length - 1]; // the business outcome leads
-  const support = study.stats.slice(0, -1);
-  const enter = (ms: number) => (live ? enterAt(ms) : undefined);
-  return (
-    <div className="flex flex-1 flex-col">
-    <p className="flex items-center gap-2 font-mono text-[0.68rem] tracking-[0.12em] text-ink/55 uppercase" style={enter(0)}>
-      <span className="size-1.5 rounded-full bg-[#1a7f47]" />
-      Case study
-    </p>
-    <h3 className="mt-4 max-w-[22ch] text-[clamp(1.55rem,2.5vw,2.2rem)] leading-[1.1] font-medium tracking-[-0.04em] text-ink" style={enter(90)}>
-      {study.outcome}
-    </h3>
-    {/* The results on one line: the business outcome as the big number, the other two beside it as quiet support. */}
-    <dl className="mt-6 flex items-end gap-x-6 gap-y-4 max-sm:flex-wrap lg:mt-7" style={enter(150)}>
-      <div className="pr-1">
-        <dd className="text-[clamp(2.9rem,4.6vw,3.9rem)] leading-[0.95] font-medium tracking-[-0.06em] text-ink tabular-nums">
-          <CountUp value={hero.value} delay={420} still={reduced || !live} go={visible || !live} />
-        </dd>
-        <dt className="mt-1.5 text-[0.9rem] tracking-[-0.01em] text-ink/70">{hero.label}</dt>
-      </div>
-      {support.map((r, n) => (
-        <div key={r.label} className="border-l border-ink/[0.1] pb-0.5 pl-6">
-          <dd className="text-[1.45rem] leading-none font-medium tracking-[-0.04em] text-ink tabular-nums">
-            <CountUp value={r.value} delay={560 + n * 120} still={reduced || !live} go={visible || !live} />
-          </dd>
-          <dt className="mt-1.5 text-[0.84rem] text-ink/55">{r.label}</dt>
-        </div>
-      ))}
-    </dl>
-    {study.quote && (
-      <blockquote className="mt-7 lg:mt-auto lg:pt-7" style={enter(200)}>
-        <p className="text-[clamp(1.05rem,1.45vw,1.3rem)] leading-[1.5] tracking-[-0.01em] text-ink/80">“{study.quote.text}”</p>
-        <footer className="mt-4 font-mono text-[0.68rem] tracking-[0.1em] text-ink/45 uppercase">{study.quote.by}</footer>
-      </blockquote>
-    )}
-    <a href={study.href} {...(live ? hold : {})} tabIndex={live ? undefined : -1} className="group mt-6 inline-flex w-fit items-center gap-2 text-[0.92rem] font-medium text-ink" style={enter(300)}>
-      <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-300 group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
-        Read the case study
-      </span>
-      <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-0.5">
-        →
-      </span>
-    </a>
-    </div>
-  );
-}
-
-/** A result ("3.1M", "+38%", "4.6×") whose digits roll up to its value, as the site's other numbers do; its prefix and suffix stay put. */
-function CountUp({ value, delay, still, go }: { value: string; delay: number; still: boolean; go: boolean }) {
+/** A result that counts up to its value ("3.1M", "+38%", "4.6×"): the number rolls, its prefix and suffix stay put. */
+function CountUp({ value, delay, still }: { value: string; delay: number; still: boolean }) {
   const m = value.match(/^(\D*)(\d+(?:\.\d+)?)(.*)$/);
-  const target = m ? parseFloat(m[2]) : 0;
-  const [n, setN] = useState(still ? target : 0);
+  const [k, setK] = useState(0);
   useEffect(() => {
-    if (!go) return;
-    const id = setTimeout(() => setN(target), still ? 0 : delay);
-    return () => clearTimeout(id);
-  }, [target, delay, still, go]);
+    let raf = 0;
+    const start = performance.now() + delay;
+    const tick = (t: number) => {
+      const u = still ? 1 : Math.min(1, Math.max(0, (t - start) / 1000));
+      setK(1 - (1 - u) ** 3);
+      if (u < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [delay, still]);
   if (!m) return <>{value}</>;
   const decimals = (m[2].split(".")[1] ?? "").length;
   return (
-    <NumberFlow
-      value={n}
-      prefix={m[1]}
-      suffix={m[3]}
-      locales="en-US"
-      format={{ minimumFractionDigits: decimals, maximumFractionDigits: decimals }}
-      transformTiming={{ duration: 900, easing: "cubic-bezier(0.22,1,0.36,1)" }}
-      spinTiming={{ duration: 900, easing: "cubic-bezier(0.22,1,0.36,1)" }}
-    />
+    <>
+      {m[1]}
+      {(parseFloat(m[2]) * (still ? 1 : k)).toFixed(decimals)}
+      {m[3]}
+    </>
   );
 }
