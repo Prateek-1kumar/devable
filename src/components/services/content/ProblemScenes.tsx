@@ -82,7 +82,7 @@ export function Depth({ t }: { t: number }) {
   const all = [{ label: layers[0].label, icon: "product" as const }, ...layers.slice(1)];
 
   return (
-    <div className="absolute inset-0 flex flex-col px-5 pt-4 pb-5">
+    <div className="absolute inset-0 flex flex-col px-5 pt-4 pb-5 @min-[22rem]:px-7">
       {/* Shallow or technical: the thumb slides across as the article deepens. */}
       <div className="relative mx-auto grid grid-cols-2 rounded-full bg-white/[0.05] p-[3px] text-[0.74rem] font-medium shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06),inset_0_1px_2px_rgb(0_0_0/0.35)]" style={rise(intro, 4)}>
         <span className="absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full" style={{ transform: `translateX(${d * 100}%)`, background: mix("rgb(25 231 110 / 0.18)", "rgb(255 255 255 / 0.1)", d), boxShadow: `inset 0 0 0 1px ${mix("rgb(25 231 110 / 0.4)", "rgb(255 255 255 / 0.12)", d)}` }} />
@@ -172,7 +172,7 @@ export function Direction({ t }: { t: number }) {
   const tick = (on: boolean): CSSProperties => ({ color: on ? "#fff" : "rgb(255 255 255 / 0.38)", transition: "color 150ms" });
 
   return (
-    <div className="absolute inset-0 grid grid-cols-[3.7rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-y-2 px-5 pt-5 pb-4 @min-[22rem]:grid-cols-[4.6rem_minmax(0,1fr)]">
+    <div className="absolute inset-0 grid grid-cols-[3.7rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-y-2 px-5 pt-5 pb-4 @min-[22rem]:grid-cols-[4.6rem_minmax(0,1fr)] @min-[22rem]:px-7">
       {/* The up axis: High at the top, Low at the bottom, and what it measures between them. */}
       <div className="flex flex-col items-end justify-between py-2.5 pr-2.5 text-right @min-[22rem]:pr-3.5">
         <span className={AXIS} style={tick(rel === 1)}>
@@ -284,7 +284,7 @@ export function Distribution({ t, still }: { t: number; still: boolean }) {
   const intro = seg(t, 0.1, 0.9);
 
   return (
-    <div className="absolute inset-0 flex items-stretch px-5">
+    <div className="absolute inset-0 flex items-stretch px-5 @min-[22rem]:px-7">
       {/* The article: one published piece, with the others behind it. */}
       <div className="relative my-auto h-[10.2rem] w-[5.2rem] shrink-0" style={rise(intro, 12)}>
         <span className="absolute inset-0 rounded-xl bg-[#171717] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]" style={{ transform: "translate(-7px, 6px) rotate(-4deg)", opacity: 0.6 }} />
