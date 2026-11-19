@@ -194,19 +194,19 @@ export const WAYS = {
   title: "Plug us into your content team or hand us the engine.",
   options: [
     {
-      name: "Full Content Program",
-      body: "We own the content engine from strategy through execution, optimization, and distribution.",
-      listLabel: "Best for teams that need support across:",
-      items: ["Strategy and research", "Editorial planning", "Technical content production", "SEO and AI optimization", "Distribution", "Reporting and iteration"],
-    },
-    {
       name: "Extend Your Content Team",
       body: "Already have a strategy or internal content lead? We plug into your existing workflow and add the technical expertise and production capacity you need.",
       listLabel: "Depending on your setup, we can support:",
       items: ["Technical writing and tutorials", "Code examples and demos", "Technical review", "SEO/GEO optimization", "Content refreshes", "Additional production capacity"],
     },
+    {
+      name: "Full Content Program",
+      body: "We own the content engine from strategy through execution, optimization, and distribution.",
+      listLabel: "Best for teams that need support across:",
+      items: ["Strategy and research", "Editorial planning", "Technical content production", "SEO and AI optimization", "Distribution", "Reporting and iteration"],
+    },
   ],
-  // Who runs each stage of the engine under each option (drawn as an ownership strip on each card).
+  // Who runs each stage of the engine under each option (drawn as an ownership strip on each column).
   ownership: {
     stages: ["Strategy", "Planning", "Production", "Review", "Optimization", "Distribution"],
     full: ["us", "us", "us", "us", "us", "us"],

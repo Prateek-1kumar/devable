@@ -1,20 +1,16 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
-import { Fragment, useSyncExternalStore, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { Label, useInView } from "../kit";
-import { GREEN, INK, LINE, Layer, MOVE, Plate, tilt, untilt } from "../content/PlateKit";
 import { COMMITMENT } from "./content";
 
 // Our commitment to a client: the claim set large and centred, its two key phrases in the brand green ("90-day plan"
-// fills in as a pill, "commercial impact" gets a highlighter stroke), and under it the three horizons as three cards in
-// the order the work runs: long-term strategy, then the highest-impact 90-day priorities, then monthly execution. A
-// green link with an arrow joins each card to the next, so the progression reads without a word. Each card has a 3D
-// plate icon in the same family as How the work gets done (see PlateKit), which acts out its idea on hover:
-//   01 Long-term strategy   three layers pull apart, the top one lighting green
-//   02 90-day priorities    a crosshair turns onto the target and the centre lights
-//   03 Monthly execution    a calendar fills three days in green, one sprint at a time
-// Plays once when scrolled to; reduced motion shows it finished.
+// fills in as a pill, "commercial impact" gets a highlighter stroke), and under it the three horizons as one compact
+// panel, read left to right as a zoom into time. Each column carries a small brand scale instead of an icon:
+//   01 Long-term strategy   the year, four quarters, the first marked green: the next 90 days
+//   02 90-day priorities    that quarter, three months, the first lit
+//   03 Monthly execution    that month, four weekly sprints, filling in green one after another
+// Hairlines divide the columns; no arrows. Plays once when scrolled to; reduced motion shows it finished.
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
 const subscribe = (onChange: () => void) => {
@@ -59,45 +55,27 @@ export default function Commitment() {
           {COMMITMENT.body}
         </p>
 
-        <ol className="mt-16 grid w-full text-left lg:mt-20 lg:grid-cols-[minmax(0,1fr)_4.25rem_minmax(0,1fr)_4.25rem_minmax(0,1fr)]">
+        <ol className="mt-14 grid w-full overflow-hidden rounded-2xl border border-line bg-white text-left shadow-[0_1px_2px_rgb(23_44_33/0.04),0_24px_50px_-36px_rgb(23_44_33/0.25)] max-lg:divide-y max-lg:divide-line lg:mt-16 lg:grid-cols-3 lg:divide-x lg:divide-line">
           {COMMITMENT.horizons.map((h, i) => {
-            const Icon = ICONS[i];
+            const Scale = SCALES[i];
+            const start = 1.8 + i * 0.3; // when this column arrives
             return (
-              <Fragment key={h.name}>
               <li
-                onPointerMove={tilt}
-                onPointerLeave={untilt}
-                style={{ transitionDelay: on ? `${1.8 + i * 0.25}s` : "0s" }}
-                className={`group relative flex flex-col gap-6 rounded-[28px] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-7 shadow-[0_0_0_1px_rgb(23_44_33/0.07),0_1px_2px_rgb(23_44_33/0.04),0_28px_50px_-34px_rgb(23_44_33/0.28),inset_0_1px_0_#fff] transition-[opacity,translate,box-shadow] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] hover:shadow-[0_0_0_1px_rgb(25_231_110/0.3),0_1px_2px_rgb(23_44_33/0.04),0_30px_50px_-30px_rgb(25_231_110/0.4),inset_0_1px_0_#fff] motion-reduce:transition-none sm:p-8 ${
-                  on ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-                }`}
+                key={h.name}
+                style={{ transitionDelay: on ? `${start}s` : "0s" }}
+                className={`group flex flex-col p-6 transition-[opacity,translate,background-color] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#fbfdfb] motion-reduce:transition-none sm:p-7 ${on ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"}`}
               >
-                <span className="absolute top-7 right-8 font-mono text-[0.78rem] tracking-[0.08em] text-ink/30 transition-colors duration-300 group-hover:text-[#1a7f47] sm:top-8">0{i + 1}</span>
-                <Plate>
-                  <Icon />
-                </Plate>
-                <div>
-                  <h3 className="text-[clamp(1.4rem,1.75vw,1.7rem)] leading-[1.1] font-semibold tracking-[-0.035em] text-ink">{h.name}</h3>
-                  <p className="mt-3 max-w-[24rem] text-[1.02rem] leading-relaxed text-ink/60">{h.body}</p>
-                </div>
-              </li>
-              {/* The link to the next stage: a dotted line out of this card, an arrow, a dotted line into the next. */}
-              {i < COMMITMENT.horizons.length - 1 && (
-                <li aria-hidden="true" className="flex h-14 items-center justify-center lg:h-auto">
-                  {/* It appears once both cards it joins are in place: after the next card has landed. */}
-                  <span
-                    style={{ transitionDelay: on ? `${2.3 + (i + 1) * 0.25}s` : "0s" }}
-                    className={`flex items-center transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-lg:flex-col ${on ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
-                  >
-                    <span className="h-px w-2 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)] max-lg:h-3 max-lg:w-px max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)]" />
-                    <span className="mx-1 grid size-10 shrink-0 place-items-center rounded-full bg-primary text-ink shadow-[0_0_0_4px_#fff,0_0_0_5px_rgb(25_231_110/0.3),0_10px_18px_-8px_rgb(25_231_110/0.6)] max-lg:my-1.5 max-lg:mx-0">
-                      <ArrowRight className="size-[1.1rem] max-lg:rotate-90" strokeWidth={2.4} />
-                    </span>
-                    <span className="h-px w-2 bg-[repeating-linear-gradient(90deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)] max-lg:h-3 max-lg:w-px max-lg:bg-[repeating-linear-gradient(180deg,rgb(25_231_110/0.7)_0_3px,transparent_3px_7px)]" />
+                <p className="flex items-center justify-between font-mono text-[0.7rem] tracking-[0.08em] text-ink/45 uppercase">
+                  <span className="flex items-center gap-2">
+                    <span className="size-[7px] bg-primary" />
+                    {HORIZON[i]}
                   </span>
-                </li>
-              )}
-              </Fragment>
+                  <span>0{i + 1}</span>
+                </p>
+                <Scale on={on} wait={start + 0.4} />
+                <h3 className="mt-6 text-[1.3rem] leading-[1.15] font-medium tracking-[-0.03em] text-ink">{h.name}</h3>
+                <p className="mt-2 text-[0.98rem] leading-relaxed text-ink/60">{h.body}</p>
+              </li>
             );
           })}
         </ol>
@@ -150,91 +128,51 @@ function Stroke({ on, children }: { on: boolean; children: ReactNode }) {
   );
 }
 
-// ── The three icons, each a few layers at different heights ─────────────────────────────────────────────────
+// ── The three scales: one zoom into time ───────────────────────────────────────────────────────────────────
 
-/** 01 · Long-term strategy: three layers that pull apart, the top one lighting green. */
-function Layers() {
-  const sheet = (y: number, fill: string, stroke: string) => <path d={`M24 ${y} L41 ${y + 8.5} L24 ${y + 17} L7 ${y + 8.5} Z`} fill={fill} stroke={stroke} strokeWidth="1.7" strokeLinejoin="round" />;
-  return (
-    <>
-      <Layer z={5}>
-        <g className={`${MOVE} group-hover:translate-y-[5px]`}>{sheet(23, "#f1f0ea", INK)}</g>
-      </Layer>
-      <Layer z={13}>
-        <g>{sheet(16, "#ffffff", INK)}</g>
-      </Layer>
-      <Layer z={24}>
-        <g className={`${MOVE} group-hover:-translate-y-[5px]`}>
-          <path d="M24 11 L41 19.5 L24 28 L7 19.5 Z" fill="#fff" stroke={INK} strokeWidth="1.7" strokeLinejoin="round" className="transition-[fill,stroke] duration-500 group-hover:fill-[#d8f8e5] group-hover:stroke-[var(--primary)]" />
-        </g>
-      </Layer>
-    </>
-  );
-}
+/** The time span each column covers. */
+const HORIZON = ["12 months", "90 days", "Each month"];
 
-/** 02 · 90-day priorities: a crosshair that turns onto the target, the centre lighting green. */
-function Target() {
-  return (
-    <>
-      <Layer z={5}>
-        <circle cx="24" cy="24" r="15" {...LINE} strokeOpacity="0.55" />
-        <circle cx="24" cy="24" r="8" {...LINE} strokeOpacity="0.4" strokeDasharray="2 3" />
-      </Layer>
-      <Layer z={14}>
-        <g className={`${MOVE} origin-center [transform-box:fill-box] group-hover:rotate-90`}>
-          <path d="M24 5 V13 M24 35 V43 M5 24 H13 M35 24 H43" {...LINE} strokeWidth="2" />
-        </g>
-      </Layer>
-      <Layer z={26}>
-        <g className={`${MOVE} origin-center [transform-box:fill-box] group-hover:scale-125`}>
-          <circle cx="24" cy="24" r="4.4" fill={GREEN} stroke={INK} strokeWidth="1.5" />
-        </g>
-      </Layer>
-    </>
-  );
-}
+type ScaleProps = { on: boolean; wait: number };
+const GROW = "origin-left transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
 
-/** 03 · Monthly execution: a calendar, and three sprints that fill in green, one after another. */
-function Calendar() {
-  const days = [0, 1, 2, 3, 4, 5, 6, 7];
-  const sprint = new Set([1, 4, 6]);
+/** A row of segments with labels under them; `lit(k)` says how each fills (0 empty, 1 soft, 2 full green). */
+function Segments({ labels, lit, on, wait, step = 0.12 }: { labels: string[]; lit: (k: number) => 0 | 1 | 2; on: boolean; wait: number; step?: number }) {
   return (
-    <>
-      <Layer z={5}>
-        <rect x="7" y="10" width="34" height="31" rx="5" fill="#fff" stroke={INK} strokeWidth="1.7" />
-        <path d="M7 19 H41" {...LINE} strokeWidth="1.5" />
-      </Layer>
-      <Layer z={13}>
-        {days.map((d) => {
-          const x = 13 + (d % 4) * 7.4;
-          const y = 25 + Math.floor(d / 4) * 7.6;
-          return sprint.has(d) ? null : <rect key={d} x={x} y={y} width="4.6" height="4.6" rx="1.2" fill={INK} fillOpacity="0.14" />;
-        })}
-      </Layer>
-      <Layer z={22}>
-        <path d="M15 6 V13 M33 6 V13" {...LINE} strokeWidth="2.2" />
-        {days.filter((d) => sprint.has(d)).map((d, k) => {
-          const x = 13 + (d % 4) * 7.4;
-          const y = 25 + Math.floor(d / 4) * 7.6;
+    <div className="mt-5">
+      <div className="flex gap-1">
+        {labels.map((l, k) => {
+          const f = lit(k);
           return (
-            <rect
-              key={d}
-              x={x}
-              y={y}
-              width="4.6"
-              height="4.6"
-              rx="1.2"
-              fill={GREEN}
-              stroke={INK}
-              strokeWidth="1"
-              className="origin-center [transform-box:fill-box] group-hover:animate-[grow_0.7s_cubic-bezier(0.34,1.56,0.64,1)_both] motion-reduce:animate-none"
-              style={{ animationDelay: `${k * 0.14}s` }}
-            />
+            <span key={l} className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-ink/[0.07]">
+              {f > 0 && (
+                <span
+                  style={{ transitionDelay: on ? `${wait + k * step}s` : "0s" }}
+                  className={`absolute inset-0 rounded-full ${f === 2 ? "bg-primary" : "bg-light-green-soft"} ${GROW} ${on ? "scale-x-100" : "scale-x-0"}`}
+                />
+              )}
+            </span>
           );
         })}
-      </Layer>
-    </>
+      </div>
+      <div className="mt-2 flex gap-1 font-mono text-[0.66rem] tracking-[0.04em] text-ink/40">
+        {labels.map((l, k) => (
+          <span key={l} className={`flex-1 ${lit(k) === 2 ? "font-medium text-[#1a7f47]" : ""}`}>
+            {l}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
-const ICONS = [Layers, Target, Calendar];
+/** 01 · Long-term strategy: the year, four quarters; the direction covers it all, the first quarter is next. */
+const Year = ({ on, wait }: ScaleProps) => <Segments labels={["Q1", "Q2", "Q3", "Q4"]} lit={(k) => (k === 0 ? 2 : 1)} on={on} wait={wait} />;
+
+/** 02 · 90-day priorities: that quarter, three months; the first is in focus. */
+const Quarter = ({ on, wait }: ScaleProps) => <Segments labels={["Month 1", "Month 2", "Month 3"]} lit={(k) => (k === 0 ? 2 : 1)} on={on} wait={wait} />;
+
+/** 03 · Monthly execution: that month, four weekly sprints, filling in one after another. */
+const Month = ({ on, wait }: ScaleProps) => <Segments labels={["Wk 1", "Wk 2", "Wk 3", "Wk 4"]} lit={() => 2} on={on} wait={wait} step={0.22} />;
+
+const SCALES = [Year, Quarter, Month];

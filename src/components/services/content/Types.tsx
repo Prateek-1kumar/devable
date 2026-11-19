@@ -2,23 +2,25 @@
 
 import type { ReactNode } from "react";
 import { Label, useInView } from "../kit";
+import { Mark } from "../parts";
 import { TYPES } from "./content";
 
-// The six formats as one board, all visible at once, in the structure of the content team's mock and the line quality
-// of the Threadslab reference. Each column has a mono label strip with its number, a dashed rule, a fine-line
-// isometric drawing that says what the format is without the words, another dashed rule, then the name and one
-// line. Hovering a column tints it green, fills its marker and sets its drawing moving, one gesture each:
-//   Technical Articles   an article slab with a code block, and a pin that rises: it ranks
-//   Tutorials & Guides   numbered steps climbing to a green top step: build it, one step at a time
-//   Product-Led Content  a workflow running through the product: something goes in, value comes out
-//   Comparisons          a balance that settles level: an objective look at two options
-//   Integration Content  two blocks and the code that bridges them; they draw together
-//   Thought Leadership   bars of what is known, and a dotted path toward a green spark: what is next
-// The cards rise in once, as they scroll into view.
+// The six formats as one board, all visible at once. Each column has a mono label strip with its number, a dashed
+// rule, a small scene, another dashed rule, then the name and one line. Each scene is the format itself, shot like a
+// film still: fine ink-line frames holding real developer UI, set in 3D perspective with depth (a focal piece, a
+// second piece floating in front or softened behind, soft key shadows and a ground shadow). Hovering a column tints
+// it green, eases the camera round to face the scene, and plays one small gesture:
+//   Technical Articles   an article about a real problem; its key line of code lights up
+//   Tutorials & Guides   a step list beside a terminal; the current step ticks and the command returns
+//   Product-Led Content  a guide that teaches chunking; its import of your product lights and is called out
+//   Comparisons          your product against an alternative, line by line; your column glows
+//   Integration Content  your product plugged into the frameworks developers use; the connections run
+//   Thought Leadership   an essay with a byline and a pull quote; its reach line draws upward
+// The cards rise in once, as they scroll into view. Reduced motion: no camera move, no gestures.
 
 export default function Types() {
   const [ref, seen] = useInView<HTMLUListElement>(0.12);
-  const scenes = [Article, Steps, Workflow, Balance, Bridge, Horizon];
+  const scenes = [Article, Tutorial, ProductLed, Comparison, Integration, Thought];
   return (
     <section aria-labelledby="types-title" className="px-6 py-14 sm:px-12 lg:py-20 xl:px-[6vw]">
       <div className="mx-auto max-w-[76rem]">
@@ -43,7 +45,7 @@ export default function Types() {
                   </span>
                   <span className="text-ink/45">[{String(i + 1).padStart(2, "0")}]</span>
                 </div>
-                <div aria-hidden="true" className="relative grid h-60 place-items-center border-b border-dashed border-ink/15">
+                <div aria-hidden="true" className="relative grid h-60 place-items-center overflow-hidden border-b border-dashed border-ink/15">
                   {["top-4 left-5", "top-4 right-5", "bottom-4 left-5", "bottom-4 right-5"].map((c) => (
                     <span key={c} className={`absolute font-mono text-[0.85rem] leading-none text-ink/35 ${c}`}>
                       +
@@ -64,195 +66,311 @@ export default function Types() {
   );
 }
 
-// ── An isometric line-drawing kit ────────────────────────────────────────────────────────────────────────────
-// x runs right-down, y runs left-down, z is up (all in drawing units). Boxes are drawn back to front.
+// ── The scene kit ─────────────────────────────────────────────────────────────────────────────────────────────
 
-const INK = "#172c21";
-const GREEN = "var(--primary)";
-const K = 0.866;
-const P = (x: number, y: number, z = 0) => `${((x - y) * K).toFixed(1)},${((x + y) * 0.5 - z).toFixed(1)}`;
-const poly = (pts: [number, number, number][]) => `M${pts.map(([x, y, z]) => P(x, y, z)).join(" L")} Z`;
-const seg = (x1: number, y1: number, x2: number, y2: number, z = 0) => `M${P(x1, y1, z)} L${P(x2, y2, z)}`;
-const SPRING = "ease-[cubic-bezier(0.34,1.56,0.64,1)]";
-const MOVE = `transition-transform duration-700 ${SPRING} motion-reduce:transition-none`;
+const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
+const MONO = "font-mono";
+/** A drawn frame: an ink hairline on white, lit from above, with a soft key shadow. */
+const FRAME =
+  "absolute rounded-[10px] border-[1.4px] border-ink bg-[linear-gradient(170deg,#ffffff_0%,#fbfbf8_100%)] shadow-[inset_0_1px_0_#fff,0_2px_3px_rgb(23_44_33/0.08),0_22px_34px_-20px_rgb(23_44_33/0.5)]";
+/** A muted text bar. */
+const Bar = ({ w, o = 0.14 }: { w: string; o?: number }) => <span className="block h-[5px] rounded-full bg-ink" style={{ width: w, opacity: o }} />;
 
-type BoxProps = { x: number; y: number; z?: number; w: number; d: number; h: number; top?: string; left?: string; right?: string; sw?: number };
-/** A box: three faces, white with hairline edges. */
-function Box({ x, y, z = 0, w, d, h, top = "#fff", left = "#f3f2ed", right = "#e8e7e0", sw = 1.15 }: BoxProps) {
-  const s = { stroke: INK, strokeWidth: sw, strokeLinejoin: "round" } as const;
+/**
+ * The stage: a camera angle on the scene. The pieces live in 3D (each `Depth` at its own z); a ground shadow sits
+ * under them. On hover the camera eases round toward face-on.
+ */
+function Stage({ children, tilt = "rotateX(16deg) rotateY(-18deg) rotateZ(3deg)" }: { children: ReactNode; tilt?: string }) {
   return (
-    <g>
-      <path d={poly([[x + w, y, z], [x + w, y + d, z], [x + w, y + d, z + h], [x + w, y, z + h]])} fill={right} {...s} />
-      <path d={poly([[x, y + d, z], [x + w, y + d, z], [x + w, y + d, z + h], [x, y + d, z + h]])} fill={left} {...s} />
-      <path d={poly([[x, y, z + h], [x + w, y, z + h], [x + w, y + d, z + h], [x, y + d, z + h]])} fill={top} {...s} />
-    </g>
+    <div className="relative h-[12.75rem] w-[19rem] max-w-[86%] [perspective:1000px]">
+      <span className="absolute inset-x-6 -bottom-1 h-8 rounded-[50%] bg-[rgb(23_44_33/0.22)] blur-xl" />
+      <div
+        className={`absolute inset-0 [transform-style:preserve-3d] transition-transform duration-[1100ms] ${EASE} group-hover:[transform:rotateX(7deg)_rotateY(-7deg)_rotateZ(0.5deg)] motion-reduce:transition-none motion-reduce:group-hover:[transform:none]`}
+        style={{ transform: tilt }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
-const Line = ({ d, w = 1.1, o = 0.7, color = INK }: { d: string; w?: number; o?: number; color?: string }) => <path d={d} fill="none" stroke={color} strokeOpacity={o} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />;
+/** A piece of the scene, lifted `z` px toward the camera. */
+const Depth = ({ z, className = "", children }: { z: number; className?: string; children: ReactNode }) => (
+  <div className={`absolute inset-0 [transform-style:preserve-3d] ${className}`} style={{ transform: `translateZ(${z}px)` }}>
+    {children}
+  </div>
+);
 
-function Frame({ children }: { children: ReactNode }) {
+/** A line of code: a muted line number, then tokens. */
+function Code({ n, children, className = "" }: { n: number; children: ReactNode; className?: string }) {
   return (
-    <svg viewBox="-110 -92 220 184" className="h-full max-h-56 w-full max-w-[19rem] overflow-visible">
-      {children}
-    </svg>
+    <p className={`flex items-center gap-2 px-2 leading-[1.75] whitespace-nowrap ${className}`}>
+      <span className="w-2 text-right text-ink/30">{n}</span>
+      <span>{children}</span>
+    </p>
   );
 }
+const K = ({ children }: { children: ReactNode }) => <span className="text-[#7c4dbd]">{children}</span>; // keyword
+const F = ({ children }: { children: ReactNode }) => <span className="text-[#12894b]">{children}</span>; // function
+const S = ({ children }: { children: ReactNode }) => <span className="text-[#a15c00]">{children}</span>; // string
 
-/** A small arrowhead pointing right at (x, y). */
-const Arrow = ({ x, y }: { x: number; y: number }) => <path d={`M${x - 6} ${y - 4} L${x} ${y} L${x - 6} ${y + 4}`} fill="none" stroke={GREEN} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />;
-
-/** Technical Articles: an article slab, with a heading, text and a code block; a pin rises off it. */
+/** Technical Articles: an article about a problem developers actually have; on hover its key line lights up. */
 function Article() {
-  const pin = P(24, 38, 54).split(",").map(Number);
   return (
-    <Frame>
-      <g transform="translate(0 26)">
-        <g className={`${MOVE} group-hover:-translate-y-1`}>
-          <Box x={-30} y={-44} w={60} d={88} h={5} />
-          <Line d={seg(-21, -36, -21, -8, 5)} w={2.6} o={0.9} />
-          {[-12, -5, 2, 9].map((x, k) => (
-            <Line key={x} d={seg(x, -36, x, 30 - k * 6, 5)} w={1} o={0.5} />
-          ))}
-          <path d={poly([[14, -36, 5], [26, -36, 5], [26, 6, 5], [14, 6, 5]])} fill={GREEN} fillOpacity="0.55" stroke={GREEN} strokeWidth="1.1" />
-          <Line d={seg(17, -31, 17, -10, 5)} w={0.9} o={0.7} />
-          <Line d={seg(21, -31, 21, -18, 5)} w={0.9} o={0.7} />
-        </g>
-        <g className={`${MOVE} group-hover:-translate-y-3`}>
-          <Line d={`M${P(24, 38, 6)} L${P(24, 38, 44)}`} w={1.2} o={0.6} />
-          <circle cx={pin[0]} cy={pin[1]} r="10" fill="#fff" stroke={GREEN} strokeWidth="1.7" />
-          <text x={pin[0]} y={pin[1] + 3.4} textAnchor="middle" fontSize="9.5" fontFamily="var(--font-mono), monospace" fontWeight="600" fill={INK}>
-            #1
-          </text>
-        </g>
-      </g>
-    </Frame>
+    <Stage>
+      {/* A second article, softened behind. */}
+      <Depth z={-40}>
+        <div className={`${FRAME} top-0 right-0 h-[70%] w-[62%] opacity-50 blur-[0.6px]`}>
+          <div className="space-y-1.5 p-3 pt-4">
+            <Bar w="70%" o={0.3} />
+            <Bar w="90%" />
+            <Bar w="80%" />
+          </div>
+        </div>
+      </Depth>
+      <Depth z={0}>
+        <div className={`${FRAME} top-3 bottom-1 left-0 w-[86%] p-3.5`}>
+          <p className="flex items-center gap-1.5 text-[0.56rem] text-ink/45">
+            <span className={`${MONO} rounded-[3px] bg-light-green-soft px-1 py-px font-semibold tracking-[0.06em] text-[#1a7f47]`}>DEBUGGING</span>
+            8 min read
+          </p>
+          <p className="mt-1.5 text-[0.92rem] leading-[1.15] font-semibold tracking-[-0.02em] text-ink">Why your RAG pipeline loses its tables</p>
+          <div className="mt-2 space-y-1">
+            <Bar w="96%" />
+            <Bar w="78%" />
+          </div>
+          <div className={`${MONO} mt-2.5 overflow-hidden rounded-md border border-ink/15 bg-[#f6f7f4] py-1 text-[0.56rem] text-ink`}>
+            <Code n={1}>
+              doc = <F>parse</F>(<S>&quot;report.pdf&quot;</S>)
+            </Code>
+            <Code
+              n={2}
+              className={`bg-[linear-gradient(rgb(25_231_110/0.22),rgb(25_231_110/0.22))] bg-no-repeat [background-size:0%_100%] transition-[background-size] duration-700 ${EASE} group-hover:[background-size:100%_100%]`}
+            >
+              rows = doc.<F>tables</F>[<K>0</K>].<F>to_markdown</F>()
+            </Code>
+          </div>
+          <div className="mt-2.5 space-y-1">
+            <Bar w="92%" />
+            <Bar w="64%" />
+          </div>
+        </div>
+      </Depth>
+    </Stage>
   );
 }
 
-/** Centre a box of side `s` on floor point (cx, cy). */
-const at = (cx: number, cy: number, w: number, d = w) => ({ x: cx - w / 2, y: cy - d / 2, w, d });
+/** Tutorials & Developer Guides: a step list beside a terminal; on hover the current step ticks and the command returns. */
+function Tutorial() {
+  const steps = ["Install the SDK", "Add your API key", "Query your docs", "Deploy"];
+  return (
+    <Stage>
+      <Depth z={0}>
+        <div className={`${FRAME} top-0 left-0 w-[64%] p-3`}>
+          <p className="text-[0.78rem] leading-tight font-semibold tracking-[-0.02em] text-ink">Build a RAG app</p>
+          <p className={`${MONO} mt-0.5 text-[0.5rem] text-ink/45`}>Step 3 of 4</p>
+          <ol className="mt-2 space-y-1.5">
+            {steps.map((st, i) => {
+              const done = i < 2;
+              const current = i === 2;
+              return (
+                <li key={st} className={`flex items-center gap-1.5 text-[0.62rem] ${current ? "font-medium text-ink" : done ? "text-ink/60" : "text-ink/35"}`}>
+                  <span
+                    className={`relative grid size-3.5 shrink-0 place-items-center rounded-full border text-[0.45rem] font-bold ${done ? "border-ink bg-primary text-ink" : current ? "border-ink bg-white text-ink transition-colors duration-500 group-hover:bg-primary" : "border-ink/30 text-ink/40"}`}
+                  >
+                    {done ? "✓" : current ? <span className="transition-opacity duration-300 group-hover:opacity-0">3</span> : i + 1}
+                    {current && <span className="absolute opacity-0 transition-opacity delay-200 duration-300 group-hover:opacity-100">✓</span>}
+                  </span>
+                  {st}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </Depth>
+      {/* The terminal, floating in front. */}
+      <Depth z={46}>
+        <div className={`${FRAME} right-0 bottom-1 w-[60%] overflow-hidden border-ink bg-ink bg-none`}>
+          <div className="flex h-4 items-center gap-1 border-b border-white/10 px-2">
+            {[0, 1, 2].map((k) => (
+              <span key={k} className="size-[5px] rounded-full bg-white/30" />
+            ))}
+          </div>
+          <div className={`${MONO} space-y-0.5 p-2 text-[0.55rem] leading-snug text-white/85`}>
+            <p>
+              <span className="text-primary">$</span> npm i your-sdk
+            </p>
+            <p className="text-white/45">+ your-sdk@2.4.0</p>
+            <p>
+              <span className="text-primary">$</span> node query.js
+            </p>
+            <p className={`text-primary transition-[opacity,translate] duration-500 ${EASE} translate-y-0.5 opacity-0 group-hover:translate-y-0 group-hover:opacity-100`}>✓ 3 answers, 412ms</p>
+          </div>
+        </div>
+      </Depth>
+    </Stage>
+  );
+}
 
-/** Tutorials & Developer Guides: numbered steps, each higher than the last, up to a green finish. */
-function Steps() {
-  const steps = [
-    { t: -44, h: 14 },
-    { t: 0, h: 30 },
-    { t: 44, h: 46 },
+/** Product-Led Content: a guide that teaches something useful (chunking long PDFs); your product is in its code,
+ *  and on hover that import lights and a callout names it. */
+function ProductLed() {
+  return (
+    <Stage tilt="rotateX(16deg) rotateY(18deg) rotateZ(-3deg)">
+      <Depth z={0}>
+        <div className={`${FRAME} top-2 right-0 bottom-0 w-[88%] p-3.5`}>
+          <p className={`${MONO} text-[0.5rem] text-ink/45`}>Guides / Long documents</p>
+          <p className="mt-1 text-[0.88rem] leading-[1.15] font-semibold tracking-[-0.02em] text-ink">Chunking strategies for 500-page PDFs</p>
+          <div className="mt-2 space-y-1">
+            <Bar w="94%" />
+            <Bar w="70%" />
+          </div>
+          <div className={`${MONO} mt-2.5 rounded-md border border-ink/15 bg-[#f6f7f4] py-1 text-[0.56rem] text-ink`}>
+            <Code n={1}>
+              <K>import</K> {"{ chunk }"} <K>from</K>{" "}
+              <span className="rounded-[3px] px-0.5 transition-[background-color,box-shadow] duration-500 group-hover:bg-[rgb(25_231_110/0.28)] group-hover:shadow-[inset_0_0_0_1px_rgb(25_150_80/0.5)]">
+                <S>&quot;your-product&quot;</S>
+              </span>
+            </Code>
+            <Code n={2}>
+              parts = <F>chunk</F>(doc, size=<K>800</K>)
+            </Code>
+          </div>
+          <div className="mt-2.5 space-y-1">
+            <Bar w="90%" />
+            <Bar w="58%" />
+          </div>
+        </div>
+      </Depth>
+      {/* The callout, in front. */}
+      <Depth z={40}>
+        <span
+          className={`absolute top-[46%] -left-1 flex items-center gap-1.5 rounded-full border-[1.4px] border-ink bg-white py-1 pr-2.5 pl-1.5 text-[0.62rem] font-medium text-ink shadow-[0_14px_22px_-14px_rgb(23_44_33/0.55)] transition-[translate,box-shadow] duration-700 ${EASE} group-hover:-translate-y-1`}
+        >
+          <span className="grid size-4 place-items-center rounded-full bg-primary text-[0.5rem] font-bold text-ink">Y</span>
+          Your Product
+        </span>
+      </Depth>
+    </Stage>
+  );
+}
+
+/** Comparisons & Alternatives: your product against an alternative, feature by feature; on hover your column glows. */
+function Comparison() {
+  const rows: [string, string, string][] = [
+    ["Table parsing", "✓", "✕"],
+    ["Self-hosted", "✓", "✕"],
+    ["Streaming", "✓", "✓"],
+    ["Per 1K pages", "$4", "$12"],
   ];
   return (
-    <Frame>
-      <g transform="translate(0 30)">
-        {steps.map((s, k) => {
-          const [cx, cy] = P(s.t, -s.t, s.h).split(",").map(Number);
-          const last = k === 2;
-          return (
-            <g key={s.t} className={`${MOVE} ${last ? "group-hover:-translate-y-2.5" : k === 1 ? "group-hover:-translate-y-1.5" : "group-hover:-translate-y-0.5"}`}>
-              <Box {...at(s.t, -s.t, 30)} h={s.h} top={last ? "#d8f8e5" : "#fff"} />
-              <circle cx={cx} cy={cy} r="8" fill="#fff" stroke={last ? GREEN : INK} strokeWidth="1.4" />
-              <text x={cx} y={cy + 3.4} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono), monospace" fontWeight="600" fill={INK}>
-                {k + 1}
-              </text>
-            </g>
-          );
-        })}
-      </g>
-    </Frame>
-  );
-}
-
-/** Product-Led Content: a workflow that runs through the product cube. */
-function Workflow() {
-  return (
-    <Frame>
-      <g transform="translate(0 24)">
-        <Box {...at(-50, 50, 20)} h={14} />
-        <g className={`${MOVE} group-hover:-translate-y-2`}>
-          <Box {...at(0, 0, 34)} h={36} top="#d8f8e5" />
-        </g>
-        <Box {...at(50, -50, 20)} h={14} />
-        <Box {...at(50, -50, 20)} z={14} h={14} />
-        <g className="[stroke-dasharray:1.5_4] group-hover:animate-dash-flow motion-reduce:animate-none">
-          <path d="M-62 -9 H-40" fill="none" stroke={GREEN} strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M34 -9 H56" fill="none" stroke={GREEN} strokeWidth="1.8" strokeLinecap="round" />
-        </g>
-        <Arrow x={-34} y={-9} />
-        <Arrow x={62} y={-9} />
-      </g>
-    </Frame>
-  );
-}
-
-/** Comparisons & Alternatives: a balance that settles level, one option in each pan. */
-function Balance() {
-  const beam = `${MOVE} -rotate-[7deg] group-hover:rotate-0`;
-  const pan = `${MOVE} rotate-[7deg] group-hover:rotate-0`;
-  return (
-    <Frame>
-      <g transform="translate(0 30)">
-        <Line d="M0 44 V-40" w={1.5} o={0.9} />
-        <path d="M-24 44 H24" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M-11 44 L0 26 L11 44" fill="#fff" stroke={INK} strokeWidth="1.3" strokeLinejoin="round" />
-        <g className={beam} style={{ transformOrigin: "0px -40px" }}>
-          <Line d="M-72 -40 H72" w={1.6} o={0.95} />
-          {[-72, 72].map((x, k) => (
-            <g key={x} transform={`translate(${x} -40)`}>
-              <g className={pan} style={{ transformOrigin: "0px 0px" }}>
-                <Line d="M0 0 L-19 46 M0 0 L19 46" w={1} o={0.6} />
-                <path d="M-24 46 q 24 16 48 0 Z" fill="#fff" stroke={INK} strokeWidth="1.4" strokeLinejoin="round" />
-                <g transform="translate(0 42)">
-                  <Box {...at(0, 0, 18)} h={16} top={k === 1 ? "#d8f8e5" : "#fff"} />
-                </g>
-              </g>
-            </g>
+    <Stage>
+      <Depth z={0}>
+        <div className={`${FRAME} inset-x-0 top-2 bottom-1 overflow-hidden`}>
+          <div className="grid grid-cols-[1.25fr_1fr_1fr] border-b border-ink/15 text-[0.6rem] font-semibold text-ink">
+            <span className="px-2.5 py-2 text-ink/40">Feature</span>
+            <span className="flex items-center gap-1 bg-[rgb(25_231_110/0.12)] px-2 py-2">
+              <span className="size-1.5 rounded-full bg-primary" />
+              Your Product
+            </span>
+            <span className="px-2 py-2 text-ink/55">Alternative</span>
+          </div>
+          {rows.map(([f, a, b]) => (
+            <div key={f} className="grid grid-cols-[1.25fr_1fr_1fr] border-b border-ink/[0.07] text-[0.6rem] last:border-0">
+              <span className="px-2.5 py-[0.42rem] text-ink/65">{f}</span>
+              <span className={`bg-[rgb(25_231_110/0.12)] px-2 py-[0.42rem] font-semibold text-[#13804a] transition-colors duration-500 group-hover:bg-[rgb(25_231_110/0.24)]`}>{a}</span>
+              <span className={`px-2 py-[0.42rem] ${b === "✕" ? "text-[#c2410c]" : "text-ink/55"}`}>{b}</span>
+            </div>
           ))}
-        </g>
-        <circle cx="0" cy="-40" r="4" fill="#fff" stroke={INK} strokeWidth="1.4" />
-      </g>
-    </Frame>
+        </div>
+      </Depth>
+      {/* The verdict, in front. */}
+      <Depth z={44}>
+        <span className={`absolute right-3 bottom-4 flex items-center gap-1 rounded-full border-[1.4px] border-ink bg-primary px-2 py-0.5 text-[0.56rem] font-semibold text-ink shadow-[0_14px_22px_-14px_rgb(23_44_33/0.55)] transition-[translate] duration-700 ${EASE} group-hover:-translate-y-1`}>
+          Best for RAG
+        </span>
+      </Depth>
+    </Stage>
   );
 }
 
-/** Integration Content: two blocks and the code that bridges them; they draw together. */
-function Bridge() {
+/** Integration Content: your product plugged into the frameworks developers already use, with the install line;
+ *  on hover the connections start to run. */
+function Integration() {
+  const around = [
+    { mark: "langchain" as const, x: 14, y: 16 },
+    { mark: "python" as const, x: 14, y: 50 },
+    { mark: "typescript" as const, x: 14, y: 84 },
+    { mark: "vercel" as const, x: 86, y: 16 },
+    { mark: "huggingface" as const, x: 86, y: 50 },
+    { mark: "docker" as const, x: 86, y: 84 },
+  ];
   return (
-    <Frame>
-      <g transform="translate(0 30)">
-        <g className={`${MOVE} group-hover:translate-x-2.5`}>
-          <Box {...at(-48, 48, 32)} h={32} top="#d8f8e5" />
-        </g>
-        <g className={`${MOVE} group-hover:-translate-x-2.5`}>
-          <Box {...at(48, -48, 32)} h={32} />
-        </g>
-        <path d="M-66 -30 C -66 -92, 66 -92, 66 -30" fill="none" stroke={INK} strokeOpacity="0.55" strokeWidth="1.3" strokeDasharray="1.5 3.5" strokeLinecap="round" className="group-hover:animate-dash-flow motion-reduce:animate-none" />
-        <g className={`${MOVE} group-hover:-translate-y-1.5`}>
-          <rect x="-21" y="-79" width="42" height="24" rx="7" fill="#fff" stroke={GREEN} strokeWidth="1.7" />
-          <text x="0" y="-63" textAnchor="middle" fontSize="12" fontFamily="var(--font-mono), monospace" fontWeight="600" fill={INK}>
-            {"</>"}
-          </text>
-        </g>
-      </g>
-    </Frame>
+    <Stage tilt="rotateX(18deg) rotateY(-14deg) rotateZ(2deg)">
+      <Depth z={0}>
+        <div className={`${FRAME} inset-0 overflow-hidden bg-[radial-gradient(circle,rgb(23_44_33/0.1)_1px,transparent_1.2px)] bg-[length:12px_12px]`}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
+            {around.map((a) => (
+              <path
+                key={a.mark}
+                d={`M${a.x} ${a.y * 0.82} C${(a.x + 50) / 2} ${a.y * 0.82} ${(a.x + 50) / 2} 41 50 41`}
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="1.4"
+                vectorEffect="non-scaling-stroke"
+                strokeLinecap="round"
+                className="[stroke-dasharray:1_6] group-hover:animate-dash-flow motion-reduce:animate-none"
+              />
+            ))}
+          </svg>
+          {around.map((a) => (
+            <span key={a.mark} className="absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-lg border border-ink/20 bg-white shadow-[0_4px_8px_-4px_rgb(23_44_33/0.3)]" style={{ left: `${a.x}%`, top: `${a.y * 0.82}%` }}>
+              <Mark name={a.mark} className="size-3.5" />
+            </span>
+          ))}
+          <p className={`${MONO} absolute inset-x-3 bottom-2.5 rounded-md border border-ink/15 bg-white px-2 py-1 text-[0.52rem] whitespace-nowrap text-ink`}>
+            <span className="text-[#12894b]">$</span> pip install langchain-yourproduct
+          </p>
+        </div>
+      </Depth>
+      {/* Your product, the hub, in front. */}
+      <Depth z={42}>
+        <span className="absolute top-[41%] left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-xl border-[1.4px] border-ink bg-white py-1.5 pr-2.5 pl-1.5 text-[0.62rem] font-semibold whitespace-nowrap text-ink shadow-[0_16px_24px_-14px_rgb(23_44_33/0.6)] transition-shadow duration-500 group-hover:shadow-[0_0_0_4px_rgb(25_231_110/0.25),0_16px_24px_-14px_rgb(23_44_33/0.6)]">
+          <span className="grid size-5 place-items-center rounded-md bg-primary text-[0.55rem] font-bold text-ink">Y</span>
+          Your Product
+        </span>
+      </Depth>
+    </Stage>
   );
 }
 
-/** Thought Leadership: bars of what is known, and a dotted path toward a green spark: what is next. */
-function Horizon() {
-  const heights = [16, 28, 42];
+/** Thought Leadership: an essay with a byline and a pull quote, and how far it travelled; on hover the reach line draws. */
+function Thought() {
   return (
-    <Frame>
-      <g transform="translate(-14 40)">
-        <Box x={-54} y={-34} w={84} d={72} h={5} />
-        {heights.map((h, k) => (
-          <g key={h} className={`${MOVE} origin-bottom [transform-box:fill-box] group-hover:scale-y-110`}>
-            <Box x={-42 + k * 24} y={-10} z={5} w={15} d={20} h={h} top={k === 2 ? "#d8f8e5" : "#fff"} />
-          </g>
-        ))}
-        <path d="M16 -46 C 34 -68, 50 -72, 70 -98" fill="none" stroke={GREEN} strokeWidth="1.8" strokeDasharray="1.5 4" strokeLinecap="round" className="group-hover:animate-dash-flow motion-reduce:animate-none" />
-        <g className={`${MOVE} group-hover:-translate-y-2 group-hover:scale-110`} style={{ transformOrigin: "74px -112px" }}>
-          <path d="M80 -128 L66 -110 H76 L70 -92 L86 -113 H76 Z" fill={GREEN} stroke={INK} strokeWidth="1.3" strokeLinejoin="round" />
-        </g>
-      </g>
-    </Frame>
+    <Stage tilt="rotateX(16deg) rotateY(18deg) rotateZ(-3deg)">
+      <Depth z={0}>
+        <div className={`${FRAME} top-1 right-0 bottom-1 w-[86%] p-3.5`}>
+          <p className={`${MONO} text-[0.5rem] font-semibold tracking-[0.12em] text-[#1a7f47]`}>PERSPECTIVE</p>
+          <p className="mt-1 font-heading text-[1rem] leading-[1.1] tracking-[-0.02em] text-ink">The context window was never the bottleneck</p>
+          <p className="mt-2 flex items-center gap-1.5 text-[0.55rem] text-ink/50">
+            <span className="grid size-4 place-items-center rounded-full bg-ink text-[0.42rem] font-bold text-white">SR</span>
+            CTO, Your Product &middot; Nov 2026
+          </p>
+          <p className="mt-2 border-l-2 border-primary pl-2 text-[0.6rem] leading-snug text-ink/70 italic">&ldquo;Retrieval quality, not model size, decides what ships.&rdquo;</p>
+        </div>
+      </Depth>
+      {/* How far it travelled, in front. */}
+      <Depth z={44}>
+        <div className="absolute bottom-0 left-0 w-[46%] rounded-lg border-[1.4px] border-ink bg-white p-2 shadow-[0_16px_24px_-14px_rgb(23_44_33/0.6)]">
+          <p className="flex items-baseline justify-between text-[0.5rem] text-ink/50">
+            Shared
+            <b className="text-[0.66rem] font-semibold text-ink">2.1K</b>
+          </p>
+          <svg viewBox="0 0 80 24" className="mt-1 h-6 w-full overflow-visible">
+            <path d="M2 21 L18 18 L32 19 L48 11 L62 9 L78 3" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className={`[stroke-dasharray:1] [stroke-dashoffset:0.55] transition-[stroke-dashoffset] duration-1000 ${EASE} group-hover:[stroke-dashoffset:0] motion-reduce:[stroke-dashoffset:0]`} />
+          </svg>
+        </div>
+      </Depth>
+    </Stage>
   );
 }

@@ -12,7 +12,7 @@ import { WAYS } from "./content";
 // where your team keeps it, each with its icon and its words, so it never relies on colour alone. A row lights a
 // little on hover. No tabs and no controls, and no call to action: the next section is for that.
 const { options, ownership } = WAYS;
-const OWNERS = [ownership.full, ownership.extend];
+const OWNERS = [ownership.extend, ownership.full]; // in the same order as `options`: Extend first, then Full
 const CELL = "border-l border-line px-3 py-4 align-top sm:px-6 sm:py-5";
 const LABEL = "px-3 py-4 align-top font-mono text-[0.58rem] leading-snug tracking-[0.03em] text-ink/55 uppercase sm:px-6 sm:py-5 sm:text-[0.7rem] sm:tracking-[0.08em]";
 
