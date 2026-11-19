@@ -1,14 +1,12 @@
 "use client";
 
-import { Search, Users } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { Label } from "./kit";
-import { Mark } from "./parts";
 
 // "Client proof", shared by the Reddit and Search & AI pages, in the Influencer page's case-study layout: one featured case
 // study at a time in a soft brand-green frame holding two inset panels. On the left, the words: services, the key result, a
 // short description and the link. On the right, the client's logo in ink on the brand green, with a soft light, a fine grid
-// and an arc, and a small row of marks for the services we ran. Under the card, the clients as tabs: the active tab fills like a
+// and an arc. Under the card, the clients as tabs: the active tab fills like a
 // progress bar and, when it is full, the section moves on to the next client; any tab can be clicked. The loop pauses while the
 // pointer or focus is on the link or the tabs and while the section is off screen, and never runs with reduced motion.
 // Changing client is one choreographed move: the old content lifts away, the new one floats up, and the card never changes
@@ -146,11 +144,6 @@ export default function ClientProof({ label, title, slots, cases }: { label: str
                       <span className="text-[clamp(2.4rem,4.4vw,3.6rem)] leading-none font-semibold tracking-[-0.05em] text-ink/90">{c.client.toLowerCase()}</span>
                     )}
                   </div>
-                  <div key={`marks-${shown}`} className="mt-7 flex gap-2" style={enterAt(240)}>
-                    {c.services.map((s) => (
-                      <ServiceMark key={s} name={s} />
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>
@@ -225,15 +218,6 @@ function Words({ c, slots, live, hold }: { c: ProofCase; slots: Slots; live: boo
         </span>
       </a>
     </>
-  );
-}
-
-/** A service as a small white disc with its mark: the Reddit mark, a search glass, or people. */
-function ServiceMark({ name }: { name: string }) {
-  return (
-    <span title={name} className="grid size-8 place-items-center rounded-full bg-white shadow-[0_0_0_1px_rgb(23_44_33/0.06),0_6px_14px_-6px_rgb(23_44_33/0.35)]">
-      {name === "Reddit" ? <Mark name="reddit" className="size-[1.15rem]" /> : name === "Creator Distribution" ? <Users className="size-4 text-ink" strokeWidth={1.9} /> : <Search className="size-4 text-ink" strokeWidth={1.9} />}
-    </span>
   );
 }
 

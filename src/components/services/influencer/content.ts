@@ -118,12 +118,36 @@ export const LOGOS = [
   { src: "/clients/kilo.svg", alt: "Kilo Code", h: 34 },
 ];
 
-/** The creator campaigns rail: webAI's real launch posts, most-viewed first, each linking to the post itself. */
+/** A post on the creator campaigns rail: whose campaign it was for, who posted it, and where. `views` and `photo` are
+ *  set when we have them (webAI's X posts); LinkedIn shows no public view count, so those cards link to the post. */
+export type CampaignPost = { client: string; name: string; handle: string; url: string; platform: Platform; text: string; views?: number; photo?: string };
+
+// Glean's LinkedIn creator posts, from the client's campaign sheet ("LinkedIn posts" and "Aug 5 launch posts" tabs), one
+// per creator. Texts are the posts' opening lines, verbatim. The sheet has no reach numbers or photos for these. Photos
+// are from each creator's LinkedIn or X profile, where we could confirm the match; the rest show initials.
+const GLEAN_POSTS: CampaignPost[] = [
+  { client: "Glean", name: "Bhavishya Pandit", handle: "superbhavishya", photo: "/services/creators/glean/superbhavishya.jpg", platform: "linkedin", url: "https://www.linkedin.com/posts/superbhavishya_i-want-to-confess-i-used-to-grade-ai-on-share-7498602658845319168-v7cj/", text: "I want to confess.\nI used to grade AI on answer quality. Not the effort it took to get there.\nBut then I ran into a Glean benchmark testing their assistant against Claude Cowork." },
+  { client: "Glean", name: "Shantanu Ladhwe", handle: "shantanuladhwe", photo: "/services/creators/glean/shantanuladhwe.jpg", platform: "linkedin", url: "https://www.linkedin.com/feed/update/urn:li:activity:7490722599296106497/", text: "Today, most AI failures are not hallucinations.\nThe model simply never saw the file." },
+  { client: "Glean", name: "Sarthak Rastogi", handle: "sarthakrastogi", photo: "/services/creators/glean/sarthakrastogi.jpg", platform: "linkedin", url: "https://www.linkedin.com/posts/sarthakrastogi_ai-llms-aiagents-share-7498616650070429697-MDbG/", text: "Enterprise AI has a context problem.\nMost AI agents still spend a lot of their runtime figuring out context." },
+  { client: "Glean", name: "Brij Pandey", handle: "brijpandeyji", photo: "/services/creators/glean/brijpandeyji.jpg", platform: "linkedin", url: "https://www.linkedin.com/feed/update/urn:li:activity:7491062551590420480/", text: "The scariest RAG failure I've seen in production wasn't a hallucination.\nIt was a correct-sounding answer." },
+  { client: "Glean", name: "Mayank A.", handle: "curiouslearner", platform: "linkedin", url: "https://www.linkedin.com/posts/curiouslearner_someone-built-a-desktop-ai-that-connects-share-7498729599854538753-NY7e/", text: "Someone built a desktop AI that connects your local files, apps, and code to your company’s permission-aware enterprise context.\nIt’s called Glean Tau." },
+  { client: "Glean", name: "Shirin Khosravi Jam", handle: "shirin-khosravi-jam", photo: "/services/creators/glean/shirin-khosravi-jam.jpg", platform: "linkedin", url: "https://www.linkedin.com/feed/update/urn:li:activity:7490730390429745152/", text: "Your vector database is not your retrieval layer.\nIt is one part of it, and it maybe the wrong part for half your questions." },
+  { client: "Glean", name: "AI Engineering", handle: "theaiengineering", photo: "/services/creators/glean/theaiengineering.jpg", platform: "linkedin", url: "https://www.linkedin.com/posts/your-ai-agent-is-wasting-tokens-rebuilding-share-7499059879395893248-YIkI/", text: "Your AI agent is wasting tokens rebuilding context that already exists across your systems!" },
+  { client: "Glean", name: "Sumanth P", handle: "sumanth077", photo: "/services/creators/glean/sumanth077.jpg", platform: "linkedin", url: "https://www.linkedin.com/posts/sumanth077_stop-optimizing-tokens-index-your-context-share-7491095957275615232-XeqH/", text: "Stop optimizing tokens. Index your context instead!\nRetrieval quality is the foundation of context engineering." },
+];
+
+// webAI's launch, its eight most-viewed creator posts on X.
+const WEBAI_POSTS: CampaignPost[] = [...HERO_LAUNCH.posts]
+  .sort((a, b) => b.views - a.views)
+  .slice(0, 8)
+  .map((p) => ({ client: HERO_LAUNCH.company.name, name: p.name, handle: p.handle, url: p.url, platform: p.platform, text: p.text, views: p.views, photo: `/services/creators/webai/${p.handle}.jpg` }));
+
+/** The creator campaigns rail: posts from several clients' campaigns, across X and LinkedIn, the clients alternating
+ *  so no stretch of the rail reads as one campaign. Each links to the post itself. */
 export const LAUNCHES = {
   label: "Creator campaigns",
   title: "Products we've put in front of technical audiences.",
-  posts: [...HERO_LAUNCH.posts].sort((a, b) => b.views - a.views),
-  client: HERO_LAUNCH.company.name,
+  posts: WEBAI_POSTS.flatMap((p, i) => (GLEAN_POSTS[i] ? [p, GLEAN_POSTS[i]] : [p])),
 };
 
 export const MODES = {
@@ -145,7 +169,7 @@ export const MODES = {
 
 // Launch Amplification's illustration. SAMPLE: the faces are the hero launch's creators (photos in
 // /services/creators/webai, named by X handle); platforms and view counts are placeholders. The first hour's six
-// posts and the two later ones add up to the launch's total.
+// posts and the later ones add up to the launch's total.
 export const AMPLIFY = {
   pill: "First hour \u00b7 6 posts",
   window: "24h window",
@@ -158,11 +182,24 @@ export const AMPLIFY = {
     { who: "DataChaz", platform: "x", views: 88_000 },
     { who: "BenGeskin", platform: "x", views: 78_000 },
   ] as { who: string; platform: Platform; views: number }[],
-  // Posts later in the day, pinned to the dial at their hour.
+  // Later in the day, a few more creators post around each pinned hour (they pop in one after another).
   later: [
-    { who: "kimmonismus", platform: "linkedin", views: 54_000, hour: 18 },
-    { who: "ai_for_success", platform: "x", views: 63_000, hour: 6 },
-  ] as { who: string; platform: Platform; views: number; hour: number }[],
+    {
+      hour: 6,
+      posts: [
+        { who: "ai_for_success", platform: "x", views: 63_000 },
+        { who: "marcusyul", platform: "linkedin", views: 41_000 },
+        { who: "Hesamation", platform: "x", views: 29_000 },
+      ],
+    },
+    {
+      hour: 18,
+      posts: [
+        { who: "kimmonismus", platform: "linkedin", views: 54_000 },
+        { who: "haider1", platform: "x", views: 32_000 },
+      ],
+    },
+  ] as { hour: number; posts: { who: string; platform: Platform; views: number }[] }[],
 };
 
 export type Case = {

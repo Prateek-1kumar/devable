@@ -21,7 +21,8 @@ const KEYFRAMES = `
 // hand-off is continuous. Hovering an input or outcome spotlights its path: everything else dims, its wire stays
 // lit and a pill over the article names the link (the brief row lights too while it shows).
 // Below xl the same story stacks vertically (no wires). The still frame is the finished picture, shown before the
-// loop runs and with reduced motion.
+// loop runs and with reduced motion. Between loops nothing leaves the stage: the inputs, wires, card and outcomes
+// stay put; the ticks, lit wires and glows ease off and the card's contents cross-fade back to the empty draft.
 
 const CYCLE = 26.5;
 const FINAL = 24;
@@ -41,7 +42,8 @@ const LAYER_AT = (j: number) => 9.2 + LAYER * j;
 const PUB = 18.2; // published
 const SEND = (k: number) => 18.8 + 0.6 * k; // outcome packet k leaves
 const SEND_FOR = 1.4;
-const FADE = 25.2; // the whole picture eases away before it replays
+const FADE = 25.2; // the picture rewinds before it replays: the frame stays, only its state eases back
+const REFILL = 0.7; // after the loop restarts, the article's contents ease back in over this long
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const out3 = (v: number) => 1 - (1 - v) ** 3;
@@ -53,6 +55,7 @@ const seg = (s: number, a: number, b: number, f = out3) => f(clamp01((s - a) / (
 function useClock() {
   const box = useRef<HTMLDivElement>(null);
   const [s, setS] = useState(FINAL);
+  const [looped, setLooped] = useState(false); // a full loop has played: the inputs are already on stage
   useEffect(() => {
     const el = box.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -60,7 +63,9 @@ function useClock() {
     let start = 0;
     const tick = (now: number) => {
       start ||= now;
-      setS(Math.max(0, (now - start) / 1000 - LEAD) % CYCLE);
+      const t = Math.max(0, (now - start) / 1000 - LEAD);
+      setS(t % CYCLE);
+      setLooped(t >= CYCLE);
       raf = requestAnimationFrame(tick);
     };
     const io = new IntersectionObserver(
@@ -68,6 +73,7 @@ function useClock() {
         cancelAnimationFrame(raf);
         start = 0;
         setS(0);
+        setLooped(false);
         if (e.isIntersecting) raf = requestAnimationFrame(tick);
       },
       { threshold: 0.3 },
@@ -78,7 +84,7 @@ function useClock() {
       cancelAnimationFrame(raf);
     };
   }, []);
-  return [box, s] as const;
+  return [box, s, looped] as const;
 }
 
 // Desktop geometry (px). Rows and wires share these numbers, so they line up by construction.
@@ -101,16 +107,17 @@ function bez(y0: number, y1: number, u: number): [number, number] {
 const wire = (y0: number, y1: number) => `M0 ${y0} C${GAP / 2} ${y0} ${GAP / 2} ${y1} ${GAP} ${y1}`;
 
 export default function HeroStage() {
-  const [box, s] = useClock();
+  const [box, s, looped] = useClock();
   const beat = s < BEAT[1] ? 0 : s < BEAT[2] ? 1 : s < BEAT[3] ? 2 : 3;
-  const live = 1 - seg(s, FADE, CYCLE); // everything fades with the picture before it replays
+  const keep = 1 - seg(s, FADE, CYCLE, io3); // 1, easing to 0 as the picture rewinds at the end of a loop
+  const veil = s >= FADE ? keep : looped ? seg(s, 0, REFILL) : 1; // the article's contents: out, then back in
 
   // Per-input and per-outcome progress.
-  const appear = HERO.inputs.map((_, i) => seg(s, IN_AT(i), IN_AT(i) + 0.8));
+  const appear = HERO.inputs.map((_, i) => (looped ? 1 : seg(s, IN_AT(i), IN_AT(i) + 0.8)));
   const go = HERO.inputs.map((_, i) => seg(s, PACKET(i), PACKET(i) + TRAVEL, io3));
-  const spent = go.map((u) => seg(u, 0.92, 1));
+  const spent = go.map((u) => seg(u, 0.92, 1) * keep);
   const send = HERO.outcomes.map((_, k) => seg(s, SEND(k), SEND(k) + SEND_FOR, io3));
-  const lit = send.map((u) => seg(u, 0.9, 1));
+  const lit = send.map((u) => seg(u, 0.9, 1) * keep);
   const ripple = HERO.outcomes.map((_, k) => clamp01((s - (SEND(k) + SEND_FOR)) / 1));
 
   const [hot, setHot] = useState<{ side: "in" | "out"; i: number } | null>(null);
@@ -124,7 +131,7 @@ export default function HeroStage() {
   const fade = (on: boolean): CSSProperties => ({ opacity: !focus || on ? 1 : 0.28, transition: "opacity 200ms" });
 
   return (
-    <div ref={box} aria-hidden="true" className="w-full" style={{ opacity: live }}>
+    <div ref={box} aria-hidden="true" className="w-full">
       {/* Desktop: inputs → article → outcomes on fixed rows, joined by wires. */}
       <div className={`hidden xl:grid ${COLS}`}>
         <Stages beat={beat} slot={0} />
@@ -133,7 +140,7 @@ export default function HeroStage() {
         <span />
         <Stages beat={beat} slot={2} />
       </div>
-      <div className={`relative mt-6 hidden xl:grid ${COLS}`} style={{ height: H }}>
+      <div className={`relative mt-4 hidden xl:grid ${COLS}`} style={{ height: H }}>
         <div className="relative">
           {HERO.inputs.map((inp, i) => (
             <div
@@ -154,7 +161,7 @@ export default function HeroStage() {
             return (
               <g key={i} style={fade(hotIn === i)}>
                 <path d={wire(y0, MID)} fill="none" stroke="var(--ink)" strokeOpacity={0.1 * appear[i]} strokeWidth={1.25} />
-                <path d={wire(y0, MID)} pathLength={1} fill="none" stroke={inp.dot} strokeOpacity={0.6} strokeWidth={1.25} strokeDasharray="1 1" strokeDashoffset={1 - go[i]} />
+                <path d={wire(y0, MID)} pathLength={1} fill="none" stroke={inp.dot} strokeOpacity={0.6 * keep} strokeWidth={1.25} strokeDasharray="1 1" strokeDashoffset={1 - go[i]} />
                 <path d={wire(y0, MID)} fill="none" stroke={inp.dot} strokeWidth={10} strokeLinecap="round" style={{ opacity: hotIn === i ? 0.14 : 0, transition: "opacity 200ms" }} />
                 <path d={wire(y0, MID)} fill="none" stroke={inp.dot} strokeWidth={2.25} strokeLinecap="round" style={{ opacity: hotIn === i ? 1 : 0, transition: "opacity 200ms" }} />
                 {go[i] > 0 && go[i] < 1 && (
@@ -168,7 +175,7 @@ export default function HeroStage() {
           })}
         </svg>
         <div className="flex items-center">
-          <Article s={s} hotIn={hotIn} hotOut={hotOut} link={link} />
+          <Article s={s} veil={veil} hotIn={hotIn} hotOut={hotOut} link={link} />
         </div>
         <svg width={GAP} height={H} className="overflow-visible">
           {HERO.outcomes.map((o, k) => {
@@ -177,7 +184,7 @@ export default function HeroStage() {
             return (
               <g key={k} style={fade(hotOut === k)}>
                 <path d={wire(MID, y1)} fill="none" stroke="var(--ink)" strokeOpacity={0.1} strokeWidth={1.25} />
-                <path d={wire(MID, y1)} pathLength={1} fill="none" stroke={o.dot} strokeOpacity={0.6} strokeWidth={1.25} strokeDasharray="1 1" strokeDashoffset={1 - send[k]} />
+                <path d={wire(MID, y1)} pathLength={1} fill="none" stroke={o.dot} strokeOpacity={0.6 * keep} strokeWidth={1.25} strokeDasharray="1 1" strokeDashoffset={1 - send[k]} />
                 <path d={wire(MID, y1)} fill="none" stroke={o.dot} strokeWidth={10} strokeLinecap="round" style={{ opacity: hotOut === k ? 0.14 : 0, transition: "opacity 200ms" }} />
                 <path d={wire(MID, y1)} fill="none" stroke={o.dot} strokeWidth={2.25} strokeLinecap="round" style={{ opacity: hotOut === k ? 1 : 0, transition: "opacity 200ms" }} />
                 {send[k] > 0 && send[k] < 1 && (
@@ -217,7 +224,7 @@ export default function HeroStage() {
         </div>
         <div className="mx-auto max-w-[26rem] space-y-6">
           <Stages beat={beat} slot={1} />
-          <Article s={s} hotIn={-1} hotOut={-1} link={null} />
+          <Article s={s} veil={veil} hotIn={-1} hotOut={-1} link={null} />
         </div>
         <Stages beat={beat} slot={2} />
         <div className="mx-auto max-w-[34rem] space-y-3">
@@ -232,17 +239,17 @@ export default function HeroStage() {
   );
 }
 
-/** One stage title: mono caps between four corner brackets, like Scalerrs' labels. Playing = ink with coral brackets, done = dimmer. */
-function Stage({ state, children }: { state: "todo" | "on" | "done"; children: ReactNode }) {
-  const text = state === "on" ? "text-ink" : state === "done" ? "text-ink/55" : "text-ink/30";
-  const edge = state === "on" ? "border-accent" : state === "done" ? "border-ink/30" : "border-ink/15";
-  const corner = `absolute size-2.5 transition-colors duration-300 ${edge}`;
+/** One stage title, kept small: its number, a status dot and the name. Playing = ink, with a brand-green dot that
+ *  breathes; done = muted, with a solid green dot; to come = faint, with a hollow dot. */
+function Stage({ n, state, children }: { n: number; state: "todo" | "on" | "done"; children: ReactNode }) {
+  const text = state === "on" ? "text-ink" : state === "done" ? "text-ink/50" : "text-ink/30";
   return (
-    <p className={`relative mx-auto flex w-[14rem] justify-center px-4 py-3.5 font-mono text-[0.9rem] font-medium tracking-[0.14em] whitespace-nowrap uppercase transition-colors duration-300 ${text}`}>
-      <span className={`${corner} top-0 left-0 border-t-[1.5px] border-l-[1.5px]`} />
-      <span className={`${corner} top-0 right-0 border-t-[1.5px] border-r-[1.5px]`} />
-      <span className={`${corner} bottom-0 left-0 border-b-[1.5px] border-l-[1.5px]`} />
-      <span className={`${corner} right-0 bottom-0 border-r-[1.5px] border-b-[1.5px]`} />
+    <p className={`mx-auto flex w-fit items-center gap-2 font-mono text-[0.7rem] tracking-[0.1em] whitespace-nowrap uppercase transition-colors duration-300 ${text}`}>
+      <span className="text-ink/30 tabular-nums">0{n}</span>
+      <span className="relative grid size-2 place-items-center">
+        {state === "on" && <span className="absolute inset-0 animate-ping rounded-full bg-primary/50 [animation-duration:1.8s] motion-reduce:hidden" />}
+        <span className={`relative size-1.5 rounded-full transition-colors duration-300 ${state === "todo" ? "border border-ink/30" : state === "on" ? "bg-primary" : "bg-[#1a7f47]/70"}`} />
+      </span>
       {children}
     </p>
   );
@@ -250,11 +257,21 @@ function Stage({ state, children }: { state: "todo" | "on" | "done"; children: R
 
 /** The title over a column: Inputs on the left, Brief then Build & review (it swaps) over the article, Published on the right. */
 function Stages({ beat, slot }: { beat: number; slot: 0 | 1 | 2 }) {
-  if (slot === 0) return <Stage state={beat === 0 ? "on" : "done"}>{HERO.beats[0]}</Stage>;
-  if (slot === 2) return <Stage state={beat === 3 ? "on" : "todo"}>{HERO.beats[3]}</Stage>;
+  if (slot === 0)
+    return (
+      <Stage n={1} state={beat === 0 ? "on" : "done"}>
+        {HERO.beats[0]}
+      </Stage>
+    );
+  if (slot === 2)
+    return (
+      <Stage n={3} state={beat === 3 ? "on" : "todo"}>
+        {HERO.beats[3]}
+      </Stage>
+    );
   const review = beat >= 2;
   return (
-    <Stage state={beat === 0 ? "todo" : beat === 3 ? "done" : "on"}>
+    <Stage n={2} state={beat === 0 ? "todo" : beat === 3 ? "done" : "on"}>
       <span key={review ? 2 : 1} className="motion-safe:animate-fade-up">
         {HERO.beats[review ? 2 : 1]}
       </span>
@@ -336,7 +353,7 @@ const STATUS_DOT = { Draft: "bg-ink/30", Brief: "bg-accent", "In review": "bg-ac
  * The article, as one document that never changes shape: a tag and status up top, the title, a body, and the
  * review stepper below. The body shows the brief at first, then the page itself.
  */
-function Article({ s, hotIn, hotOut, link }: { s: number; hotIn: number; hotOut: number; link: { dot: string; text: string } | null }) {
+function Article({ s, veil = 1, hotIn, hotOut, link }: { s: number; veil?: number; hotIn: number; hotOut: number; link: { dot: string; text: string } | null }) {
   const g = HERO.guide;
   const waiting = 1 - seg(s, BEAT[1] - 0.2, BEAT[1] + 0.6);
   const typed = seg(s, TYPE, TYPE + TYPE_FOR, lin);
@@ -360,8 +377,8 @@ function Article({ s, hotIn, hotOut, link }: { s: number; hotIn: number; hotOut:
       )}
 
       <div
-        className={`flex h-[29rem] flex-col overflow-hidden rounded-[20px] border bg-white ring-1 ring-black/[0.02] transition-[border-color,opacity] duration-300 sm:h-[26rem] ${published ? "border-[#1a7f47]/25" : "border-black/[0.07]"}`}
-        style={{ opacity: dim ? 0.5 : 1, boxShadow: "0 1px 1px rgb(23 44 33 / 0.04), 0 2px 4px rgb(23 44 33 / 0.04), 0 28px 50px -24px rgb(23 44 33 / 0.3)" }}
+        className={`flex h-[29rem] flex-col overflow-hidden rounded-[20px] border bg-white ring-1 ring-black/[0.02] transition-[border-color,opacity] duration-300 sm:h-[26rem] [&>*]:[opacity:var(--veil)] ${published ? "border-[#1a7f47]/25" : "border-black/[0.07]"}`}
+        style={{ opacity: dim ? 0.5 : 1, ["--veil" as string]: veil, boxShadow: "0 1px 1px rgb(23 44 33 / 0.04), 0 2px 4px rgb(23 44 33 / 0.04), 0 28px 50px -24px rgb(23 44 33 / 0.3)" }}
       >
         <div className="flex items-center justify-between px-5 pt-5">
           <span

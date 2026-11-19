@@ -2,7 +2,7 @@
 
 import { Activity, ArrowRight, AtSign, CalendarCheck, ChartPie, ListOrdered, MessagesSquare, MousePointerClick, Search, Sparkles, ThumbsUp, TrendingUp, UserPlus, type LucideIcon } from "lucide-react";
 import { Label, useInView } from "../kit";
-import { MarkStack, STAMP, Tick } from "../parts";
+import { MarkStack, Tick } from "../parts";
 import { MEASURE } from "./content";
 
 // What each metric looks like, one small glyph per row, in the same order as MEASURE.groups[].items.
@@ -15,7 +15,9 @@ const ICONS: LucideIcon[][] = [
 // Karma is not the KPI, shown literally. On the left the vanity number: it appears in full first, then a line
 // is drawn through it and it goes quiet. That is the only motion on the page section; the metrics we do report
 // on are static. On the right they run Community → Discovery → Business as three cards with arrows between,
-// each with its own icons and platform marks, and Business, the outcome the other two feed, on the same card as the others: set apart only by a larger title, firmer text, and the green wire that lands on its edge.
+// each with its own icons and platform marks. Business, the outcome the other two feed, carries the strongest
+// emphasis while staying clean: a white card like the others, but outlined in the brand green and lifted on a soft
+// green glow, with mint icon tiles, green glyphs, a larger title, firmer text, and the green wire landing on its edge.
 // Reduced motion: Karma already struck out.
 export default function Measure() {
   const [ref, seen] = useInView<HTMLDivElement>(0.4);
@@ -74,13 +76,16 @@ export default function Measure() {
               return (
                 <li
                   key={g.name}
-                  className="relative rounded-2xl border border-line bg-card p-6"
+                  className={`relative rounded-2xl border p-6 ${
+                    outcome
+                      ? "border-transparent bg-white shadow-[0_0_0_1.5px_var(--primary),0_0_0_6px_color-mix(in_srgb,var(--primary)_12%,transparent),0_2px_4px_rgb(23_44_33/0.06),0_28px_48px_-26px_rgb(25_150_80/0.45)]"
+                      : "border-line bg-card"
+                  }`}
                 >
                   {/* Where the wire from Discovery lands: a green port on the card's edge, level with its header. */}
                   {outcome && (
                     <>
                       <span aria-hidden="true" className="absolute top-[2.6rem] -left-[4.5px] hidden size-[9px] -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_1px_var(--primary),0_0_0_4px_color-mix(in_srgb,var(--primary)_16%,transparent)] md:block" />
-                      <span aria-hidden="true" className="absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--primary)_70%,transparent),transparent)]" />
                     </>
                   )}
                   <div className="flex items-center justify-between gap-3">
@@ -93,15 +98,15 @@ export default function Measure() {
                         </span>
                       )}
                     </span>
-                    {outcome ? <span className={STAMP}>The outcome</span> : <span className="font-mono text-[11px] tracking-[0.06em] text-ink/35">0{i + 1}</span>}
+                    {outcome ? <span className="rounded-full bg-primary px-2.5 py-1 font-mono text-[10.5px] tracking-[0.06em] text-ink uppercase">The outcome</span> : <span className="font-mono text-[11px] tracking-[0.06em] text-ink/35">0{i + 1}</span>}
                   </div>
-                  <h3 className={`mt-5 leading-none tracking-[-0.035em] text-ink ${outcome ? "text-[1.65rem] font-semibold" : "text-[1.3rem] font-medium"}`}>{g.name}</h3>
+                  <h3 className={`mt-5 leading-none tracking-[-0.035em] ${outcome ? "text-[1.65rem] font-semibold text-ink" : "text-[1.3rem] font-medium text-ink"}`}>{g.name}</h3>
                   <ul className="mt-5">
                     {g.items.map((item, j) => {
                       const Glyph = Glyphs[j];
                       return (
-                        <li key={item} className={`flex items-center gap-3 py-3 text-[0.93rem] leading-snug ${outcome ? "font-medium text-ink" : "text-ink/70"} ${j ? "border-t border-ink/[0.06]" : ""}`}>
-                          <span className={`grid size-7 shrink-0 place-items-center rounded-lg bg-ink/[0.045] ${outcome ? "text-[#1a7f47]" : "text-ink/55"}`}>
+                        <li key={item} className={`flex items-center gap-3 py-3 text-[0.93rem] leading-snug ${outcome ? "font-medium text-ink" : "text-ink/70"} ${j ? (outcome ? "border-t border-[color-mix(in_srgb,var(--primary)_20%,transparent)]" : "border-t border-ink/[0.06]") : ""}`}>
+                          <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${outcome ? "bg-light-green-soft text-[#13804a]" : "bg-ink/[0.045] text-ink/55"}`}>
                             <Glyph aria-hidden="true" strokeWidth={1.9} className="size-3.5" />
                           </span>
                           {item}

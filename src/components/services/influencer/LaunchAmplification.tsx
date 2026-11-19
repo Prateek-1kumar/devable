@@ -11,7 +11,8 @@ import { AMPLIFY as A } from "./content";
 //               raised green segment at the top, because that is where most of the push happens, then runs the rest.
 //   first hour  six creators' posts pop up in an arc above that segment, one by one while the hand is inside it, each
 //               tied into the "First hour · 6 posts" label that points at the segment.
-//   later       two more posts are pinned to the rim at 6h and 18h and appear as the hand reaches them.
+//   later       a few more creators are pinned to the rim at 6h and 18h, a crowd at each: their faces pop in one
+//               after another as the hand passes, and the crowd's views add up.
 //   the launch  its views add up as every post lands; the label at the bottom reads the hour, then "24h window".
 // Drawn once at a fixed size and scaled to the box, so the composition never reflows; phones get their own, sparser
 // drawing. Loops while on screen with a long hold on the finished picture. Reduced motion: the finished picture.
@@ -34,7 +35,7 @@ const WIDE = {
   chip: { w: 84, h: 36, y: 12, arc: [18, 6, 0], pad: 16 },
   pill: { w: 194, h: 30, y: 64 },
   card: { w: 224, y: 150 },
-  later: { w: 84, h: 36, y: 328, inset: 16 },
+  later: { w: 132, h: 36, y: 328, inset: 16 },
   win: { w: 132, h: 28, y: 332 },
 };
 const PHONE: typeof WIDE = {
@@ -42,7 +43,7 @@ const PHONE: typeof WIDE = {
   chip: { w: 44, h: 52, y: 8, arc: [8, 3, 0], pad: 8 },
   pill: { w: 172, h: 26, y: 68 },
   card: { w: 192, y: 136 },
-  later: { w: 68, h: 28, y: 240, inset: 6 },
+  later: { w: 98, h: 28, y: 240, inset: 6 },
   win: { w: 110, h: 26, y: 242 },
 };
 type Layout = typeof WIDE;
@@ -119,6 +120,33 @@ function Post({ who, platform, views, shown, size }: { who: string; platform: Pl
   );
 }
 
+/** Several creators' posts around one hour: their faces overlapping in a pill (each with its platform), popping in one
+ *  after another, and the views they brought together. */
+function Crowd({ posts, small }: { posts: { who: string; platform: Platform; views: number; shown: number }[]; small: boolean }) {
+  const face = small ? 22 : 28;
+  const views = posts.reduce((sum, p) => sum + p.views * out3(p.shown), 0);
+  return (
+    <span className={`flex size-full items-center justify-center rounded-full bg-white ${RING} ${small ? "gap-1.5" : "gap-2"}`}>
+      <span className="flex">
+        {posts.map((p, k) => (
+          <span
+            key={p.who}
+            className="relative shrink-0 rounded-full"
+            style={{ marginLeft: k ? -Math.round(face * 0.3) : 0, zIndex: posts.length - k, opacity: p.shown, transform: `scale(${r1(0.6 + 0.4 * out3(p.shown))})` }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
+            <img src={`/services/creators/webai/${p.who}.jpg`} alt="" className="rounded-full object-cover ring-2 ring-white" style={{ width: face, height: face }} />
+            <span className={`absolute -right-1 -bottom-1 grid place-items-center rounded-full bg-white shadow-[0_0_0_1px_rgb(15_26_20/0.1)] ${small ? "size-[12px]" : "size-[14px]"}`}>
+              <PlatformIcon platform={p.platform} className={`${small ? "size-[7px]" : "size-[8px]"} ${p.platform === "linkedin" ? "text-[#0a66c2]" : "text-ink"}`} />
+            </span>
+          </span>
+        ))}
+      </span>
+      <span className={`font-semibold tracking-[-0.02em] text-ink tabular-nums leading-none ${small ? "text-[13.5px]" : "text-[16px]"}`}>{k(views)}</span>
+    </span>
+  );
+}
+
 export default function LaunchAmplification({ seen }: { seen: boolean }) {
   const { box, t, still, size } = useScene(seen, CYCLE, SWEEP[1] + 1);
   const phone = !!size && size.h / size.w > 0.7;
@@ -135,13 +163,15 @@ export default function LaunchAmplification({ seen }: { seen: boolean }) {
     const x = L.chip.pad + (i * (L.W - 2 * L.chip.pad - L.chip.w)) / (A.first.length - 1);
     return { ...p, x, y: L.chip.y + L.chip.arc[edge], edge, left: i < A.first.length / 2, turn: (i - 2.5) * 1.6, shown: seg(hour, (i + 0.35) / 6.6, (i + 0.35) / 6.6 + 0.13) };
   });
-  const later = A.later.map((p) => {
-    const at = pt(L, START + p.hour * 15, 1);
+  const later = A.later.map((g) => {
+    const at = pt(L, START + g.hour * 15, 1);
     // Under its pin, kept inside the drawing.
     const x = Math.min(L.W - L.later.inset - L.later.w, Math.max(L.later.inset, at[0] - L.later.w / 2));
-    return { ...p, at, x, shown: seg(hour, p.hour, p.hour + 1.6) };
+    // The crowd's creators land one after another, about an hour apart.
+    const posts = g.posts.map((p, k) => ({ ...p, shown: seg(hour, g.hour + k * 1.1, g.hour + k * 1.1 + 1.4) }));
+    return { ...g, at, x, posts, shown: posts[0].shown };
   });
-  const total = [...first, ...later].reduce((sum, p) => sum + p.views * out3(p.shown), 0);
+  const total = [...first, ...later.flatMap((g) => g.posts)].reduce((sum, p) => sum + p.views * out3(p.shown), 0);
 
   const pillX = L.cx - L.pill.w / 2;
   const pillMid = L.pill.y + L.pill.h / 2;
@@ -246,14 +276,14 @@ export default function LaunchAmplification({ seen }: { seen: boolean }) {
           </span>
         ))}
 
-        {/* The two later posts, under their pins. */}
-        {later.map((p) => (
+        {/* The later crowds, under their pins. */}
+        {later.map((g) => (
           <span
-            key={p.who}
+            key={g.hour}
             className="absolute"
-            style={{ left: p.x, top: L.later.y, width: L.later.w, height: L.later.h, opacity: p.shown, transform: `translateY(${r1((1 - p.shown) * 8)}px)` }}
+            style={{ left: g.x, top: L.later.y, width: L.later.w, height: L.later.h, opacity: g.shown, transform: `translateY(${r1((1 - g.shown) * 8)}px)` }}
           >
-            <Post {...p} size={phone ? "sm" : "lg"} />
+            <Crowd posts={g.posts} small={phone} />
           </span>
         ))}
 

@@ -1,11 +1,12 @@
-import { Label, PLATFORM_NAME, PlatformIcon } from "../kit";
-import { LAUNCHES, LOGOS, type LaunchPost } from "./content";
+import { Label, PlatformIcon } from "../kit";
+import { LAUNCHES, LOGOS, type CampaignPost } from "./content";
 
 // Fade a rail out at both edges.
 const EDGES = "[mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,transparent)]";
 
 // Proof first: the clients drift right to left on one slow rail (like Baseten's), and under them, running the
-// other way (left to right), a rail of the creator posts from those launches, each with its view count. Both repeat their list once so the
+// other way (left to right), a rail of creator posts from several clients' campaigns on X and LinkedIn, each tagged
+// with its client and, where the platform shows one, its view count. Both repeat their list once so the
 // −50% loop is seamless (the copy is hidden from screen readers); hovering a rail pauses it.
 export default function Launches() {
   return (
@@ -44,10 +45,14 @@ export default function Launches() {
   );
 }
 
+// Platform names, kept here: this is a server component, and the shared map lives in a client module, whose plain
+// values don't reach server rendering.
+const PLATFORM = { x: "X", linkedin: "LinkedIn", youtube: "YouTube", newsletter: "Newsletter" } as const;
+
 const views = (n: number) => (n < 10_000 ? `${(n / 1000).toFixed(1)}K` : n < 1e6 ? `${Math.round(n / 1000)}K` : `${(n / 1e6).toFixed(1)}M`);
 
 /** A real post, linking to the original. The rail repeats its list, so the copy's links stay out of the tab order. */
-function PostCard({ post, copy }: { post: LaunchPost; copy: boolean }) {
+function PostCard({ post, copy }: { post: CampaignPost; copy: boolean }) {
   return (
     <li aria-hidden={copy || undefined} className="flex w-[19rem]">
       <a
@@ -58,22 +63,38 @@ function PostCard({ post, copy }: { post: LaunchPost; copy: boolean }) {
         className="group flex w-full flex-col rounded-xl border border-line bg-white p-5 transition-[border-color,box-shadow,translate] duration-300 hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_18px_36px_-22px_rgb(23_44_33/0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink/50"
       >
         <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element -- creator photos */}
-          <img src={`/services/creators/webai/${post.handle}.jpg`} alt="" className="size-9 rounded-full object-cover" />
+          {post.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- creator photos
+            <img src={post.photo} alt="" className="size-9 rounded-full object-cover" />
+          ) : (
+            // No photo yet: the platform's own empty profile, a head and shoulders on grey.
+            <svg aria-hidden="true" viewBox="0 0 36 36" className="size-9 shrink-0 overflow-hidden rounded-full">
+              <rect width="36" height="36" fill="#e9e5df" />
+              <circle cx="18" cy="14" r="6.5" fill="#b9b2a8" />
+              <path d="M5 36c0-7.6 5.8-12.5 13-12.5S31 28.4 31 36Z" fill="#b9b2a8" />
+            </svg>
+          )}
           <p className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-[0.85rem] font-semibold text-ink">{post.name}</span>
-            <span className="block truncate text-[0.74rem] text-muted">@{post.handle}</span>
+            <span className="block truncate text-[0.74rem] text-muted">{post.platform === "linkedin" ? `in/${post.handle}` : `@${post.handle}`}</span>
           </p>
           <PlatformIcon platform={post.platform} className="size-4 text-ink/80" />
-          <span className="sr-only">on {PLATFORM_NAME[post.platform]}</span>
+          <span className="sr-only">on {PLATFORM[post.platform]}</span>
         </div>
         <p className="mt-3.5 mb-5 line-clamp-4 text-[0.88rem] leading-snug whitespace-pre-line text-ink/85">{post.text}</p>
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-line pt-3.5">
-          <span className="rounded-full bg-[#f4f2eb] px-2.5 py-1 text-[0.72rem] font-medium text-ink/75">for {LAUNCHES.client}</span>
-          <span className="text-right leading-none">
-            <span className="block text-[1.35rem] font-medium tracking-[-0.04em] text-ink tabular-nums">{views(post.views)}</span>
-            <span className="mt-1 block font-mono text-[0.6rem] tracking-[0.1em] text-muted uppercase">views</span>
-          </span>
+          <span className="rounded-full bg-[#f4f2eb] px-2.5 py-1 text-[0.72rem] font-medium text-ink/75">for {post.client}</span>
+          {post.views ? (
+            <span className="text-right leading-none">
+              <span className="block text-[1.35rem] font-medium tracking-[-0.04em] text-ink tabular-nums">{views(post.views)}</span>
+              <span className="mt-1 block font-mono text-[0.6rem] tracking-[0.1em] text-muted uppercase">views</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 pb-1 text-[0.78rem] font-medium text-ink/70 transition-colors group-hover:text-ink">
+              Read on {PLATFORM[post.platform]}
+              <span aria-hidden="true">&#8599;</span>
+            </span>
+          )}
         </div>
         <span className="sr-only">(opens the post in a new tab)</span>
       </a>
